@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI District Chakwal Dashboard | Official Website</title>
-    <link rel="icon" href="favicon.png.png" type="image/png">
+    <link rel="icon" href="favicon.png" type="image/png">
     <style>
         * {
             margin: 0;
@@ -172,10 +172,12 @@
             font-size: 14px;
             font-weight: 500;
             transition: background 0.3s;
+            cursor: pointer;
         }
         .btn:hover {
             background: #09402b;
         }
+
         /* Footer */
         .footer {
             background: #0d5c3d;
@@ -205,6 +207,14 @@
             }
         }
     </style>
+
+    <script>
+        // jin links mein filhal data nahi, unpar click se "Coming Soon" dikhana
+        function comingSoon(event) {
+            event.preventDefault(); // link ko normal behave karne se rok de
+            alert("Coming Soon");
+        }
+    </script>
 </head>
 <body>
     <!-- Top Scrolling News -->
@@ -223,7 +233,7 @@
 
     <!-- Header with Logo on Left + Title Center + Logo on Right -->
     <div class="header">
-        <img src="favicon.png.png" alt="EPI Logo Left" class="logo-left">
+        <img src="favicon.png" alt="EPI Logo Left" class="logo-left">
         <div class="header-content">
             <h1>EPI District Chakwal Dashboard</h1>
             <p>Official Website | Punjab Expanded Programme on Immunization</p>
@@ -264,35 +274,42 @@
         <div class="main-content">
             <div class="section-title">Official Downloads & Reports</div>
             <div class="download-grid">
+                <!-- REAL DOWNLOAD (file maujood) -->
                 <div class="download-card">
                     <h3>Monthly EPI Presentation</h3>
                     <p>July 2026 District Performance Review</p>
-                    <a href="Chakwal_EPI_Coverage_July_2026 Final.pptx" class="btn">Download PPT</a>
+                    <a href="Chakwal_EPI_Coverage_July_2026_Final.pptx" class="btn">Download PPT</a>
                 </div>
+
+                <!-- COMING SOON BUTTONS -->
                 <div class="download-card">
                     <h3>Coverage Report</h3>
                     <p>Antigen-wise Coverage Analysis</p>
-                    <a href="#" class="btn">Download PDF</a>
+                    <a href="#" class="btn" onclick="comingSoon(event)">Coming Soon</a>
                 </div>
+
                 <div class="download-card">
                     <h3>Zero-Dose Analysis</h3>
                     <p>Identification & Action Plan</p>
-                    <a href="#" class="btn">Download Report</a>
+                    <a href="#" class="btn" onclick="comingSoon(event)">Coming Soon</a>
                 </div>
+
                 <div class="download-card">
                     <h3>Dropout Analysis</h3>
                     <p>Penta1 to Penta3 & MR Dropout</p>
-                    <a href="#" class="btn">Download Excel</a>
+                    <a href="#" class="btn" onclick="comingSoon(event)">Coming Soon</a>
                 </div>
+
                 <div class="download-card">
                     <h3>UC-wise Performance</h3>
                     <p>Union Council Ranking Report</p>
-                    <a href="#" class="btn">Download PDF</a>
+                    <a href="#" class="btn" onclick="comingSoon(event)">Coming Soon</a>
                 </div>
+
                 <div class="download-card">
                     <h3>Stock Status Report</h3>
                     <p>Vaccine & Logistics Availability</p>
-                    <a href="#" class="btn">Download Report</a>
+                    <a href="#" class="btn" onclick="comingSoon(event)">Coming Soon</a>
                 </div>
             </div>
         </div>
@@ -306,7 +323,7 @@
         <div class="counter">
             <!-- hitwebcounter Code START -->
             <a href="https://www.hitwebcounter.com/character-counter" target="_blank" rel="noopener" title="Total Characters">
-            <img src="https://www.hitwebcounter.com/counter/counter.php?page=21512655&amp;style=0009&amp;nbdigits=5&amp;type=page" alt="Total Characters" decoding="async" style="border:0;max-width:100%;height:auto;" />
+                <img src="https://www.hitwebcounter.com/counter/counter.php?page=21512655&amp;style=0009&amp;nbdigits=5&amp;type=page" alt="Total Characters" decoding="async" style="border:0;max-width:100%;height:auto;" />
             </a>
             <br />
             <a href="https://www.hitwebcounter.com/" target="_blank" rel="noopener" style="font-family:Arial, Helvetica, sans-serif;font-size:10px;color:#ffffff;text-decoration:underline;font-weight:strong;">PageHits</a>
