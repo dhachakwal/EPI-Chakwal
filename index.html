@@ -44,13 +44,23 @@
             position: relative;
             text-align: center;
         }
-        .header img {
+        .header .logo-left {
             width: 70px;
             height: 70px;
             border-radius: 8px;
             object-fit: contain;
             position: absolute;
             left: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header .logo-right {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            object-fit: contain;
+            position: absolute;
+            right: 90px;
             top: 50%;
             transform: translateY(-50%);
         }
@@ -183,10 +193,11 @@
             .sidebar {
                 width: 100%;
             }
-            .header img {
+            .header .logo-left,
+            .header .logo-right {
                 position: static;
-                display: block;
-                margin: 0 auto 10px auto;
+                display: inline-block;
+                margin: 5px;
                 transform: none;
             }
         }
@@ -207,13 +218,14 @@
         </div>
     </div>
 
-    <!-- Header with Logo on Left + Title Center -->
+    <!-- Header with Logo on Left + Title Center + Logo on Right -->
     <div class="header">
-        <img src="favicon.png.png" alt="EPI Logo">
+        <img src="favicon.png.png" alt="EPI Logo Left" class="logo-left">
         <div class="header-content">
             <h1>EPI District Chakwal Dashboard</h1>
             <p>Official Website | Punjab Expanded Programme on Immunization</p>
         </div>
+        <img src="logo-right.png" alt="EPI Logo Right" class="logo-right">
     </div>
 
     <!-- Main Container -->
