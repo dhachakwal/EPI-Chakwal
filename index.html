@@ -40,23 +40,22 @@
             background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
             color: white;
             padding: 20px;
-            text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .header-content {
-            display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 15px;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
+            position: relative;
+            text-align: center;
         }
         .header img {
             width: 80px;
             height: 80px;
             border-radius: 8px;
             object-fit: contain;
+            position: absolute;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header-content {
+            text-align: center;
         }
         .header h1 {
             font-size: 26px;
@@ -184,9 +183,11 @@
             .sidebar {
                 width: 100%;
             }
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
+            .header img {
+                position: static;
+                display: block;
+                margin: 0 auto 10px auto;
+                transform: none;
             }
         }
     </style>
@@ -206,14 +207,12 @@
         </div>
     </div>
 
-    <!-- Header with Logo -->
+    <!-- Header with Logo on Left + Title Center -->
     <div class="header">
+        <img src="favicon.png.png" alt="EPI Logo">
         <div class="header-content">
-            <img src="favicon.png.png" alt="EPI Logo">
-            <div>
-                <h1>EPI District Chakwal Dashboard</h1>
-                <p>Official Website | Punjab Expanded Programme on Immunization</p>
-            </div>
+            <h1>EPI District Chakwal Dashboard</h1>
+            <p>Official Website | Punjab Expanded Programme on Immunization</p>
         </div>
     </div>
 
