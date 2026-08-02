@@ -586,7 +586,28 @@
         .result-value {
             font-weight: 700;
             color: #0d5c3d;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
+        
+        /* Copy Button Style */
+        .copy-btn {
+            background: #e8f5e9;
+            color: #0d5c3d;
+            border: 1px solid #1a8a5c;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .copy-btn:hover {
+            background: #0d5c3d;
+            color: white;
+        }
+
         /* Prominent Status Style */
         .status-badge-large {
             font-size: 20px !important;
@@ -857,23 +878,25 @@
         </div>
     </div>
 
-    <!-- Payment Status For NID Worker Modal Popup (Integrated Customized Excel Search) -->
+    <!-- Payment Status For NID Worker Modal Popup (Integrated Form for Enter/Android & Copy Option) -->
     <div class="modal-overlay" id="nidModal" onclick="if(event.target===this) closeNidModal()">
         <div class="modal-box" style="max-width:520px;">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
             <h2 style="color:#0d5c3d; margin-bottom:10px;">NID Worker Payment Search</h2>
             <p style="font-size:13px; color:#666; margin-bottom:15px;">Campaign muntakhib karen aur CNIC ya Account Number enter karen:</p>
             
-            <label style="display:block; text-align:left; font-size:12px; font-weight:700; color:#0d5c3d; margin-bottom:4px;">Select Campaign:</label>
-            <select id="fileSelect" class="nid-select-input">
-                <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
-                <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
-            </select>
+            <form onsubmit="handleNidSearchSubmit(event)">
+                <label style="display:block; text-align:left; font-size:12px; font-weight:700; color:#0d5c3d; margin-bottom:4px;">Select Campaign:</label>
+                <select id="fileSelect" class="nid-select-input">
+                    <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
+                    <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
+                </select>
 
-            <label style="display:block; text-align:left; font-size:12px; font-weight:700; color:#0d5c3d; margin-bottom:4px;">Enter CNIC / Account Number:</label>
-            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="e.g. 37201-XXXXXXX-X or Without Dashes" onkeyup="if(event.key==='Enter') performNidSearch()">
-            
-            <button class="btn" onclick="performNidSearch()" style="width:100%; margin-top:5px;">Search Payment Status 🔍</button>
+                <label style="display:block; text-align:left; font-size:12px; font-weight:700; color:#0d5c3d; margin-bottom:4px;">Enter CNIC / Account Number:</label>
+                <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="e.g. 37201-XXXXXXX-X or Without Dashes" autocomplete="off" enterkeyhint="search">
+                
+                <button type="submit" class="btn" style="width:100%; margin-top:5px;">Search Payment Status 🔍</button>
+            </form>
             
             <div id="nidSearchResult"></div>
         </div>
@@ -1261,6 +1284,30 @@
             return 'N/A';
         }
 
+        // Form Submit Handler for Enter / Mobile Search Button
+        function handleNidSearchSubmit(event) {
+            event.preventDefault();
+            performNidSearch();
+        }
+
+        // Copy Code Functionality
+        function copyPaymentCode(codeText, btnElement) {
+            if (!codeText || codeText === 'N/A') return;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const originalText = btnElement.innerText;
+                btnElement.innerText = "Copied! ✓";
+                btnElement.style.background = "#0d5c3d";
+                btnElement.style.color = "#ffffff";
+                setTimeout(() => {
+                    btnElement.innerText = originalText;
+                    btnElement.style.background = "#e8f5e9";
+                    btnElement.style.color = "#0d5c3d";
+                }, 2000);
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
         function performNidSearch() {
             const fileName = document.getElementById('fileSelect').value;
             const query = document.getElementById('nidSearchQuery').value.trim();
@@ -1312,6 +1359,8 @@
                         const paymentCode = getPropValue(foundRecord, ['XpinDraftNo', 'Xpin Draft No', 'Payment Code', 'Xpin']);
                         const status = getPropValue(foundRecord, ['Status']);
 
+                        let copyBtnHtml = (paymentCode !== 'N/A') ? `<button class="copy-btn" onclick="copyPaymentCode('${paymentCode}', this)">Copy 📋</button>` : '';
+
                         let html = `
                             <div class="result-card">
                                 <div class="result-row">
@@ -1344,7 +1393,9 @@
                                 </div>
                                 <div class="result-row">
                                     <span class="result-label">Payment Code:</span>
-                                    <span class="result-value">${paymentCode}</span>
+                                    <span class="result-value">
+                                        ${paymentCode} ${copyBtnHtml}
+                                    </span>
                                 </div>
                                 <div class="result-row" style="margin-top: 12px; border-bottom: none;">
                                     <span class="result-label" style="font-size: 16px;">Status:</span>
