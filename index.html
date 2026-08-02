@@ -393,6 +393,10 @@
         .contact-item a:hover {
             text-decoration: underline;
         }
+        .off-day {
+            color: #b03030;
+            font-weight: 600;
+        }
         .map-container {
             width: 100%;
             height: 200px;
@@ -687,6 +691,13 @@
                         <div class="contact-item">📧 <a href="mailto:epichakwal@gmail.com">epichakwal@gmail.com</a></div>
                         <div class="contact-item">📧 <a href="mailto:dsvchakwal@gmail.com">dsvchakwal@gmail.com</a></div>
                     </div>
+
+                    <div class="contact-group">
+                        <div class="contact-group-title">Working Hours</div>
+                        <div class="contact-item">🕒 <span><strong>Mon - Thu & Sat:</strong> 09:00 AM - 04:00 PM</span></div>
+                        <div class="contact-item">🕒 <span><strong>Friday:</strong> 09:00 AM - 01:00 PM</span></div>
+                        <div class="contact-item">🕒 <span><strong>Sunday:</strong> <span class="off-day">Closed (Off)</span></span></div>
+                    </div>
                 </div>
 
                 <!-- Location Map Card -->
@@ -785,896 +796,212 @@
         function closeOfficerModal() {
             document.getElementById('officerModal').classList.remove('active');
         }
-const hrData = {
-    "tehsilUCs": {
-        "Chakwal": [
-            {
-                "uc": "Baigal",
-                "population": 18913
+
+        const hrData = {
+            "tehsilUCs": {
+                "Chakwal": [
+                    { "uc": "Baigal", "population": 18913 },
+                    { "uc": "Balkassar", "population": 18861 },
+                    { "uc": "Balokassar", "population": 19475 },
+                    { "uc": "Bheen", "population": 14668 },
+                    { "uc": "Bhikari Kalan", "population": 17427 },
+                    { "uc": "Chak Malook", "population": 20602 },
+                    { "uc": "Chakumra", "population": 17923 },
+                    { "uc": "Chakwal 1", "population": 28971 },
+                    { "uc": "Chakwal 2", "population": 29613 },
+                    { "uc": "Chakwal 3", "population": 26768 },
+                    { "uc": "Chakwal 4", "population": 31107 },
+                    { "uc": "Chakwal 5", "population": 57309 },
+                    { "uc": "Choa Ganj Ali Shah", "population": 20128 },
+                    { "uc": "Dab", "population": 17439 },
+                    { "uc": "Dhab Khushal", "population": 20659 },
+                    { "uc": "Dhudial", "population": 22764 },
+                    { "uc": "Dhumman", "population": 17016 },
+                    { "uc": "Dullah", "population": 20085 },
+                    { "uc": "Jabairpur", "population": 21017 },
+                    { "uc": "Jand", "population": 17731 },
+                    { "uc": "Jand Khan Zada", "population": 19812 },
+                    { "uc": "Jaswal", "population": 21419 },
+                    { "uc": "Kariyalla", "population": 19447 },
+                    { "uc": "Karsal", "population": 19118 },
+                    { "uc": "Khai", "population": 21721 },
+                    { "uc": "Kot Chudhrian", "population": 20140 },
+                    { "uc": "Maingon", "population": 16864 },
+                    { "uc": "Mangwal", "population": 19112 },
+                    { "uc": "Mogla", "population": 15545 },
+                    { "uc": "Mulhal Mughlan", "population": 19506 },
+                    { "uc": "Mureed", "population": 20810 },
+                    { "uc": "Oudherwal", "population": 20819 },
+                    { "uc": "Padhshan", "population": 23090 },
+                    { "uc": "Saigalabad", "population": 27215 },
+                    { "uc": "Saral", "population": 22216 },
+                    { "uc": "Thanil Kamal", "population": 17758 },
+                    { "uc": "Warwal", "population": 22288 }
+                ],
+                "Talagang": [
+                    { "uc": "Bhillomar", "population": 23421 },
+                    { "uc": "Bhudial", "population": 27060 },
+                    { "uc": "Bidhar", "population": 23858 },
+                    { "uc": "Dhermond", "population": 23551 },
+                    { "uc": "Dhoular", "population": 22143 },
+                    { "uc": "Dhurnal", "population": 26817 },
+                    { "uc": "J.Shah Dilwar", "population": 25707 },
+                    { "uc": "Jasial", "population": 17051 },
+                    { "uc": "Jhatla", "population": 19586 },
+                    { "uc": "Kot Gullah", "population": 23079 },
+                    { "uc": "Kot Qazi", "population": 19404 },
+                    { "uc": "Kot Sarang", "population": 18603 },
+                    { "uc": "Lawa Rural", "population": 20562 },
+                    { "uc": "Lawa Urban", "population": 21024 },
+                    { "uc": "Leti", "population": 16022 },
+                    { "uc": "Malakwal", "population": 22522 },
+                    { "uc": "Multan Khurd", "population": 23759 },
+                    { "uc": "Nakka Kahoot", "population": 20650 },
+                    { "uc": "Niraghi", "population": 17413 },
+                    { "uc": "Pichnanad", "population": 22119 },
+                    { "uc": "Pira Phatial", "population": 22501 },
+                    { "uc": "Sagghar", "population": 22384 },
+                    { "uc": "Talagang East U-I", "population": 30264 },
+                    { "uc": "Talagang West U-II", "population": 27765 },
+                    { "uc": "Talagang U-III", "population": 23735 },
+                    { "uc": "Tamman", "population": 23175 },
+                    { "uc": "Tehi", "population": 23020 },
+                    { "uc": "Thoa Mehram Khan-I", "population": 17983 },
+                    { "uc": "Thoa Mehramkhan-II", "population": 18084 }
+                ],
+                "Kallar Kahar": [
+                    { "uc": "Bher Pur", "population": 21071 },
+                    { "uc": "Bhoun", "population": 23353 },
+                    { "uc": "Buchal Kallan", "population": 18232 },
+                    { "uc": "Buchal Khurd", "population": 17613 },
+                    { "uc": "Kallar Kahar", "population": 26383 },
+                    { "uc": "Khair Pur", "population": 22770 },
+                    { "uc": "Miani", "population": 23177 },
+                    { "uc": "Munara", "population": 21228 },
+                    { "uc": "Noor Pur", "population": 23236 }
+                ],
+                "Choa Saidan Shah": [
+                    { "uc": "Ara", "population": 15359 },
+                    { "uc": "Basharat", "population": 22638 },
+                    { "uc": "Choa Saiden Shah", "population": 28529 },
+                    { "uc": "Dalwal", "population": 25625 },
+                    { "uc": "Dandoot", "population": 18855 },
+                    { "uc": "Dulmial", "population": 27417 },
+                    { "uc": "Lehr Sultan Pur", "population": 20141 },
+                    { "uc": "Saloi", "population": 18793 }
+                ]
             },
-            {
-                "uc": "Balkassar",
-                "population": 18861
+            "vaccinators": {
+                "Chakwal": [
+                    { "uc": "Baigal", "name": "Riaz Hussain", "mobile": "0333-5412213", "vacant": false },
+                    { "uc": "Balkassar", "name": "Khuram Shahzad", "mobile": "0312-5583110", "vacant": false },
+                    { "uc": "Balokassar", "name": "Saad Ali", "mobile": "0330-1680526", "vacant": false },
+                    { "uc": "Bheen", "name": "Masood Iqbal", "mobile": "0344-5770539", "vacant": false },
+                    { "uc": "Bhikari Kalan", "name": "Tahir Abbas", "mobile": "0330-1680606", "vacant": false },
+                    { "uc": "Chak Malook", "name": "Umar Nawab", "mobile": "0307-9927497", "vacant": false },
+                    { "uc": "Chakumra", "name": "Umer Shehzad", "mobile": "0335-5221400", "vacant": false },
+                    { "uc": "Chakwal 1", "name": "Amjad Hussain", "mobile": "0333-5925931", "vacant": false },
+                    { "uc": "Chakwal 2", "name": "Areeba Israr", "mobile": "0000-0000000", "vacant": false },
+                    { "uc": "Chakwal 3", "name": "Adnan Roshan", "mobile": "0334-8705194", "vacant": false },
+                    { "uc": "Chakwal 4", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Chakwal 5", "name": "Syed Shams Ul Abbas", "mobile": "0333-5774743", "vacant": false },
+                    { "uc": "Choa Ganj Ali Shah", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Dab", "name": "Tajamul Hussain", "mobile": "0333-5621463", "vacant": false },
+                    { "uc": "Dhab Khushal", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Dhudial", "name": "Waleed Shehzad", "mobile": "0337-1420786", "vacant": false },
+                    { "uc": "Dhumman", "name": "Waqas Ali", "mobile": "0344-1509598", "vacant": false },
+                    { "uc": "Dullah", "name": "Tabassum Nazeer", "mobile": "0336-1594161", "vacant": false },
+                    { "uc": "Jabairpur", "name": "Usman Farooq", "mobile": "0345-5966822", "vacant": false },
+                    { "uc": "Jand", "name": "Qaiser Mehmood", "mobile": "0335-6050375", "vacant": false },
+                    { "uc": "Jand Khan Zada", "name": "Syed Shoaib Hussain", "mobile": "0306-5973816", "vacant": false },
+                    { "uc": "Jaswal", "name": "Asad Hanif", "mobile": "0333-1565979", "vacant": false },
+                    { "uc": "Kariyalla", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Karsal", "name": "Sajjad Hussain", "mobile": "0323-5941843", "vacant": false },
+                    { "uc": "Khai", "name": "Islam Sharif", "mobile": "0310-5982108", "vacant": false },
+                    { "uc": "Kot Chudhrian", "name": "Muhammad Rehan", "mobile": "0307-5083435", "vacant": false },
+                    { "uc": "Maingon", "name": "Shahzaib", "mobile": "0334-5124598", "vacant": false },
+                    { "uc": "Mangwal", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Mogla", "name": "Zain Islam", "mobile": "0324-9571388", "vacant": false },
+                    { "uc": "Mulhal Mughlan", "name": "Muhammad Saghir", "mobile": "0313-0564766", "vacant": false },
+                    { "uc": "Mureed", "name": "Yasir Ahmad Khan", "mobile": "0332-5006458", "vacant": false },
+                    { "uc": "Oudherwal", "name": "Arshad Ali Khan", "mobile": "0313-0814554", "vacant": false },
+                    { "uc": "Padhshan", "name": "Anas Farooq", "mobile": "0313-1564521", "vacant": false },
+                    { "uc": "Saigalabad", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Saral", "name": "Abdul Muneeb", "mobile": "0332-5409690", "vacant": false },
+                    { "uc": "Thanil Kamal", "name": "Haroon Ashraf", "mobile": "0335-1527024", "vacant": false },
+                    { "uc": "Warwal", "name": "Nouman Ahmad", "mobile": "0332-8857204", "vacant": false }
+                ],
+                "Talagang": [
+                    { "uc": "Bhillomar", "name": "Muhammad Abdullah", "mobile": "0315-5944264", "vacant": false },
+                    { "uc": "Bhudial", "name": "Waseem Ud Din", "mobile": "0301-3104021", "vacant": false },
+                    { "uc": "Bidhar", "name": "Muhammad Atif", "mobile": "0302-5114922", "vacant": false },
+                    { "uc": "Dhermond", "name": "Muhammad Saqib", "mobile": "0301-3108960", "vacant": false },
+                    { "uc": "Dhoular", "name": "Akash Rasheed", "mobile": "0311-6847007", "vacant": false },
+                    { "uc": "Dhurnal", "name": "Nafees Ahmad", "mobile": "0313-5943371", "vacant": false },
+                    { "uc": "J.Shah Dilwar", "name": "Asif Iqbal", "mobile": "0306-5588692", "vacant": false },
+                    { "uc": "Jasial", "name": "Faisal Ayub", "mobile": "0301-5230335", "vacant": false },
+                    { "uc": "Jhatla", "name": "Waheed Iqbal", "mobile": "0314-8027705", "vacant": false },
+                    { "uc": "Kot Gullah", "name": "Umiar Khalid", "mobile": "0342-5236302", "vacant": false },
+                    { "uc": "Kot Qazi", "name": "Muhammad Amar Sameem", "mobile": "0302-5469321", "vacant": false },
+                    { "uc": "Kot Sarang", "name": "Muhammad Afzaal", "mobile": "0320-9375321", "vacant": false },
+                    { "uc": "Lawa Rural", "name": "Shahid Iqbal", "mobile": "0305-8978360", "vacant": false },
+                    { "uc": "Lawa Urban", "name": "Muhammad Shabir", "mobile": "0308-5704103", "vacant": false },
+                    { "uc": "Leti", "name": "Muhammad Waqas", "mobile": "0302-5120606", "vacant": false },
+                    { "uc": "Malakwal", "name": "Muhammad Saqlain", "mobile": "0316-5567621", "vacant": false },
+                    { "uc": "Multan Khurd", "name": "Muhammad Sidique", "mobile": "0307-0055841", "vacant": false },
+                    { "uc": "Nakka Kahoot", "name": "Muhammad Ali", "mobile": "0333-0966014", "vacant": false },
+                    { "uc": "Niraghi", "name": "Mohsin Iqbal", "mobile": "0311-5174164", "vacant": false },
+                    { "uc": "Pichnanad", "name": "Saeed Ur Rehman", "mobile": "0331-5972653", "vacant": false },
+                    { "uc": "Pira Phatial", "name": "Amjad Mehmood", "mobile": "0312-3644633", "vacant": false },
+                    { "uc": "Sagghar", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Talagang East U-I", "name": "Ali Zeeshan Akbar", "mobile": "0334-5685093", "vacant": false },
+                    { "uc": "Talagang West U-II", "name": "Nouman Ali", "mobile": "0314-9318684", "vacant": false },
+                    { "uc": "Talagang U-III", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Tamman", "name": "Najeed Ul Zaman", "mobile": "0323-5152294", "vacant": false },
+                    { "uc": "Tehi", "name": "Farhan Shehzad", "mobile": "0345-5881586", "vacant": false },
+                    { "uc": "Thoa Mehram Khan-I", "name": "Khalid Iqbal", "mobile": "0306-5699816", "vacant": false },
+                    { "uc": "Thoa Mehramkhan-II", "name": "Vacant", "mobile": "N/A", "vacant": true }
+                ],
+                "Kallar Kahar": [
+                    { "uc": "Bher Pur", "name": "Khalil Ur Rehman", "mobile": "0327-5069418", "vacant": false },
+                    { "uc": "Bhoun", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Buchal Kallan", "name": "Prince Kashif Nouman", "mobile": "0313-5418054", "vacant": false },
+                    { "uc": "Buchal Khurd", "name": "Touseef Nouman", "mobile": "0314-9323163", "vacant": false },
+                    { "uc": "Kallar Kahar", "name": "Faheem Razzaq / Faryal Samman", "mobile": "0331-5992128", "vacant": false },
+                    { "uc": "Khair Pur", "name": "Khwair Iftikhar", "mobile": "0306-2260722", "vacant": false },
+                    { "uc": "Miani", "name": "Muhammad Sheraz", "mobile": "0316-8496515", "vacant": false },
+                    { "uc": "Munara", "name": "Azhar Javaid", "mobile": "0336-5848475", "vacant": false },
+                    { "uc": "Noor Pur", "name": "Muhammad Asif", "mobile": "0334-9274110", "vacant": false }
+                ],
+                "Choa Saidan Shah": [
+                    { "uc": "Ara", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Basharat", "name": "Abdul Basit", "mobile": "0341-5905065", "vacant": false },
+                    { "uc": "Choa Saiden Shah", "name": "Danish Firdous", "mobile": "0346-5868570", "vacant": false },
+                    { "uc": "Dalwal", "name": "Amir Nazir", "mobile": "0332-9874235", "vacant": false },
+                    { "uc": "Dandoot", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Dulmial", "name": "Muhammad Ejaz", "mobile": "0343-5541163", "vacant": false },
+                    { "uc": "Lehr Sultan Pur", "name": "Waqar Haider", "mobile": "0343-5541163", "vacant": false },
+                    { "uc": "Saloi", "name": "Vacant", "mobile": "N/A", "vacant": true }
+                ]
             },
-            {
-                "uc": "Balokassar",
-                "population": 19475
-            },
-            {
-                "uc": "Bheen",
-                "population": 14668
-            },
-            {
-                "uc": "Bhikari Kalan",
-                "population": 17427
-            },
-            {
-                "uc": "Chak Malook",
-                "population": 20602
-            },
-            {
-                "uc": "Chakumra",
-                "population": 17923
-            },
-            {
-                "uc": "Chakwal 1",
-                "population": 28971
-            },
-            {
-                "uc": "Chakwal 2",
-                "population": 29613
-            },
-            {
-                "uc": "Chakwal 3",
-                "population": 26768
-            },
-            {
-                "uc": "Chakwal 4",
-                "population": 31107
-            },
-            {
-                "uc": "Chakwal 5",
-                "population": 57309
-            },
-            {
-                "uc": "Choa Ganj Ali Shah",
-                "population": 20128
-            },
-            {
-                "uc": "Dab",
-                "population": 17439
-            },
-            {
-                "uc": "Dhab Khushal",
-                "population": 20659
-            },
-            {
-                "uc": "Dhudial",
-                "population": 22764
-            },
-            {
-                "uc": "Dhumman",
-                "population": 17016
-            },
-            {
-                "uc": "Dullah",
-                "population": 20085
-            },
-            {
-                "uc": "Jabairpur",
-                "population": 21017
-            },
-            {
-                "uc": "Jand",
-                "population": 17731
-            },
-            {
-                "uc": "Jand Khan Zada",
-                "population": 19812
-            },
-            {
-                "uc": "Jaswal",
-                "population": 21419
-            },
-            {
-                "uc": "Kariyalla",
-                "population": 19447
-            },
-            {
-                "uc": "Karsal",
-                "population": 19118
-            },
-            {
-                "uc": "Khai",
-                "population": 21721
-            },
-            {
-                "uc": "Kot Chudhrian",
-                "population": 20140
-            },
-            {
-                "uc": "Maingon",
-                "population": 16864
-            },
-            {
-                "uc": "Mangwal",
-                "population": 19112
-            },
-            {
-                "uc": "Mogla",
-                "population": 15545
-            },
-            {
-                "uc": "Mulhal Mughlan",
-                "population": 19506
-            },
-            {
-                "uc": "Mureed",
-                "population": 20810
-            },
-            {
-                "uc": "Oudherwal",
-                "population": 20819
-            },
-            {
-                "uc": "Padhshan",
-                "population": 23090
-            },
-            {
-                "uc": "Saigalabad",
-                "population": 27215
-            },
-            {
-                "uc": "Saral",
-                "population": 22216
-            },
-            {
-                "uc": "Thanil Kamal",
-                "population": 17758
-            },
-            {
-                "uc": "Warwal",
-                "population": 22288
+            "asvs": {
+                "Chakwal": [
+                    { "name": "Wajid Maqbool Raja", "mobile": "0342-5354759" },
+                    { "name": "Umer Shahzad", "mobile": "0335-5221400" }
+                ],
+                "Talagang": [
+                    { "name": "Qazi Muhammad Rashid", "mobile": "0308-7772112" },
+                    { "name": "Abdul Wahid", "mobile": "0333-5781386" },
+                    { "name": "Asif Iqbal", "mobile": "0306-5588692" }
+                ],
+                "Kallar Kahar": [
+                    { "name": "Zafar Iqbal", "mobile": "0313-6752321" }
+                ],
+                "Choa Saidan Shah": [
+                    { "name": "Ansar Mehmood", "mobile": "0334-5666948" }
+                ]
             }
-        ],
-        "Talagang": [
-            {
-                "uc": "Bhillomar",
-                "population": 23421
-            },
-            {
-                "uc": "Bhudial",
-                "population": 27060
-            },
-            {
-                "uc": "Bidhar",
-                "population": 23858
-            },
-            {
-                "uc": "Dhermond",
-                "population": 23551
-            },
-            {
-                "uc": "Dhoular",
-                "population": 22143
-            },
-            {
-                "uc": "Dhurnal",
-                "population": 26817
-            },
-            {
-                "uc": "J.Shah Dilwar",
-                "population": 25707
-            },
-            {
-                "uc": "Jasial",
-                "population": 17051
-            },
-            {
-                "uc": "Jhatla",
-                "population": 19586
-            },
-            {
-                "uc": "Kot Gullah",
-                "population": 23079
-            },
-            {
-                "uc": "Kot Qazi",
-                "population": 19404
-            },
-            {
-                "uc": "Kot Sarang",
-                "population": 18603
-            },
-            {
-                "uc": "Lawa Rural",
-                "population": 20562
-            },
-            {
-                "uc": "Lawa Urban",
-                "population": 21024
-            },
-            {
-                "uc": "Leti",
-                "population": 16022
-            },
-            {
-                "uc": "Malakwal",
-                "population": 22522
-            },
-            {
-                "uc": "Multan Khurd",
-                "population": 23759
-            },
-            {
-                "uc": "Nakka Kahoot",
-                "population": 20650
-            },
-            {
-                "uc": "Niraghi",
-                "population": 17413
-            },
-            {
-                "uc": "Pichnanad",
-                "population": 22119
-            },
-            {
-                "uc": "Pira Phatial",
-                "population": 22501
-            },
-            {
-                "uc": "Sagghar",
-                "population": 22384
-            },
-            {
-                "uc": "Talagang East U-I",
-                "population": 30264
-            },
-            {
-                "uc": "Talagang West U-II",
-                "population": 27765
-            },
-            {
-                "uc": "Talagang U-III",
-                "population": 23735
-            },
-            {
-                "uc": "Tamman",
-                "population": 23175
-            },
-            {
-                "uc": "Tehi",
-                "population": 23020
-            },
-            {
-                "uc": "Thoa Mehram Khan-I",
-                "population": 17983
-            },
-            {
-                "uc": "Thoa Mehramkhan-II",
-                "population": 18084
-            }
-        ],
-        "Kallar Kahar": [
-            {
-                "uc": "Bher Pur",
-                "population": 21071
-            },
-            {
-                "uc": "Bhoun",
-                "population": 23353
-            },
-            {
-                "uc": "Buchal Kallan",
-                "population": 18232
-            },
-            {
-                "uc": "Buchal Khurd",
-                "population": 17613
-            },
-            {
-                "uc": "Kallar Kahar",
-                "population": 26383
-            },
-            {
-                "uc": "Khair Pur",
-                "population": 22770
-            },
-            {
-                "uc": "Miani",
-                "population": 23177
-            },
-            {
-                "uc": "Munara",
-                "population": 21228
-            },
-            {
-                "uc": "Noor Pur",
-                "population": 23236
-            }
-        ],
-        "Choa Saidan Shah": [
-            {
-                "uc": "Ara",
-                "population": 15359
-            },
-            {
-                "uc": "Basharat",
-                "population": 22638
-            },
-            {
-                "uc": "Choa Saiden Shah",
-                "population": 28529
-            },
-            {
-                "uc": "Dalwal",
-                "population": 25625
-            },
-            {
-                "uc": "Dandoot",
-                "population": 18855
-            },
-            {
-                "uc": "Dulmial",
-                "population": 27417
-            },
-            {
-                "uc": "Lehr Sultan Pur",
-                "population": 20141
-            },
-            {
-                "uc": "Saloi",
-                "population": 18793
-            }
-        ]
-    },
-    "vaccinators": {
-        "Chakwal": [
-            {
-                "uc": "Baigal",
-                "name": "Riaz Hussain",
-                "mobile": "0333-5412213",
-                "vacant": false
-            },
-            {
-                "uc": "Balkassar",
-                "name": "Khuram Shahzad",
-                "mobile": "0312-5583110",
-                "vacant": false
-            },
-            {
-                "uc": "Balokassar",
-                "name": "Saad Ali",
-                "mobile": "0330-1680526",
-                "vacant": false
-            },
-            {
-                "uc": "Bheen",
-                "name": "Masood Iqbal",
-                "mobile": "0344-5770539",
-                "vacant": false
-            },
-            {
-                "uc": "Bhikari Kalan",
-                "name": "Tahir Abbas",
-                "mobile": "0330-1680606",
-                "vacant": false
-            },
-            {
-                "uc": "Chak Malook",
-                "name": "Umar Nawab",
-                "mobile": "0307-9927497",
-                "vacant": false
-            },
-            {
-                "uc": "Chakumra",
-                "name": "Umer Shehzad",
-                "mobile": "0335-5221400",
-                "vacant": false
-            },
-            {
-                "uc": "Chakwal 1",
-                "name": "Amjad Hussain",
-                "mobile": "0333-5925931",
-                "vacant": false
-            },
-            {
-                "uc": "Chakwal 2",
-                "name": "Areeba Israr",
-                "mobile": "0000-0000000",
-                "vacant": false
-            },
-            {
-                "uc": "Chakwal 3",
-                "name": "Adnan Roshan",
-                "mobile": "0334-8705194",
-                "vacant": false
-            },
-            {
-                "uc": "Chakwal 4",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Chakwal 5",
-                "name": "Syed Shams Ul Abbas",
-                "mobile": "0333-5774743",
-                "vacant": false
-            },
-            {
-                "uc": "Choa Ganj Ali Shah",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Dab",
-                "name": "Tajamul Hussain",
-                "mobile": "0333-5621463",
-                "vacant": false
-            },
-            {
-                "uc": "Dhab Khushal",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Dhudial",
-                "name": "Waleed Shehzad",
-                "mobile": "0337-1420786",
-                "vacant": false
-            },
-            {
-                "uc": "Dhumman",
-                "name": "Waqas Ali",
-                "mobile": "0344-1509598",
-                "vacant": false
-            },
-            {
-                "uc": "Dullah",
-                "name": "Tabassum Nazeer",
-                "mobile": "0336-1594161",
-                "vacant": false
-            },
-            {
-                "uc": "Jabairpur",
-                "name": "Usman Farooq",
-                "mobile": "0345-5966822",
-                "vacant": false
-            },
-            {
-                "uc": "Jand",
-                "name": "Qaiser Mehmood",
-                "mobile": "0335-6050375",
-                "vacant": false
-            },
-            {
-                "uc": "Jand Khan Zada",
-                "name": "Syed Shoaib Hussain",
-                "mobile": "0306-5973816",
-                "vacant": false
-            },
-            {
-                "uc": "Jaswal",
-                "name": "Asad Hanif",
-                "mobile": "0333-1565979",
-                "vacant": false
-            },
-            {
-                "uc": "Kariyalla",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Karsal",
-                "name": "Sajjad Hussain",
-                "mobile": "0323-5941843",
-                "vacant": false
-            },
-            {
-                "uc": "Khai",
-                "name": "Islam Sharif",
-                "mobile": "0310-5982108",
-                "vacant": false
-            },
-            {
-                "uc": "Kot Chudhrian",
-                "name": "Muhammad Rehan",
-                "mobile": "0307-5083435",
-                "vacant": false
-            },
-            {
-                "uc": "Maingon",
-                "name": "Shahzaib",
-                "mobile": "0334-5124598",
-                "vacant": false
-            },
-            {
-                "uc": "Mangwal",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Mogla",
-                "name": "Zain Islam",
-                "mobile": "0324-9571388",
-                "vacant": false
-            },
-            {
-                "uc": "Mulhal Mughlan",
-                "name": "Muhammad Saghir",
-                "mobile": "0313-0564766",
-                "vacant": false
-            },
-            {
-                "uc": "Mureed",
-                "name": "Yasir Ahmad Khan",
-                "mobile": "0332-5006458",
-                "vacant": false
-            },
-            {
-                "uc": "Oudherwal",
-                "name": "Arshad Ali Khan",
-                "mobile": "0313-0814554",
-                "vacant": false
-            },
-            {
-                "uc": "Padhshan",
-                "name": "Anas Farooq",
-                "mobile": "0313-1564521",
-                "vacant": false
-            },
-            {
-                "uc": "Saigalabad",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Saral",
-                "name": "Abdul Muneeb",
-                "mobile": "0332-5409690",
-                "vacant": false
-            },
-            {
-                "uc": "Thanil Kamal",
-                "name": "Haroon Ashraf",
-                "mobile": "0335-1527024",
-                "vacant": false
-            },
-            {
-                "uc": "Warwal",
-                "name": "Nouman Ahmad",
-                "mobile": "0332-8857204",
-                "vacant": false
-            }
-        ],
-        "Talagang": [
-            {
-                "uc": "Bhillomar",
-                "name": "Muhammad Abdullah",
-                "mobile": "0315-5944264",
-                "vacant": false
-            },
-            {
-                "uc": "Bhudial",
-                "name": "Waseem Ud Din",
-                "mobile": "0301-3104021",
-                "vacant": false
-            },
-            {
-                "uc": "Bidhar",
-                "name": "Muhammad Atif",
-                "mobile": "0302-5114922",
-                "vacant": false
-            },
-            {
-                "uc": "Dhermond",
-                "name": "Muhammad Saqib",
-                "mobile": "0301-3108960",
-                "vacant": false
-            },
-            {
-                "uc": "Dhoular",
-                "name": "Akash Rasheed",
-                "mobile": "0311-6847007",
-                "vacant": false
-            },
-            {
-                "uc": "Dhurnal",
-                "name": "Nafees Ahmad",
-                "mobile": "0313-5943371",
-                "vacant": false
-            },
-            {
-                "uc": "J.Shah Dilwar",
-                "name": "Asif Iqbal",
-                "mobile": "0306-5588692",
-                "vacant": false
-            },
-            {
-                "uc": "Jasial",
-                "name": "Faisal Ayub",
-                "mobile": "0301-5230335",
-                "vacant": false
-            },
-            {
-                "uc": "Jhatla",
-                "name": "Waheed Iqbal",
-                "mobile": "0314-8027705",
-                "vacant": false
-            },
-            {
-                "uc": "Kot Gullah",
-                "name": "Umiar Khalid",
-                "mobile": "0342-5236302",
-                "vacant": false
-            },
-            {
-                "uc": "Kot Qazi",
-                "name": "Muhammad Amar Sameem",
-                "mobile": "0302-5469321",
-                "vacant": false
-            },
-            {
-                "uc": "Kot Sarang",
-                "name": "Muhammad Afzaal",
-                "mobile": "0320-9375321",
-                "vacant": false
-            },
-            {
-                "uc": "Lawa Rural",
-                "name": "Shahid Iqbal",
-                "mobile": "0305-8978360",
-                "vacant": false
-            },
-            {
-                "uc": "Lawa Urban",
-                "name": "Muhammad Shabir",
-                "mobile": "0308-5704103",
-                "vacant": false
-            },
-            {
-                "uc": "Leti",
-                "name": "Muhammad Waqas",
-                "mobile": "0302-5120606",
-                "vacant": false
-            },
-            {
-                "uc": "Malakwal",
-                "name": "Muhammad Saqlain",
-                "mobile": "0316-5567621",
-                "vacant": false
-            },
-            {
-                "uc": "Multan Khurd",
-                "name": "Muhammad Sidique",
-                "mobile": "0307-0055841",
-                "vacant": false
-            },
-            {
-                "uc": "Nakka Kahoot",
-                "name": "Muhammad Ali",
-                "mobile": "0333-0966014",
-                "vacant": false
-            },
-            {
-                "uc": "Niraghi",
-                "name": "Mohsin Iqbal",
-                "mobile": "0311-5174164",
-                "vacant": false
-            },
-            {
-                "uc": "Pichnanad",
-                "name": "Saeed Ur Rehman",
-                "mobile": "0331-5972653",
-                "vacant": false
-            },
-            {
-                "uc": "Pira Phatial",
-                "name": "Amjad Mehmood",
-                "mobile": "0312-3644633",
-                "vacant": false
-            },
-            {
-                "uc": "Sagghar",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Talagang East U-I",
-                "name": "Ali Zeeshan Akbar",
-                "mobile": "0334-5685093",
-                "vacant": false
-            },
-            {
-                "uc": "Talagang West U-II",
-                "name": "Nouman Ali",
-                "mobile": "0314-9318684",
-                "vacant": false
-            },
-            {
-                "uc": "Talagang U-III",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Tamman",
-                "name": "Najeed Ul Zaman",
-                "mobile": "0323-5152294",
-                "vacant": false
-            },
-            {
-                "uc": "Tehi",
-                "name": "Farhan Shehzad",
-                "mobile": "0345-5881586",
-                "vacant": false
-            },
-            {
-                "uc": "Thoa Mehram Khan-I",
-                "name": "Khalid Iqbal",
-                "mobile": "0306-5699816",
-                "vacant": false
-            },
-            {
-                "uc": "Thoa Mehramkhan-II",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            }
-        ],
-        "Kallar Kahar": [
-            {
-                "uc": "Bher Pur",
-                "name": "Khalil Ur Rehman",
-                "mobile": "0327-5069418",
-                "vacant": false
-            },
-            {
-                "uc": "Bhoun",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Buchal Kallan",
-                "name": "Prince Kashif Nouman",
-                "mobile": "0313-5418054",
-                "vacant": false
-            },
-            {
-                "uc": "Buchal Khurd",
-                "name": "Touseef Nouman",
-                "mobile": "0314-9323163",
-                "vacant": false
-            },
-            {
-                "uc": "Kallar Kahar",
-                "name": "Faheem Razzaq / Faryal Samman",
-                "mobile": "0331-5992128",
-                "vacant": false
-            },
-            {
-                "uc": "Khair Pur",
-                "name": "Khwair Iftikhar",
-                "mobile": "0306-2260722",
-                "vacant": false
-            },
-            {
-                "uc": "Miani",
-                "name": "Muhammad Sheraz",
-                "mobile": "0316-8496515",
-                "vacant": false
-            },
-            {
-                "uc": "Munara",
-                "name": "Azhar Javaid",
-                "mobile": "0336-5848475",
-                "vacant": false
-            },
-            {
-                "uc": "Noor Pur",
-                "name": "Muhammad Asif",
-                "mobile": "0334-9274110",
-                "vacant": false
-            }
-        ],
-        "Choa Saidan Shah": [
-            {
-                "uc": "Ara",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Basharat",
-                "name": "Abdul Basit",
-                "mobile": "0341-5905065",
-                "vacant": false
-            },
-            {
-                "uc": "Choa Saiden Shah",
-                "name": "Danish Firdous",
-                "mobile": "0346-5868570",
-                "vacant": false
-            },
-            {
-                "uc": "Dalwal",
-                "name": "Amir Nazir",
-                "mobile": "0332-9874235",
-                "vacant": false
-            },
-            {
-                "uc": "Dandoot",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            },
-            {
-                "uc": "Dulmial",
-                "name": "Muhammad Ejaz",
-                "mobile": "0343-5541163",
-                "vacant": false
-            },
-            {
-                "uc": "Lehr Sultan Pur",
-                "name": "Waqar Haider",
-                "mobile": "0343-5541163",
-                "vacant": false
-            },
-            {
-                "uc": "Saloi",
-                "name": "Vacant",
-                "mobile": "N/A",
-                "vacant": true
-            }
-        ]
-    },
-    "asvs": {
-        "Chakwal": [
-            {
-                "name": "Wajid Maqbool Raja",
-                "mobile": "0342-5354759"
-            },
-            {
-                "name": "Umer Shahzad",
-                "mobile": "0335-5221400"
-            }
-        ],
-        "Talagang": [
-            {
-                "name": "Qazi Muhammad Rashid",
-                "mobile": "0308-7772112"
-            },
-            {
-                "name": "Abdul Wahid",
-                "mobile": "0333-5781386"
-            },
-            {
-                "name": "Asif Iqbal",
-                "mobile": "0306-5588692"
-            }
-        ],
-        "Kallar Kahar": [
-            {
-                "name": "Zafar Iqbal",
-                "mobile": "0313-6752321"
-            }
-        ],
-        "Choa Saidan Shah": [
-            {
-                "name": "Ansar Mehmood",
-                "mobile": "0334-5666948"
-            }
-        ]
-    }
-};
+        };
 
         const TEHSIL_ORDER = ["Chakwal", "Talagang", "Kallar Kahar", "Choa Saidan Shah"];
 
