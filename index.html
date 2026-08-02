@@ -201,6 +201,8 @@
             font-size: 14px;
             font-weight: 500;
             transition: background 0.3s;
+            cursor: pointer;
+            border: none;
         }
         .btn:hover {
             background: #09402b;
@@ -532,6 +534,23 @@
             color: #0d5c3d;
             font-weight: 600;
         }
+
+        /* NID Worker Search Input & Popup Custom Styles */
+        .nid-search-input {
+            width: 100%;
+            padding: 11px 15px;
+            border: 2px solid #0d5c3d;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .nid-search-input:focus {
+            border-color: #1a8a5c;
+            box-shadow: 0 0 5px rgba(26, 138, 92, 0.3);
+        }
+
         /* Footer */
         .footer {
             background: #0d5c3d;
@@ -652,6 +671,16 @@
                 <div class="stat-card clickable" onclick="openStatModal('asvs')">
                     <div class="stat-number">7</div>
                     <div class="stat-label">ASVs</div>
+                </div>
+            </div>
+
+            <!-- NEW SECTION: Payment Status For NID Worker -->
+            <div class="section-title">Payment Status For NID Worker</div>
+            <div class="download-grid" style="grid-template-columns: 1fr;">
+                <div class="download-card">
+                    <h3>NID Workers Payment Verification</h3>
+                    <p>Check campaign payment and disbursement details for NID Workers</p>
+                    <button class="btn" onclick="openNidModal()">Check Payment Status 💳</button>
                 </div>
             </div>
 
@@ -783,6 +812,20 @@
             <button class="modal-close" onclick="closeStatModal()">&times;</button>
             <div class="stat-modal-title" id="stat-modal-title"></div>
             <div class="stat-modal-body" id="stat-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Payment Status For NID Worker Modal Popup -->
+    <div class="modal-overlay" id="nidModal" onclick="if(event.target===this) closeNidModal()">
+        <div class="modal-box" style="max-width:480px;">
+            <button class="modal-close" onclick="closeNidModal()">&times;</button>
+            <h2 style="color:#0d5c3d; margin-bottom:15px;">Search NID Worker Payment</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">Enter CNIC (e.g. 37201-XXXXXXX-X), CNIC without dashes, or Account No below:</p>
+            
+            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="Enter CNIC or Account No...">
+            <button class="btn" onclick="performNidSearch()" style="width:100%;">Search Payment Status 🔍</button>
+            
+            <div id="nidSearchResult" style="margin-top:20px; text-align:left; font-size:13.5px; color:#333;"></div>
         </div>
     </div>
 
@@ -1139,6 +1182,33 @@
 
         function closeStatModal() {
             document.getElementById('statModal').classList.remove('active');
+        }
+
+        /* NID Worker Payment Modal Controls */
+        function openNidModal() {
+            document.getElementById('nidModal').classList.add('active');
+            document.getElementById('nidSearchQuery').value = '';
+            document.getElementById('nidSearchResult').innerHTML = '';
+        }
+
+        function closeNidModal() {
+            document.getElementById('nidModal').classList.remove('active');
+        }
+
+        function performNidSearch() {
+            const query = document.getElementById('nidSearchQuery').value.trim();
+            const resultDiv = document.getElementById('nidSearchResult');
+            
+            if (!query) {
+                resultDiv.innerHTML = '<div style="color:red; text-align:center;">براہ کرم CNIC یا اکاؤنٹ نمبر درج کریں!</div>';
+                return;
+            }
+
+            // Search logic interface placeholder
+            resultDiv.innerHTML = '<div style="background:#f0f7f4; padding:12px; border-radius:8px; border:1px solid #1a8a5c;">' +
+                                  '<strong>Search Query:</strong> ' + query + '<br>' +
+                                  '<strong>Status:</strong> Search functionality ready for integration.' +
+                                  '</div>';
         }
 
     </script>
