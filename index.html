@@ -176,6 +176,160 @@
         .btn:hover {
             background: #09402b;
         }
+        /* HR Overview Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-bottom: 4px solid #1a8a5c;
+        }
+        .stat-card .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0d5c3d;
+        }
+        .stat-card .stat-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        /* Officers */
+        .officers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+        .officer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 4px solid #0d5c3d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .officer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .officer-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0 auto 12px;
+            overflow: hidden;
+        }
+        .officer-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .officer-card h3 {
+            color: #0d5c3d;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        .officer-card .officer-designation {
+            font-size: 12.5px;
+            color: #666;
+            line-height: 1.4;
+        }
+        /* Officer Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 14px;
+            max-width: 420px;
+            width: 100%;
+            padding: 30px 25px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 22px;
+            color: #999;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 auto 15px;
+            overflow: hidden;
+        }
+        .modal-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .modal-box h2 {
+            color: #0d5c3d;
+            font-size: 19px;
+            margin-bottom: 6px;
+        }
+        .modal-designation {
+            font-size: 13.5px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .modal-contact {
+            background: #f0f7f4;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            color: #0d5c3d;
+            font-weight: 600;
+        }
         /* Footer */
         .footer {
             background: #0d5c3d;
@@ -262,6 +416,49 @@
 
         <!-- Main Content -->
         <div class="main-content">
+            <div class="section-title">HR Overview - District Chakwal</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Total Tehsils</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">83</div>
+                    <div class="stat-label">Total UCs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">78</div>
+                    <div class="stat-label">Vaccinators</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">7</div>
+                    <div class="stat-label">ASVs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">DSV</div>
+                </div>
+            </div>
+
+            <div class="section-title">Key Officers</div>
+            <div class="officers-grid">
+                <div class="officer-card" onclick="openOfficerModal('ceo')">
+                    <div class="officer-avatar" id="avatar-ceo">SA</div>
+                    <h3>Dr. Saeed Akhtar</h3>
+                    <div class="officer-designation">Chief Executive Officer, District Health Authority Chakwal</div>
+                </div>
+                <div class="officer-card" onclick="openOfficerModal('dho')">
+                    <div class="officer-avatar" id="avatar-dho">AH</div>
+                    <h3>Dr. Ali Ammar Najaf Habib</h3>
+                    <div class="officer-designation">District Health Officer Preventive Services, DHA Chakwal</div>
+                </div>
+                <div class="officer-card" onclick="openOfficerModal('dsv')">
+                    <div class="officer-avatar" id="avatar-dsv">SA</div>
+                    <h3>Syed Asad Abbas</h3>
+                    <div class="officer-designation">District Superintendent Vaccination, DHA Chakwal</div>
+                </div>
+            </div>
+
             <div class="section-title">Official Downloads & Reports</div>
             <div class="download-grid">
                 <div class="download-card">
@@ -298,6 +495,17 @@
         </div>
     </div>
 
+    <!-- Officer Detail Modal -->
+    <div class="modal-overlay" id="officerModal" onclick="if(event.target===this) closeOfficerModal()">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeOfficerModal()">&times;</button>
+            <div class="modal-avatar" id="modal-avatar">SA</div>
+            <h2 id="modal-name"></h2>
+            <div class="modal-designation" id="modal-designation"></div>
+            <div class="modal-contact" id="modal-contact"></div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <div class="footer">
         © 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>
@@ -313,5 +521,49 @@
             <!-- hitwebcounter Code END -->
         </div>
     </div>
+    <script>
+        const officerData = {
+            ceo: {
+                initials: "SA",
+                name: "Dr. Saeed Akhtar",
+                designation: "Chief Executive Officer, District Health Authority Chakwal",
+                contact: "0301-5339925",
+                photo: ""
+            },
+            dho: {
+                initials: "AH",
+                name: "Dr. Ali Ammar Najaf Habib",
+                designation: "District Health Officer Preventive Services, District Health Authority Chakwal",
+                contact: "0331-5897203",
+                photo: ""
+            },
+            dsv: {
+                initials: "SA",
+                name: "Syed Asad Abbas",
+                designation: "District Superintendent Vaccination, District Health Authority Chakwal",
+                contact: "0333-5902949",
+                photo: ""
+            }
+        };
+
+        function openOfficerModal(id) {
+            const officer = officerData[id];
+            if (!officer) return;
+            document.getElementById('modal-name').textContent = officer.name;
+            document.getElementById('modal-designation').textContent = officer.designation;
+            document.getElementById('modal-contact').textContent = 'Contact: ' + officer.contact;
+            const modalAvatar = document.getElementById('modal-avatar');
+            if (officer.photo) {
+                modalAvatar.innerHTML = '<img src="' + officer.photo + '" alt="' + officer.name + '">';
+            } else {
+                modalAvatar.textContent = officer.initials;
+            }
+            document.getElementById('officerModal').classList.add('active');
+        }
+
+        function closeOfficerModal() {
+            document.getElementById('officerModal').classList.remove('active');
+        }
+    </script>
 </body>
 </html>
