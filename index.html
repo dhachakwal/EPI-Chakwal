@@ -878,7 +878,7 @@
         </div>
     </div>
 
-    <!-- Payment Status For NID Worker Modal Popup (Integrated Form for Enter/Android & Copy Option) -->
+    <!-- Payment Status For NID Worker Modal Popup -->
     <div class="modal-overlay" id="nidModal" onclick="if(event.target===this) closeNidModal()">
         <div class="modal-box" style="max-width:520px;">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
@@ -1255,7 +1255,7 @@
             document.getElementById('statModal').classList.remove('active');
         }
 
-        /* NID Worker Payment Modal & Specialized Column Extraction Search */
+        /* NID Worker Payment Modal & Column Extraction Search */
         function openNidModal() {
             document.getElementById('nidModal').classList.add('active');
             document.getElementById('nidSearchQuery').value = '';
@@ -1353,8 +1353,7 @@
                         const tehsil = getPropValue(foundRecord, ['Tehsil']);
                         const uc = getPropValue(foundRecord, ['UC', 'Union Council']);
                         const position = getPropValue(foundRecord, ['Position', 'Designation']);
-                        const paymentMethod = getPropValue(foundRecord, ['PaymentMode', 'Payment Method', 'PaymentMethod']);
-                        const paymentMode = getPropValue(foundRecord, ['Payment Mode', 'Mode']);
+                        const paymentMethod = getPropValue(foundRecord, ['PaymentMode', 'Payment Method', 'PaymentMethod', 'Payment Mode', 'Mode']);
                         const amount = getPropValue(foundRecord, ['Amount']);
                         const paymentCode = getPropValue(foundRecord, ['XpinDraftNo', 'Xpin Draft No', 'Payment Code', 'Xpin']);
                         const status = getPropValue(foundRecord, ['Status']);
@@ -1382,10 +1381,6 @@
                                 <div class="result-row" style="margin-top: 12px;">
                                     <span class="result-label">Payment Method:</span>
                                     <span class="result-value">${paymentMethod}</span>
-                                </div>
-                                <div class="result-row">
-                                    <span class="result-label">Payment Mode:</span>
-                                    <span class="result-value">${paymentMode}</span>
                                 </div>
                                 <div class="result-row">
                                     <span class="result-label">Amount:</span>
