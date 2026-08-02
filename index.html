@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI District Chakwal Dashboard | Official Website</title>
     <link rel="icon" href="favicon.png.png" type="image/png">
+    <!-- SheetJS for Excel Reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -535,20 +537,54 @@
             font-weight: 600;
         }
 
-        /* NID Worker Search Input & Popup Custom Styles */
-        .nid-search-input {
+        /* NID Worker Search Input & Dropdown Styles */
+        .nid-select-input, .nid-search-input {
             width: 100%;
             padding: 11px 15px;
             border: 2px solid #0d5c3d;
             border-radius: 6px;
             font-size: 14px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             outline: none;
+            background: white;
             transition: border-color 0.3s;
         }
-        .nid-search-input:focus {
+        .nid-search-input:focus, .nid-select-input:focus {
             border-color: #1a8a5c;
             box-shadow: 0 0 5px rgba(26, 138, 92, 0.3);
+        }
+
+        /* Result Card Styles */
+        .result-card {
+            background-color: #ffffff;
+            border: 1px solid #1a8a5c;
+            border-left: 5px solid #0d5c3d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: left;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13.5px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 4px;
+        }
+        .result-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .result-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .result-value {
+            font-weight: 700;
+            color: #0d5c3d;
         }
 
         /* Footer */
@@ -599,7 +635,7 @@
         </div>
     </div>
 
-    <!-- Header with Logo on Left + Title Center + Logo on Right -->
+    <!-- Header -->
     <div class="header">
         <img src="favicon.png.png" alt="EPI Logo Left" class="logo-left">
         <div class="header-content">
@@ -611,12 +647,10 @@
 
     <!-- Main Container -->
     <div class="container">
-        <!-- Left Sidebar News (With Image Preview Click) -->
+        <!-- Left Sidebar News -->
         <div class="sidebar">
             <div class="sidebar-header">Department News</div>
             <div class="news-list">
-                
-                <!-- News 1: Choa Saidan Shah & Kallar Kahar -->
                 <div class="news-item">
                     <div class="news-date">30th July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) is Successfully Conducted at CEO Office DHA Chakwal.</div>
@@ -627,7 +661,6 @@
                     </div>
                 </div>
 
-                <!-- News 2: Talagang -->
                 <div class="news-item">
                     <div class="news-date">31st July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) is Successfully Conducted at CEO Office DHA Chakwal.</div>
@@ -638,7 +671,6 @@
                     </div>
                 </div>
 
-                <!-- News 3: Chakwal -->
                 <div class="news-item">
                     <div class="news-date">1st August 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) is Successfully Conducted at CEO Office DHA Chakwal.</div>
@@ -648,7 +680,6 @@
                         <img src="CKL-3.jpeg" alt="Chakwal Meeting 3" onclick="openImgModal(this.src)">
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -674,7 +705,7 @@
                 </div>
             </div>
 
-            <!-- NEW SECTION: Payment Status For NID Worker -->
+            <!-- Payment Status For NID Worker -->
             <div class="section-title">Payment Status For NID Worker</div>
             <div class="download-grid" style="grid-template-columns: 1fr;">
                 <div class="download-card">
@@ -746,7 +777,6 @@
             <!-- Contact & Location Section -->
             <div class="section-title">Contact & Office Location</div>
             <div class="contact-location-grid">
-                <!-- Contact Us Card -->
                 <div class="contact-card">
                     <h3>✉️ Official Contact Information</h3>
                     
@@ -771,7 +801,6 @@
                     </div>
                 </div>
 
-                <!-- Location Map Card -->
                 <div class="location-card">
                     <h3>📍 Office Location Map</h3>
                     <div class="map-container">
@@ -782,7 +811,7 @@
                             referrerpolicy="no-referrer-when-downgrade">
                         </iframe>
                     </div>
-                    <a href="https://maps.app.goo.gl/p67duhLUHgWmwmBX7" target="_blank" class="location-btn"> Open in Google Maps 🗺️</a>
+                    <a href="https://maps.app.google.com/p67duhLUHgWmwmBX7" target="_blank" class="location-btn"> Open in Google Maps 🗺️</a>
                 </div>
             </div>
 
@@ -815,17 +844,25 @@
         </div>
     </div>
 
-    <!-- Payment Status For NID Worker Modal Popup -->
+    <!-- Payment Status For NID Worker Modal Popup (Integrated Excel Search) -->
     <div class="modal-overlay" id="nidModal" onclick="if(event.target===this) closeNidModal()">
-        <div class="modal-box" style="max-width:480px;">
+        <div class="modal-box" style="max-width:520px;">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
-            <h2 style="color:#0d5c3d; margin-bottom:15px;">Search NID Worker Payment</h2>
-            <p style="font-size:13px; color:#666; margin-bottom:15px;">Enter CNIC (e.g. 37201-XXXXXXX-X), CNIC without dashes, or Account No below:</p>
+            <h2 style="color:#0d5c3d; margin-bottom:10px;">NID Worker Payment Search</h2>
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">Campaign muntakhib karen aur CNIC ya Account Number enter karen:</p>
             
-            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="Enter CNIC or Account No...">
-            <button class="btn" onclick="performNidSearch()" style="width:100%;">Search Payment Status 🔍</button>
+            <label style="display:block; text-align:left; font-size:12px; font-weight:700; color:#0d5c3d; margin-bottom:4px;">Select Campaign:</label>
+            <select id="fileSelect" class="nid-select-input">
+                <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
+                <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
+            </select>
+
+            <label style="display:block; text-align:left; font-size:12px; font-weight:700; color:#0d5c3d; margin-bottom:4px;">Enter CNIC / Account Number:</label>
+            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="e.g. 37201-XXXXXXX-X or Without Dashes" onkeyup="if(event.key==='Enter') performNidSearch()">
             
-            <div id="nidSearchResult" style="margin-top:20px; text-align:left; font-size:13.5px; color:#333;"></div>
+            <button class="btn" onclick="performNidSearch()" style="width:100%; margin-top:5px;">Search Payment Status 🔍</button>
+            
+            <div id="nidSearchResult"></div>
         </div>
     </div>
 
@@ -835,13 +872,11 @@
         Official Dashboard for Internal Use Only
 
         <div class="counter">
-            <!-- hitwebcounter Code START -->
             <a href="https://www.hitwebcounter.com/character-counter" target="_blank" rel="noopener" title="Total Characters">
             <img src="https://www.hitwebcounter.com/counter/counter.php?page=21512655&amp;style=0009&amp;nbdigits=5&amp;type=page" alt="Total Characters" decoding="async" style="border:0;max-width:100%;height:auto;" />
             </a>
             <br />
             <a href="https://www.hitwebcounter.com/" target="_blank" rel="noopener" style="font-family:Arial, Helvetica, sans-serif;font-size:10px;color:#ffffff;text-decoration:underline;font-weight:strong;">PageHits</a>
-            <!-- hitwebcounter Code END -->
         </div>
     </div>
 
@@ -1184,7 +1219,7 @@
             document.getElementById('statModal').classList.remove('active');
         }
 
-        /* NID Worker Payment Modal Controls */
+        /* NID Worker Payment Modal & Search Controls */
         function openNidModal() {
             document.getElementById('nidModal').classList.add('active');
             document.getElementById('nidSearchQuery').value = '';
@@ -1195,22 +1230,70 @@
             document.getElementById('nidModal').classList.remove('active');
         }
 
+        function cleanString(str) {
+            if (!str) return '';
+            return str.toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        }
+
         function performNidSearch() {
+            const fileName = document.getElementById('fileSelect').value;
             const query = document.getElementById('nidSearchQuery').value.trim();
             const resultDiv = document.getElementById('nidSearchResult');
-            
+
             if (!query) {
-                resultDiv.innerHTML = '<div style="color:red; text-align:center;">براہ کرم CNIC یا اکاؤنٹ نمبر درج کریں!</div>';
+                resultDiv.innerHTML = '<div style="color: red; margin-top: 15px; font-weight: bold; text-align: center;">Barah-e-Karam CNIC ya Account Number darj karen!</div>';
                 return;
             }
 
-            // Search logic interface placeholder
-            resultDiv.innerHTML = '<div style="background:#f0f7f4; padding:12px; border-radius:8px; border:1px solid #1a8a5c;">' +
-                                  '<strong>Search Query:</strong> ' + query + '<br>' +
-                                  '<strong>Status:</strong> Search functionality ready for integration.' +
-                                  '</div>';
-        }
+            const cleanQuery = cleanString(query);
+            resultDiv.innerHTML = '<div style="margin-top: 15px; color: #0d5c3d; font-weight: bold; text-align: center;">Searching File... Please wait.</div>';
 
+            fetch(fileName)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('File nahi mili. Yaqeeni banayen ke Excel file usi folder mein majood hai.');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(data => {
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    let foundRecord = null;
+
+                    for (let row of jsonData) {
+                        for (let key in row) {
+                            let cellValue = cleanString(row[key]);
+                            if (cellValue.length > 3 && cellValue === cleanQuery) {
+                                foundRecord = row;
+                                break;
+                            }
+                        }
+                        if (foundRecord) break;
+                    }
+
+                    if (foundRecord) {
+                        let html = '<div class="result-card">';
+                        for (let key in foundRecord) {
+                            html += `
+                                <div class="result-row">
+                                    <span class="result-label">${key}:</span>
+                                    <span class="result-value">${foundRecord[key]}</span>
+                                </div>
+                            `;
+                        }
+                        html += '</div>';
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = '<div style="color: #b03030; margin-top: 15px; font-weight: bold; text-align: center;">Koi record nahi mila. Barah-e-Karam CNIC / Account No dobara check karen.</div>';
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `<div style="color: red; margin-top: 15px; font-weight: bold; text-align: center;">Error: ${error.message}</div>`;
+                });
+        }
     </script>
 </body>
 </html>
