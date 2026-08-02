@@ -554,24 +554,25 @@
             box-shadow: 0 0 5px rgba(26, 138, 92, 0.3);
         }
 
-        /* Result Card Styles */
+        /* Structured Custom Result Card Styles */
         .result-card {
             background-color: #ffffff;
             border: 1px solid #1a8a5c;
-            border-left: 5px solid #0d5c3d;
-            border-radius: 8px;
-            padding: 15px;
+            border-left: 6px solid #0d5c3d;
+            border-radius: 10px;
+            padding: 18px;
             margin-top: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             text-align: left;
         }
         .result-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 13.5px;
-            border-bottom: 1px dashed #eee;
-            padding-bottom: 4px;
+            align-items: center;
+            margin-bottom: 9px;
+            font-size: 14px;
+            border-bottom: 1px dashed #e0e0e0;
+            padding-bottom: 6px;
         }
         .result-row:last-child {
             border-bottom: none;
@@ -585,6 +586,18 @@
         .result-value {
             font-weight: 700;
             color: #0d5c3d;
+        }
+        /* Prominent Status Style */
+        .status-badge-large {
+            font-size: 20px !important;
+            font-weight: 900 !important;
+            color: #0d5c3d;
+            background: #e8f5e9;
+            padding: 4px 14px;
+            border-radius: 6px;
+            letter-spacing: 1px;
+            display: inline-block;
+            border: 1px solid #1a8a5c;
         }
 
         /* Footer */
@@ -844,7 +857,7 @@
         </div>
     </div>
 
-    <!-- Payment Status For NID Worker Modal Popup (Integrated Excel Search) -->
+    <!-- Payment Status For NID Worker Modal Popup (Integrated Customized Excel Search) -->
     <div class="modal-overlay" id="nidModal" onclick="if(event.target===this) closeNidModal()">
         <div class="modal-box" style="max-width:520px;">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
@@ -1219,7 +1232,7 @@
             document.getElementById('statModal').classList.remove('active');
         }
 
-        /* NID Worker Payment Modal & Search Controls */
+        /* NID Worker Payment Modal & Specialized Column Extraction Search */
         function openNidModal() {
             document.getElementById('nidModal').classList.add('active');
             document.getElementById('nidSearchQuery').value = '';
@@ -1233,6 +1246,19 @@
         function cleanString(str) {
             if (!str) return '';
             return str.toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        }
+
+        // Helper function to safely read case-insensitive properties from JSON
+        function getPropValue(rowObj, possibleKeys) {
+            for (let p in rowObj) {
+                let cleanKey = p.replace(/\s+/g, '').toLowerCase();
+                for (let k of possibleKeys) {
+                    if (cleanKey === k.replace(/\s+/g, '').toLowerCase()) {
+                        return rowObj[p];
+                    }
+                }
+            }
+            return 'N/A';
         }
 
         function performNidSearch() {
@@ -1275,16 +1301,57 @@
                     }
 
                     if (foundRecord) {
-                        let html = '<div class="result-card">';
-                        for (let key in foundRecord) {
-                            html += `
+                        // Custom Column Mapping
+                        const workerName = getPropValue(foundRecord, ['CustomerName', 'Worker Name', 'WorkerName']);
+                        const tehsil = getPropValue(foundRecord, ['Tehsil']);
+                        const uc = getPropValue(foundRecord, ['UC', 'Union Council']);
+                        const position = getPropValue(foundRecord, ['Position', 'Designation']);
+                        const paymentMethod = getPropValue(foundRecord, ['PaymentMode', 'Payment Method', 'PaymentMethod']);
+                        const paymentMode = getPropValue(foundRecord, ['Payment Mode', 'Mode']);
+                        const amount = getPropValue(foundRecord, ['Amount']);
+                        const paymentCode = getPropValue(foundRecord, ['XpinDraftNo', 'Xpin Draft No', 'Payment Code', 'Xpin']);
+                        const status = getPropValue(foundRecord, ['Status']);
+
+                        let html = `
+                            <div class="result-card">
                                 <div class="result-row">
-                                    <span class="result-label">${key}:</span>
-                                    <span class="result-value">${foundRecord[key]}</span>
+                                    <span class="result-label">Worker Name:</span>
+                                    <span class="result-value">${workerName}</span>
                                 </div>
-                            `;
-                        }
-                        html += '</div>';
+                                <div class="result-row">
+                                    <span class="result-label">Tehsil:</span>
+                                    <span class="result-value">${tehsil}</span>
+                                </div>
+                                <div class="result-row">
+                                    <span class="result-label">UC:</span>
+                                    <span class="result-value">${uc}</span>
+                                </div>
+                                <div class="result-row">
+                                    <span class="result-label">Position:</span>
+                                    <span class="result-value">${position}</span>
+                                </div>
+                                <div class="result-row" style="margin-top: 12px;">
+                                    <span class="result-label">Payment Method:</span>
+                                    <span class="result-value">${paymentMethod}</span>
+                                </div>
+                                <div class="result-row">
+                                    <span class="result-label">Payment Mode:</span>
+                                    <span class="result-value">${paymentMode}</span>
+                                </div>
+                                <div class="result-row">
+                                    <span class="result-label">Amount:</span>
+                                    <span class="result-value">Rs. ${amount}</span>
+                                </div>
+                                <div class="result-row">
+                                    <span class="result-label">Payment Code:</span>
+                                    <span class="result-value">${paymentCode}</span>
+                                </div>
+                                <div class="result-row" style="margin-top: 12px; border-bottom: none;">
+                                    <span class="result-label" style="font-size: 16px;">Status:</span>
+                                    <span class="status-badge-large">${status}</span>
+                                </div>
+                            </div>
+                        `;
                         resultDiv.innerHTML = html;
                     } else {
                         resultDiv.innerHTML = '<div style="color: #b03030; margin-top: 15px; font-weight: bold; text-align: center;">Koi record nahi mila. Barah-e-Karam CNIC / Account No dobara check karen.</div>';
