@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPI District Chakwal Dashboard | Official Website</title>
+    <link rel="icon" href="favicon.png.png" type="image/png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f0f7f4;
+            color: #333;
+        }
+        /* Top Scrolling News */
+        .news-ticker {
+            background: #0d5c3d;
+            color: white;
+            padding: 10px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+        .ticker-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: ticker 75s linear infinite;
+            font-size: 15px;
+        }
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
+            color: white;
+            padding: 12px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: relative;
+            text-align: center;
+        }
+        .header .logo-left {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            object-fit: contain;
+            position: absolute;
+            left: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header .logo-right {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            object-fit: contain;
+            position: absolute;
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header-content {
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .header p {
+            font-size: 13px;
+            opacity: 0.9;
+            margin: 0;
+        }
+        /* Main Layout */
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 25px auto;
+            gap: 20px;
+            padding: 0 15px;
+        }
+        /* Left Sidebar - News */
+        .sidebar {
+            width: 340px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .sidebar-header {
+            background: #0d5c3d;
+            color: white;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .news-list {
+            padding: 15px;
+        }
+        .news-item {
+            padding: 14px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: #444;
+        }
+        .news-item:last-child {
+            border-bottom: none;
+        }
+        .news-date {
+            font-size: 12px;
+            color: #1a8a5c;
+            font-weight: 700;
+            margin-bottom: 5px;
+            display: inline-block;
+            background: #e8f5e9;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .news-text {
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        /* News Images Grid */
+        .news-gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .news-gallery img {
+            width: 100%;
+            height: 65px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .news-gallery img:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        /* Main Content */
+        .main-content {
+            flex: 1;
+        }
+        .section-title {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            font-size: 18px;
+            font-weight: 600;
+            color: #0d5c3d;
+            border-left: 5px solid #0d5c3d;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+        .download-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-top: 4px solid #1a8a5c;
+        }
+        .download-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .download-card h3 {
+            color: #0d5c3d;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .download-card p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .btn {
+            display: inline-block;
+            background: #0d5c3d;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #09402b;
+        }
+        /* HR Overview Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-bottom: 4px solid #1a8a5c;
+        }
+        .stat-card .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0d5c3d;
+        }
+        .stat-card .stat-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .stat-card.clickable {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .stat-card.clickable:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        /* Stat Detail Modal */
+        .stat-modal-box {
+            background: white;
+            border-radius: 14px;
+            max-width: 560px;
+            width: 100%;
+            max-height: 85vh;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-modal-title {
+            color: #0d5c3d;
+            font-size: 19px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-right: 25px;
+        }
+        .stat-modal-body {
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .tehsil-block {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .tehsil-block-header {
+            background: #f0f7f4;
+            padding: 12px 15px;
+            font-weight: 600;
+            color: #0d5c3d;
+            font-size: 14.5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tehsil-block-header .arrow {
+            transition: transform 0.25s ease;
+            font-size: 12px;
+        }
+        .tehsil-block-header.open .arrow {
+            transform: rotate(90deg);
+        }
+        .tehsil-block-content {
+            display: none;
+            padding: 8px 15px 12px;
+        }
+        .tehsil-block-content.open {
+            display: block;
+        }
+        .tehsil-entry-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13.5px;
+            color: #444;
+        }
+        .tehsil-entry-row:last-child {
+            border-bottom: none;
+        }
+        .tehsil-entry-name {
+            font-weight: 500;
+        }
+        .tehsil-entry-sub {
+            color: #888;
+            font-size: 12px;
+        }
+        .tehsil-entry-value {
+            color: #0d5c3d;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .vacant-badge {
+            color: #b03030;
+            font-weight: 600;
+        }
+        /* Officers */
+        .officers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+        .officer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 4px solid #0d5c3d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .officer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .officer-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0 auto 12px;
+            overflow: hidden;
+        }
+        .officer-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .officer-card h3 {
+            color: #0d5c3d;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        .officer-card .officer-designation {
+            font-size: 12.5px;
+            color: #666;
+            line-height: 1.4;
+        }
+        /* Contact & Location Section */
+        .contact-location-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .contact-card, .location-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 4px solid #0d5c3d;
+        }
+        .contact-card h3, .location-card h3 {
+            color: #0d5c3d;
+            font-size: 17px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .contact-group {
+            margin-bottom: 14px;
+        }
+        .contact-group-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #1a8a5c;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            color: #444;
+            margin-bottom: 6px;
+        }
+        .contact-item a {
+            color: #0d5c3d;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .contact-item a:hover {
+            text-decoration: underline;
+        }
+        .off-day {
+            color: #b03030;
+            font-weight: 600;
+        }
+        .map-container {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            border: 1px solid #e0e0e0;
+        }
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        .location-btn {
+            display: block;
+            text-align: center;
+            background: #1a8a5c;
+            color: white;
+            padding: 9px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        .location-btn:hover {
+            background: #0d5c3d;
+        }
+        /* Modals Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 14px;
+            max-width: 420px;
+            width: 100%;
+            padding: 30px 25px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 auto 15px;
+            overflow: hidden;
+        }
+        .modal-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .modal-box h2 {
+            color: #0d5c3d;
+            font-size: 19px;
+            margin-bottom: 6px;
+        }
+        .modal-designation {
+            font-size: 13.5px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .modal-contact {
+            background: #f0f7f4;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            color: #0d5c3d;
+            font-weight: 600;
+        }
+        /* Footer */
+        .footer {
+            background: #0d5c3d;
+            color: white;
+            text-align: center;
+            padding: 18px;
+            margin-top: 40px;
+            font-size: 13px;
+        }
+        .footer .counter {
+            margin-top: 12px;
+        }
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+            }
+            .contact-location-grid {
+                grid-template-columns: 1fr;
+            }
+            .header .logo-left,
+            .header .logo-right {
+                position: static;
+                display: inline-block;
+                margin: 5px;
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Scrolling News -->
+    <div class="news-ticker">
+        <div class="ticker-content">
+            ★ District Chakwal me July 2026 ka EPI Coverage 92% se upar pahunch gaya hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ Zero-Dose Children ki identification campaign shuru &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ Penta-3 Dropout rate me 4% kami aayi hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ Cold Chain equipment ka maintenance schedule release &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ MR Campaign ke results jald publish kiye jayenge &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ District Chakwal me July 2026 ka EPI Coverage 92% se upar pahunch gaya hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ Zero-Dose Children ki identification campaign shuru &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ Penta-3 Dropout rate me 4% kami aayi hai
+        </div>
+    </div>
+
+    <!-- Header with Logo on Left + Title Center + Logo on Right -->
+    <div class="header">
+        <img src="favicon.png.png" alt="EPI Logo Left" class="logo-left">
+        <div class="header-content">
+            <h1>EPI District Chakwal Dashboard</h1>
+            <p>Official Website | Punjab Expanded Programme on Immunization</p>
+        </div>
+        <img src="logo-right2.png" alt="EPI Logo Right" class="logo-right">
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Left Sidebar News (With Image Preview Click) -->
+        <div class="sidebar">
+            <div class="sidebar-header">Department News</div>
+            <div class="news-list">
+                
+                <!-- News 1: Choa Saidan Shah & Kallar Kahar -->
+                <div class="news-item">
+                    <div class="news-date">30th July 2026</div>
+                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) is Successfully Conducted at CEO Office DHA Chakwal.</div>
+                    <div class="news-gallery">
+                        <img src="CSSKK-1.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 1" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-2.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 2" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-3.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 3" onclick="openImgModal(this.src)">
+                    </div>
+                </div>
+
+                <!-- News 2: Talagang -->
+                <div class="news-item">
+                    <div class="news-date">31st July 2026</div>
+                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) is Successfully Conducted at CEO Office DHA Chakwal.</div>
+                    <div class="news-gallery">
+                        <img src="TLG-1.jpeg" alt="Talagang Meeting 1" onclick="openImgModal(this.src)">
+                        <img src="TLG-2.jpeg" alt="Talagang Meeting 2" onclick="openImgModal(this.src)">
+                        <img src="TLG-3.jpeg" alt="Talagang Meeting 3" onclick="openImgModal(this.src)">
+                    </div>
+                </div>
+
+                <!-- News 3: Chakwal -->
+                <div class="news-item">
+                    <div class="news-date">1st August 2026</div>
+                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) is Successfully Conducted at CEO Office DHA Chakwal.</div>
+                    <div class="news-gallery">
+                        <img src="CKL-1.jpeg" alt="Chakwal Meeting 1" onclick="openImgModal(this.src)">
+                        <img src="CKL-2.jpeg" alt="Chakwal Meeting 2" onclick="openImgModal(this.src)">
+                        <img src="CKL-3.jpeg" alt="Chakwal Meeting 3" onclick="openImgModal(this.src)">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="section-title">HR Overview - District Chakwal</div>
+            <div class="stats-grid">
+                <div class="stat-card clickable" onclick="openStatModal('tehsils')">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Total Tehsils</div>
+                </div>
+                <div class="stat-card clickable" onclick="openStatModal('ucs')">
+                    <div class="stat-number">83</div>
+                    <div class="stat-label">Total UCs</div>
+                </div>
+                <div class="stat-card clickable" onclick="openStatModal('vaccinators')">
+                    <div class="stat-number">83</div>
+                    <div class="stat-label">Vaccinators</div>
+                </div>
+                <div class="stat-card clickable" onclick="openStatModal('asvs')">
+                    <div class="stat-number">7</div>
+                    <div class="stat-label">ASVs</div>
+                </div>
+            </div>
+
+            <div class="section-title">Key Officers</div>
+            <div class="officers-grid">
+                <div class="officer-card" onclick="openOfficerModal('ceo')">
+                    <div class="officer-avatar" id="avatar-ceo">
+                        <img src="CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" alt="Dr. Saeed Akhtar">
+                    </div>
+                    <h3>Dr. Saeed Akhtar</h3>
+                    <div class="officer-designation">Chief Executive Officer, District Health Authority Chakwal</div>
+                </div>
+                <div class="officer-card" onclick="openOfficerModal('dho')">
+                    <div class="officer-avatar" id="avatar-dho">
+                        <img src="DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" alt="Dr. Ali Ammar Najaf Habib">
+                    </div>
+                    <h3>Dr. Ali Ammar Najaf Habib</h3>
+                    <div class="officer-designation">District Health Officer Preventive Services, DHA Chakwal</div>
+                </div>
+                <div class="officer-card" onclick="openOfficerModal('dsv')">
+                    <div class="officer-avatar" id="avatar-dsv">
+                        <img src="DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" alt="Syed Asad Abbas">
+                    </div>
+                    <h3>Syed Asad Abbas</h3>
+                    <div class="officer-designation">District Superintendent Vaccination, DHA Chakwal</div>
+                </div>
+            </div>
+
+            <div class="section-title">Official Downloads & Reports</div>
+            <div class="download-grid">
+                <div class="download-card">
+                    <h3>Monthly EPI Presentation</h3>
+                    <p>July 2026 District Performance Review</p>
+                    <a href="Chakwal_EPI_Coverage_July_2026 Final.pptx" class="btn">Download PPT</a>
+                </div>
+                <div class="download-card">
+                    <h3>Coverage Report</h3>
+                    <p>Antigen-wise Coverage Analysis</p>
+                    <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">Download PDF</a>
+                </div>
+                <div class="download-card">
+                    <h3>Zero-Dose Analysis</h3>
+                    <p>Identification & Action Plan</p>
+                    <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">Download Report</a>
+                </div>
+                <div class="download-card">
+                    <h3>Dropout Analysis</h3>
+                    <p>Penta1 to Penta3 & MR Dropout</p>
+                    <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">Download Excel</a>
+                </div>
+                <div class="download-card">
+                    <h3>UC-wise Performance</h3>
+                    <p>Union Council Ranking Report</p>
+                    <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">Download PDF</a>
+                </div>
+                <div class="download-card">
+                    <h3>Stock Status Report</h3>
+                    <p>Vaccine & Logistics Availability</p>
+                    <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">Download Report</a>
+                </div>
+            </div>
+
+            <!-- Contact & Location Section -->
+            <div class="section-title">Contact & Office Location</div>
+            <div class="contact-location-grid">
+                <!-- Contact Us Card -->
+                <div class="contact-card">
+                    <h3>✉️ Official Contact Information</h3>
+                    
+                    <div class="contact-group">
+                        <div class="contact-group-title">Landline Numbers</div>
+                        <div class="contact-item">☎️ <a href="tel:0543660163">0543-660163</a></div>
+                        <div class="contact-item">☎️ <a href="tel:0543660138">0543-660138</a></div>
+                    </div>
+
+                    <div class="contact-group">
+                        <div class="contact-group-title">Official Email Support</div>
+                        <div class="contact-item">📧 <a href="mailto:chakwalhealth@yahoo.com">chakwalhealth@yahoo.com</a></div>
+                        <div class="contact-item">📧 <a href="mailto:epichakwal@gmail.com">epichakwal@gmail.com</a></div>
+                        <div class="contact-item">📧 <a href="mailto:dsvchakwal@gmail.com">dsvchakwal@gmail.com</a></div>
+                    </div>
+
+                    <div class="contact-group">
+                        <div class="contact-group-title">Working Hours</div>
+                        <div class="contact-item">🕒 <span><strong>Mon - Thu & Sat:</strong> 09:00 AM - 04:00 PM</span></div>
+                        <div class="contact-item">🕒 <span><strong>Friday:</strong> 09:00 AM - 01:00 PM</span></div>
+                        <div class="contact-item">🕒 <span><strong>Sunday:</strong> <span class="off-day">Closed (Off)</span></span></div>
+                    </div>
+                </div>
+
+                <!-- Location Map Card -->
+                <div class="location-card">
+                    <h3>📍 Office Location Map</h3>
+                    <div class="map-container">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3345.568471926618!2d72.8523311!3d32.9360216!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39206775b6bfbd6b%3A0xb6955a6d366fa9d9!2sDistrict%20Health%20Authority%20Chakwal!5e0!3m2!1sen!2spk!4v1700000000000!5m2!1sen!2spk" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+                    <a href="https://maps.app.goo.gl/p67duhLUHgWmwmBX7" target="_blank" class="location-btn"> Open in Google Maps 🗺️</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="modal-overlay" id="imgModal" onclick="closeImgModal()">
+        <span class="modal-close" style="color:white; font-size:40px; top:20px; right:30px;">&times;</span>
+        <img id="previewImg" src="" alt="Image Preview" style="max-width:90%; max-height:85vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.5); object-fit:contain;">
+    </div>
+
+    <!-- Officer Detail Modal -->
+    <div class="modal-overlay" id="officerModal" onclick="if(event.target===this) closeOfficerModal()">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeOfficerModal()">&times;</button>
+            <div class="modal-avatar" id="modal-avatar">SA</div>
+            <h2 id="modal-name"></h2>
+            <div class="modal-designation" id="modal-designation"></div>
+            <div class="modal-contact" id="modal-contact"></div>
+        </div>
+    </div>
+
+    <!-- Stat Detail Modal -->
+    <div class="modal-overlay" id="statModal" onclick="if(event.target===this) closeStatModal()">
+        <div class="stat-modal-box">
+            <button class="modal-close" onclick="closeStatModal()">&times;</button>
+            <div class="stat-modal-title" id="stat-modal-title"></div>
+            <div class="stat-modal-body" id="stat-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        © 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>
+        Official Dashboard for Internal Use Only
+
+        <div class="counter">
+            <!-- hitwebcounter Code START -->
+            <a href="https://www.hitwebcounter.com/character-counter" target="_blank" rel="noopener" title="Total Characters">
+            <img src="https://www.hitwebcounter.com/counter/counter.php?page=21512655&amp;style=0009&amp;nbdigits=5&amp;type=page" alt="Total Characters" decoding="async" style="border:0;max-width:100%;height:auto;" />
+            </a>
+            <br />
+            <a href="https://www.hitwebcounter.com/" target="_blank" rel="noopener" style="font-family:Arial, Helvetica, sans-serif;font-size:10px;color:#ffffff;text-decoration:underline;font-weight:strong;">PageHits</a>
+            <!-- hitwebcounter Code END -->
+        </div>
+    </div>
+
+    <script>
+        // Image Lightbox Functions
+        function openImgModal(src) {
+            document.getElementById('previewImg').src = src;
+            document.getElementById('imgModal').classList.add('active');
+        }
+
+        function closeImgModal() {
+            document.getElementById('imgModal').classList.remove('active');
+        }
+
+        const officerData = {
+            ceo: {
+                initials: "SA",
+                name: "Dr. Saeed Akhtar",
+                designation: "Chief Executive Officer, District Health Authority Chakwal",
+                contact: "0301-5339925",
+                photo: "CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg"
+            },
+            dho: {
+                initials: "AH",
+                name: "Dr. Ali Ammar Najaf Habib",
+                designation: "District Health Officer Preventive Services, District Health Authority Chakwal",
+                contact: "0331-5897203",
+                photo: "DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png"
+            },
+            dsv: {
+                initials: "SA",
+                name: "Syed Asad Abbas",
+                designation: "District Superintendent Vaccination, District Health Authority Chakwal",
+                contact: "0333-5902949",
+                photo: "DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg"
+            }
+        };
+
+        function openOfficerModal(id) {
+            const officer = officerData[id];
+            if (!officer) return;
+            document.getElementById('modal-name').textContent = officer.name;
+            document.getElementById('modal-designation').textContent = officer.designation;
+            document.getElementById('modal-contact').textContent = 'Contact: ' + officer.contact;
+            const modalAvatar = document.getElementById('modal-avatar');
+            if (officer.photo) {
+                modalAvatar.innerHTML = '<img src="' + officer.photo + '" alt="' + officer.name + '">';
+            } else {
+                modalAvatar.textContent = officer.initials;
+            }
+            document.getElementById('officerModal').classList.add('active');
+        }
+
+        function closeOfficerModal() {
+            document.getElementById('officerModal').classList.remove('active');
+        }
+
+        const hrData = {
+            "tehsilUCs": {
+                "Chakwal": [
+                    { "uc": "Baigal", "population": 18913 },
+                    { "uc": "Balkassar", "population": 18861 },
+                    { "uc": "Balokassar", "population": 19475 },
+                    { "uc": "Bheen", "population": 14668 },
+                    { "uc": "Bhikari Kalan", "population": 17427 },
+                    { "uc": "Chak Malook", "population": 20602 },
+                    { "uc": "Chakumra", "population": 17923 },
+                    { "uc": "Chakwal 1", "population": 28971 },
+                    { "uc": "Chakwal 2", "population": 29613 },
+                    { "uc": "Chakwal 3", "population": 26768 },
+                    { "uc": "Chakwal 4", "population": 31107 },
+                    { "uc": "Chakwal 5", "population": 57309 },
+                    { "uc": "Choa Ganj Ali Shah", "population": 20128 },
+                    { "uc": "Dab", "population": 17439 },
+                    { "uc": "Dhab Khushal", "population": 20659 },
+                    { "uc": "Dhudial", "population": 22764 },
+                    { "uc": "Dhumman", "population": 17016 },
+                    { "uc": "Dullah", "population": 20085 },
+                    { "uc": "Jabairpur", "population": 21017 },
+                    { "uc": "Jand", "population": 17731 },
+                    { "uc": "Jand Khan Zada", "population": 19812 },
+                    { "uc": "Jaswal", "population": 21419 },
+                    { "uc": "Kariyalla", "population": 19447 },
+                    { "uc": "Karsal", "population": 19118 },
+                    { "uc": "Khai", "population": 21721 },
+                    { "uc": "Kot Chudhrian", "population": 20140 },
+                    { "uc": "Maingon", "population": 16864 },
+                    { "uc": "Mangwal", "population": 19112 },
+                    { "uc": "Mogla", "population": 15545 },
+                    { "uc": "Mulhal Mughlan", "population": 19506 },
+                    { "uc": "Mureed", "population": 20810 },
+                    { "uc": "Oudherwal", "population": 20819 },
+                    { "uc": "Padhshan", "population": 23090 },
+                    { "uc": "Saigalabad", "population": 27215 },
+                    { "uc": "Saral", "population": 22216 },
+                    { "uc": "Thanil Kamal", "population": 17758 },
+                    { "uc": "Warwal", "population": 22288 }
+                ],
+                "Talagang": [
+                    { "uc": "Bhillomar", "population": 23421 },
+                    { "uc": "Bhudial", "population": 27060 },
+                    { "uc": "Bidhar", "population": 23858 },
+                    { "uc": "Dhermond", "population": 23551 },
+                    { "uc": "Dhoular", "population": 22143 },
+                    { "uc": "Dhurnal", "population": 26817 },
+                    { "uc": "J.Shah Dilwar", "population": 25707 },
+                    { "uc": "Jasial", "population": 17051 },
+                    { "uc": "Jhatla", "population": 19586 },
+                    { "uc": "Kot Gullah", "population": 23079 },
+                    { "uc": "Kot Qazi", "population": 19404 },
+                    { "uc": "Kot Sarang", "population": 18603 },
+                    { "uc": "Lawa Rural", "population": 20562 },
+                    { "uc": "Lawa Urban", "population": 21024 },
+                    { "uc": "Leti", "population": 16022 },
+                    { "uc": "Malakwal", "population": 22522 },
+                    { "uc": "Multan Khurd", "population": 23759 },
+                    { "uc": "Nakka Kahoot", "population": 20650 },
+                    { "uc": "Niraghi", "population": 17413 },
+                    { "uc": "Pichnanad", "population": 22119 },
+                    { "uc": "Pira Phatial", "population": 22501 },
+                    { "uc": "Sagghar", "population": 22384 },
+                    { "uc": "Talagang East U-I", "population": 30264 },
+                    { "uc": "Talagang West U-II", "population": 27765 },
+                    { "uc": "Talagang U-III", "population": 23735 },
+                    { "uc": "Tamman", "population": 23175 },
+                    { "uc": "Tehi", "population": 23020 },
+                    { "uc": "Thoa Mehram Khan-I", "population": 17983 },
+                    { "uc": "Thoa Mehramkhan-II", "population": 18084 }
+                ],
+                "Kallar Kahar": [
+                    { "uc": "Bher Pur", "population": 21071 },
+                    { "uc": "Bhoun", "population": 23353 },
+                    { "uc": "Buchal Kallan", "population": 18232 },
+                    { "uc": "Buchal Khurd", "population": 17613 },
+                    { "uc": "Kallar Kahar", "population": 26383 },
+                    { "uc": "Khair Pur", "population": 22770 },
+                    { "uc": "Miani", "population": 23177 },
+                    { "uc": "Munara", "population": 21228 },
+                    { "uc": "Noor Pur", "population": 23236 }
+                ],
+                "Choa Saidan Shah": [
+                    { "uc": "Ara", "population": 15359 },
+                    { "uc": "Basharat", "population": 22638 },
+                    { "uc": "Choa Saiden Shah", "population": 28529 },
+                    { "uc": "Dalwal", "population": 25625 },
+                    { "uc": "Dandoot", "population": 18855 },
+                    { "uc": "Dulmial", "population": 27417 },
+                    { "uc": "Lehr Sultan Pur", "population": 20141 },
+                    { "uc": "Saloi", "population": 18793 }
+                ]
+            },
+            "vaccinators": {
+                "Chakwal": [
+                    { "uc": "Baigal", "name": "Riaz Hussain", "mobile": "0333-5412213", "vacant": false },
+                    { "uc": "Balkassar", "name": "Khuram Shahzad", "mobile": "0312-5583110", "vacant": false },
+                    { "uc": "Balokassar", "name": "Saad Ali", "mobile": "0330-1680526", "vacant": false },
+                    { "uc": "Bheen", "name": "Masood Iqbal", "mobile": "0344-5770539", "vacant": false },
+                    { "uc": "Bhikari Kalan", "name": "Tahir Abbas", "mobile": "0330-1680606", "vacant": false },
+                    { "uc": "Chak Malook", "name": "Umar Nawab", "mobile": "0307-9927497", "vacant": false },
+                    { "uc": "Chakumra", "name": "Umer Shehzad", "mobile": "0335-5221400", "vacant": false },
+                    { "uc": "Chakwal 1", "name": "Amjad Hussain", "mobile": "0333-5925931", "vacant": false },
+                    { "uc": "Chakwal 2", "name": "Areeba Israr", "mobile": "0000-0000000", "vacant": false },
+                    { "uc": "Chakwal 3", "name": "Adnan Roshan", "mobile": "0334-8705194", "vacant": false },
+                    { "uc": "Chakwal 4", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Chakwal 5", "name": "Syed Shams Ul Abbas", "mobile": "0333-5774743", "vacant": false },
+                    { "uc": "Choa Ganj Ali Shah", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Dab", "name": "Tajamul Hussain", "mobile": "0333-5621463", "vacant": false },
+                    { "uc": "Dhab Khushal", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Dhudial", "name": "Waleed Shehzad", "mobile": "0337-1420786", "vacant": false },
+                    { "uc": "Dhumman", "name": "Waqas Ali", "mobile": "0344-1509598", "vacant": false },
+                    { "uc": "Dullah", "name": "Tabassum Nazeer", "mobile": "0336-1594161", "vacant": false },
+                    { "uc": "Jabairpur", "name": "Usman Farooq", "mobile": "0345-5966822", "vacant": false },
+                    { "uc": "Jand", "name": "Qaiser Mehmood", "mobile": "0335-6050375", "vacant": false },
+                    { "uc": "Jand Khan Zada", "name": "Syed Shoaib Hussain", "mobile": "0306-5973816", "vacant": false },
+                    { "uc": "Jaswal", "name": "Asad Hanif", "mobile": "0333-1565979", "vacant": false },
+                    { "uc": "Kariyalla", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Karsal", "name": "Sajjad Hussain", "mobile": "0323-5941843", "vacant": false },
+                    { "uc": "Khai", "name": "Islam Sharif", "mobile": "0310-5982108", "vacant": false },
+                    { "uc": "Kot Chudhrian", "name": "Muhammad Rehan", "mobile": "0307-5083435", "vacant": false },
+                    { "uc": "Maingon", "name": "Shahzaib", "mobile": "0334-5124598", "vacant": false },
+                    { "uc": "Mangwal", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Mogla", "name": "Zain Islam", "mobile": "0324-9571388", "vacant": false },
+                    { "uc": "Mulhal Mughlan", "name": "Muhammad Saghir", "mobile": "0313-0564766", "vacant": false },
+                    { "uc": "Mureed", "name": "Yasir Ahmad Khan", "mobile": "0332-5006458", "vacant": false },
+                    { "uc": "Oudherwal", "name": "Arshad Ali Khan", "mobile": "0313-0814554", "vacant": false },
+                    { "uc": "Padhshan", "name": "Anas Farooq", "mobile": "0313-1564521", "vacant": false },
+                    { "uc": "Saigalabad", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Saral", "name": "Abdul Muneeb", "mobile": "0332-5409690", "vacant": false },
+                    { "uc": "Thanil Kamal", "name": "Haroon Ashraf", "mobile": "0335-1527024", "vacant": false },
+                    { "uc": "Warwal", "name": "Nouman Ahmad", "mobile": "0332-8857204", "vacant": false }
+                ],
+                "Talagang": [
+                    { "uc": "Bhillomar", "name": "Muhammad Abdullah", "mobile": "0315-5944264", "vacant": false },
+                    { "uc": "Bhudial", "name": "Waseem Ud Din", "mobile": "0301-3104021", "vacant": false },
+                    { "uc": "Bidhar", "name": "Muhammad Atif", "mobile": "0302-5114922", "vacant": false },
+                    { "uc": "Dhermond", "name": "Muhammad Saqib", "mobile": "0301-3108960", "vacant": false },
+                    { "uc": "Dhoular", "name": "Akash Rasheed", "mobile": "0311-6847007", "vacant": false },
+                    { "uc": "Dhurnal", "name": "Nafees Ahmad", "mobile": "0313-5943371", "vacant": false },
+                    { "uc": "J.Shah Dilwar", "name": "Asif Iqbal", "mobile": "0306-5588692", "vacant": false },
+                    { "uc": "Jasial", "name": "Faisal Ayub", "mobile": "0301-5230335", "vacant": false },
+                    { "uc": "Jhatla", "name": "Waheed Iqbal", "mobile": "0314-8027705", "vacant": false },
+                    { "uc": "Kot Gullah", "name": "Umiar Khalid", "mobile": "0342-5236302", "vacant": false },
+                    { "uc": "Kot Qazi", "name": "Muhammad Amar Sameem", "mobile": "0302-5469321", "vacant": false },
+                    { "uc": "Kot Sarang", "name": "Muhammad Afzaal", "mobile": "0320-9375321", "vacant": false },
+                    { "uc": "Lawa Rural", "name": "Shahid Iqbal", "mobile": "0305-8978360", "vacant": false },
+                    { "uc": "Lawa Urban", "name": "Muhammad Shabir", "mobile": "0308-5704103", "vacant": false },
+                    { "uc": "Leti", "name": "Muhammad Waqas", "mobile": "0302-5120606", "vacant": false },
+                    { "uc": "Malakwal", "name": "Muhammad Saqlain", "mobile": "0316-5567621", "vacant": false },
+                    { "uc": "Multan Khurd", "name": "Muhammad Sidique", "mobile": "0307-0055841", "vacant": false },
+                    { "uc": "Nakka Kahoot", "name": "Muhammad Ali", "mobile": "0333-0966014", "vacant": false },
+                    { "uc": "Niraghi", "name": "Mohsin Iqbal", "mobile": "0311-5174164", "vacant": false },
+                    { "uc": "Pichnanad", "name": "Saeed Ur Rehman", "mobile": "0331-5972653", "vacant": false },
+                    { "uc": "Pira Phatial", "name": "Amjad Mehmood", "mobile": "0312-3644633", "vacant": false },
+                    { "uc": "Sagghar", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Talagang East U-I", "name": "Ali Zeeshan Akbar", "mobile": "0334-5685093", "vacant": false },
+                    { "uc": "Talagang West U-II", "name": "Nouman Ali", "mobile": "0314-9318684", "vacant": false },
+                    { "uc": "Talagang U-III", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Tamman", "name": "Najeed Ul Zaman", "mobile": "0323-5152294", "vacant": false },
+                    { "uc": "Tehi", "name": "Farhan Shehzad", "mobile": "0345-5881586", "vacant": false },
+                    { "uc": "Thoa Mehram Khan-I", "name": "Khalid Iqbal", "mobile": "0306-5699816", "vacant": false },
+                    { "uc": "Thoa Mehramkhan-II", "name": "Vacant", "mobile": "N/A", "vacant": true }
+                ],
+                "Kallar Kahar": [
+                    { "uc": "Bher Pur", "name": "Khalil Ur Rehman", "mobile": "0327-5069418", "vacant": false },
+                    { "uc": "Bhoun", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Buchal Kallan", "name": "Prince Kashif Nouman", "mobile": "0313-5418054", "vacant": false },
+                    { "uc": "Buchal Khurd", "name": "Touseef Nouman", "mobile": "0314-9323163", "vacant": false },
+                    { "uc": "Kallar Kahar", "name": "Faheem Razzaq / Faryal Samman", "mobile": "0331-5992128", "vacant": false },
+                    { "uc": "Khair Pur", "name": "Khwair Iftikhar", "mobile": "0306-2260722", "vacant": false },
+                    { "uc": "Miani", "name": "Muhammad Sheraz", "mobile": "0316-8496515", "vacant": false },
+                    { "uc": "Munara", "name": "Azhar Javaid", "mobile": "0336-5848475", "vacant": false },
+                    { "uc": "Noor Pur", "name": "Muhammad Asif", "mobile": "0334-9274110", "vacant": false }
+                ],
+                "Choa Saidan Shah": [
+                    { "uc": "Ara", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Basharat", "name": "Abdul Basit", "mobile": "0341-5905065", "vacant": false },
+                    { "uc": "Choa Saiden Shah", "name": "Danish Firdous", "mobile": "0346-5868570", "vacant": false },
+                    { "uc": "Dalwal", "name": "Amir Nazir", "mobile": "0332-9874235", "vacant": false },
+                    { "uc": "Dandoot", "name": "Vacant", "mobile": "N/A", "vacant": true },
+                    { "uc": "Dulmial", "name": "Muhammad Ejaz", "mobile": "0343-5541163", "vacant": false },
+                    { "uc": "Lehr Sultan Pur", "name": "Waqar Haider", "mobile": "0343-5541163", "vacant": false },
+                    { "uc": "Saloi", "name": "Vacant", "mobile": "N/A", "vacant": true }
+                ]
+            },
+            "asvs": {
+                "Chakwal": [
+                    { "name": "Wajid Maqbool Raja", "mobile": "0342-5354759" },
+                    { "name": "Umer Shahzad", "mobile": "0335-5221400" }
+                ],
+                "Talagang": [
+                    { "name": "Qazi Muhammad Rashid", "mobile": "0308-7772112" },
+                    { "name": "Abdul Wahid", "mobile": "0333-5781386" },
+                    { "name": "Asif Iqbal", "mobile": "0306-5588692" }
+                ],
+                "Kallar Kahar": [
+                    { "name": "Zafar Iqbal", "mobile": "0313-6752321" }
+                ],
+                "Choa Saidan Shah": [
+                    { "name": "Ansar Mehmood", "mobile": "0334-5666948" }
+                ]
+            }
+        };
+
+        const TEHSIL_ORDER = ["Chakwal", "Talagang", "Kallar Kahar", "Choa Saidan Shah"];
+
+        function toggleTehsilBlock(id) {
+            const header = document.getElementById('th-' + id);
+            const content = document.getElementById('tc-' + id);
+            header.classList.toggle('open');
+            content.classList.toggle('open');
+        }
+
+        function buildAccordionHTML(rowsBuilder) {
+            let html = '';
+            TEHSIL_ORDER.forEach(function(tehsil, idx) {
+                const rows = rowsBuilder(tehsil);
+                const uid = 'blk' + idx;
+                html += '<div class="tehsil-block">';
+                html += '<div class="tehsil-block-header" id="th-' + uid + '" onclick="toggleTehsilBlock(\'' + uid + '\')">';
+                html += '<span>' + tehsil + ' (' + rows.count + ')</span><span class="arrow">&#9656;</span>';
+                html += '</div>';
+                html += '<div class="tehsil-block-content" id="tc-' + uid + '">' + rows.html + '</div>';
+                html += '</div>';
+            });
+            return html;
+        }
+
+        function openStatModal(type) {
+            const titleEl = document.getElementById('stat-modal-title');
+            const bodyEl = document.getElementById('stat-modal-body');
+            let title = '';
+            let bodyHTML = '';
+
+            if (type === 'tehsils') {
+                title = 'Total Tehsils (4)';
+                bodyHTML = buildAccordionHTML(function(tehsil) {
+                    const ucs = hrData.tehsilUCs[tehsil] || [];
+                    const totalPop = ucs.reduce(function(sum, u) { return sum + (u.population || 0); }, 0);
+                    let rowsHtml = '<div class="tehsil-entry-row"><span class="tehsil-entry-name">Total UCs</span><span class="tehsil-entry-value">' + ucs.length + '</span></div>';
+                    rowsHtml += '<div class="tehsil-entry-row"><span class="tehsil-entry-name">Total Population</span><span class="tehsil-entry-value">' + totalPop.toLocaleString() + '</span></div>';
+                    return { count: ucs.length + ' UCs', html: rowsHtml };
+                });
+            } else if (type === 'ucs') {
+                title = 'Total UCs (83)';
+                bodyHTML = buildAccordionHTML(function(tehsil) {
+                    const ucs = hrData.tehsilUCs[tehsil] || [];
+                    let rowsHtml = ucs.map(function(u) {
+                        return '<div class="tehsil-entry-row"><span class="tehsil-entry-name">' + u.uc + '</span><span class="tehsil-entry-value">' + (u.population ? u.population.toLocaleString() : '-') + '</span></div>';
+                    }).join('');
+                    return { count: ucs.length, html: rowsHtml };
+                });
+            } else if (type === 'vaccinators') {
+                title = 'Vaccinators (83 Sanctioned Posts)';
+                bodyHTML = buildAccordionHTML(function(tehsil) {
+                    const list = hrData.vaccinators[tehsil] || [];
+                    let rowsHtml = list.map(function(v) {
+                        const nameHtml = v.vacant ? '<span class="vacant-badge">Vacant</span>' : v.name;
+                        const sub = v.uc ? '<div class="tehsil-entry-sub">UC: ' + v.uc + '</div>' : '';
+                        return '<div class="tehsil-entry-row"><span><span class="tehsil-entry-name">' + nameHtml + '</span>' + sub + '</span><span class="tehsil-entry-value">' + v.mobile + '</span></div>';
+                    }).join('');
+                    return { count: list.length, html: rowsHtml };
+                });
+            } else if (type === 'asvs') {
+                title = 'ASVs (7)';
+                bodyHTML = buildAccordionHTML(function(tehsil) {
+                    const list = hrData.asvs[tehsil] || [];
+                    let rowsHtml = list.map(function(a) {
+                        return '<div class="tehsil-entry-row"><span class="tehsil-entry-name">' + a.name + '</span><span class="tehsil-entry-value">' + a.mobile + '</span></div>';
+                    }).join('');
+                    return { count: list.length, html: rowsHtml };
+                });
+            }
+
+            titleEl.textContent = title;
+            bodyEl.innerHTML = bodyHTML;
+            document.getElementById('statModal').classList.add('active');
+        }
+
+        function closeStatModal() {
+            document.getElementById('statModal').classList.remove('active');
+        }
+
+    </script>
+</body>
+</html>
