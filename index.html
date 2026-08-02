@@ -453,7 +453,7 @@
         .location-btn:hover {
             background: #0d5c3d;
         }
-        /* Officer Detail Modal */
+        /* Modals Overlay */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -461,7 +461,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.55);
+            background: rgba(0,0,0,0.75);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -484,7 +484,7 @@
             position: absolute;
             top: 12px;
             right: 16px;
-            font-size: 22px;
+            font-size: 24px;
             color: #999;
             cursor: pointer;
             background: none;
@@ -592,7 +592,7 @@
 
     <!-- Main Container -->
     <div class="container">
-        <!-- Left Sidebar News (Updated) -->
+        <!-- Left Sidebar News (With Image Preview Click) -->
         <div class="sidebar">
             <div class="sidebar-header">Department News</div>
             <div class="news-list">
@@ -602,9 +602,9 @@
                     <div class="news-date">30th July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) is Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <div class="news-gallery">
-                        <img src="CSSKK-1.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 1">
-                        <img src="CSSKK-2.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 2">
-                        <img src="CSSKK-3.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 3">
+                        <img src="CSSKK-1.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 1" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-2.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 2" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-3.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 3" onclick="openImgModal(this.src)">
                     </div>
                 </div>
 
@@ -613,9 +613,9 @@
                     <div class="news-date">31st July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) is Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <div class="news-gallery">
-                        <img src="TLG-1.jpeg" alt="Talagang Meeting 1">
-                        <img src="TLG-2.jpeg" alt="Talagang Meeting 2">
-                        <img src="TLG-3.jpeg" alt="Talagang Meeting 3">
+                        <img src="TLG-1.jpeg" alt="Talagang Meeting 1" onclick="openImgModal(this.src)">
+                        <img src="TLG-2.jpeg" alt="Talagang Meeting 2" onclick="openImgModal(this.src)">
+                        <img src="TLG-3.jpeg" alt="Talagang Meeting 3" onclick="openImgModal(this.src)">
                     </div>
                 </div>
 
@@ -624,9 +624,9 @@
                     <div class="news-date">1st August 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) is Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <div class="news-gallery">
-                        <img src="CKL-1.jpeg" alt="Chakwal Meeting 1">
-                        <img src="CKL-2.jpeg" alt="Chakwal Meeting 2">
-                        <img src="CKL-3.jpeg" alt="Chakwal Meeting 3">
+                        <img src="CKL-1.jpeg" alt="Chakwal Meeting 1" onclick="openImgModal(this.src)">
+                        <img src="CKL-2.jpeg" alt="Chakwal Meeting 2" onclick="openImgModal(this.src)">
+                        <img src="CKL-3.jpeg" alt="Chakwal Meeting 3" onclick="openImgModal(this.src)">
                     </div>
                 </div>
 
@@ -760,6 +760,12 @@
         </div>
     </div>
 
+    <!-- Image Preview Modal -->
+    <div class="modal-overlay" id="imgModal" onclick="closeImgModal()">
+        <span class="modal-close" style="color:white; font-size:40px; top:20px; right:30px;">&times;</span>
+        <img id="previewImg" src="" alt="Image Preview" style="max-width:90%; max-height:85vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.5); object-fit:contain;">
+    </div>
+
     <!-- Officer Detail Modal -->
     <div class="modal-overlay" id="officerModal" onclick="if(event.target===this) closeOfficerModal()">
         <div class="modal-box">
@@ -797,6 +803,16 @@
     </div>
 
     <script>
+        // Image Lightbox Functions
+        function openImgModal(src) {
+            document.getElementById('previewImg').src = src;
+            document.getElementById('imgModal').classList.add('active');
+        }
+
+        function closeImgModal() {
+            document.getElementById('imgModal').classList.remove('active');
+        }
+
         const officerData = {
             ceo: {
                 initials: "SA",
