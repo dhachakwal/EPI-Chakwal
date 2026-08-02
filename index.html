@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI District Chakwal Dashboard | Official Website</title>
     <link rel="icon" href="favicon.png.png" type="image/png">
-    <!-- SheetJS for parsing XLSX files in browser -->
+    <!-- SheetJS Library Excel Parsing ke liye -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
@@ -18,7 +18,6 @@
             background-color: #f0f7f4;
             color: #333;
         }
-        /* Top Scrolling News */
         .news-ticker {
             background: #0d5c3d;
             color: white;
@@ -37,7 +36,6 @@
             0% { transform: translateX(0); }
             100% { transform: translateX(-100%); }
         }
-        /* Header */
         .header {
             background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
             color: white;
@@ -66,9 +64,6 @@
             top: 50%;
             transform: translateY(-50%);
         }
-        .header-content {
-            text-align: center;
-        }
         .header h1 {
             font-size: 24px;
             margin-bottom: 4px;
@@ -78,7 +73,6 @@
             opacity: 0.9;
             margin: 0;
         }
-        /* Main Layout */
         .container {
             display: flex;
             max-width: 1200px;
@@ -86,7 +80,6 @@
             gap: 20px;
             padding: 0 15px;
         }
-        /* Left Sidebar - News */
         .sidebar {
             width: 340px;
             background: white;
@@ -141,14 +134,8 @@
             object-fit: cover;
             border-radius: 6px;
             border: 1px solid #ddd;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
             cursor: pointer;
         }
-        .news-gallery img:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        /* Main Content */
         .main-content {
             flex: 1;
         }
@@ -164,7 +151,7 @@
             border-left: 5px solid #0d5c3d;
         }
 
-        /* NID Payment Search Card */
+        /* NID Payment Search Card Styling */
         .search-card {
             background: white;
             border-radius: 12px;
@@ -177,7 +164,7 @@
             display: grid;
             grid-template-columns: 1fr 2fr auto;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .search-controls select,
         .search-controls input {
@@ -186,7 +173,6 @@
             border-radius: 8px;
             font-size: 14px;
             outline: none;
-            transition: border-color 0.3s;
         }
         .search-controls select:focus,
         .search-controls input:focus {
@@ -201,13 +187,17 @@
             font-weight: 600;
             font-size: 14.5px;
             cursor: pointer;
-            transition: background 0.3s;
         }
         .search-btn:hover {
             background: #09402b;
         }
+        .cnic-hint {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
         
-        /* Payment Status Grid Layout */
+        /* Grid Result Cards Layout */
         .status-display {
             display: none;
             background: #fafafa;
@@ -225,16 +215,15 @@
             color: #0d5c3d;
             text-transform: uppercase;
             margin-bottom: 15px;
-            letter-spacing: 0.5px;
             border-bottom: 2px solid #0d5c3d;
             display: inline-block;
             padding-bottom: 4px;
         }
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
         }
         .info-box {
             background: white;
@@ -244,37 +233,37 @@
         }
         .info-box label {
             display: block;
-            font-size: 11.5px;
+            font-size: 11px;
             color: #666;
             font-weight: 600;
             margin-bottom: 4px;
             text-transform: uppercase;
         }
         .info-box span {
-            font-size: 14.5px;
+            font-size: 14px;
             color: #222;
             font-weight: 600;
         }
 
-        /* Status Badges */
+        /* Colored Status Badges */
         .status-badge {
             display: inline-block;
-            padding: 6px 16px;
+            padding: 8px 20px;
             border-radius: 20px;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 15px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .status-badge.paid {
             background-color: #e8f5e9;
             color: #2e7d32;
-            border: 1.5px solid #2e7d32;
+            border: 2px solid #2e7d32;
         }
         .status-badge.unpaid {
             background-color: #ffebee;
             color: #c62828;
-            border: 1.5px solid #c62828;
+            border: 2px solid #c62828;
         }
 
         .no-result {
@@ -289,384 +278,6 @@
             border: 1px solid #ffcdd2;
         }
 
-        /* Download Grid */
-        .download-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 18px;
-            margin-bottom: 25px;
-        }
-        .download-card {
-            background: white;
-            border-radius: 12px;
-            padding: 22px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            border-top: 4px solid #1a8a5c;
-        }
-        .download-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        }
-        .download-card h3 {
-            color: #0d5c3d;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        .download-card p {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 15px;
-        }
-        .btn {
-            display: inline-block;
-            background: #0d5c3d;
-            color: white;
-            padding: 10px 22px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background 0.3s;
-        }
-        .btn:hover {
-            background: #09402b;
-        }
-
-        /* HR Overview Stats */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 18px 10px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border-bottom: 4px solid #1a8a5c;
-        }
-        .stat-card .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-            color: #0d5c3d;
-        }
-        .stat-card .stat-label {
-            font-size: 13px;
-            color: #666;
-            margin-top: 4px;
-        }
-        .stat-card.clickable {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .stat-card.clickable:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        }
-
-        /* Stat Detail Modal */
-        .stat-modal-box {
-            background: white;
-            border-radius: 14px;
-            max-width: 560px;
-            width: 100%;
-            max-height: 85vh;
-            padding: 25px;
-            position: relative;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-        }
-        .stat-modal-title {
-            color: #0d5c3d;
-            font-size: 19px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            padding-right: 25px;
-        }
-        .stat-modal-body {
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        .tehsil-block {
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-        .tehsil-block-header {
-            background: #f0f7f4;
-            padding: 12px 15px;
-            font-weight: 600;
-            color: #0d5c3d;
-            font-size: 14.5px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .tehsil-block-header .arrow {
-            transition: transform 0.25s ease;
-            font-size: 12px;
-        }
-        .tehsil-block-header.open .arrow {
-            transform: rotate(90deg);
-        }
-        .tehsil-block-content {
-            display: none;
-            padding: 8px 15px 12px;
-        }
-        .tehsil-block-content.open {
-            display: block;
-        }
-        .tehsil-entry-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 7px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 13.5px;
-            color: #444;
-        }
-        .tehsil-entry-row:last-child {
-            border-bottom: none;
-        }
-        .tehsil-entry-name {
-            font-weight: 500;
-        }
-        .tehsil-entry-sub {
-            color: #888;
-            font-size: 12px;
-        }
-        .tehsil-entry-value {
-            color: #0d5c3d;
-            font-weight: 600;
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        .vacant-badge {
-            color: #b03030;
-            font-weight: 600;
-        }
-
-        /* Officers */
-        .officers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 18px;
-            margin-bottom: 25px;
-        }
-        .officer-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border-top: 4px solid #0d5c3d;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .officer-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        }
-        .officer-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 26px;
-            font-weight: 700;
-            margin: 0 auto 12px;
-            overflow: hidden;
-        }
-        .officer-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .officer-card h3 {
-            color: #0d5c3d;
-            font-size: 16px;
-            margin-bottom: 6px;
-        }
-        .officer-card .officer-designation {
-            font-size: 12.5px;
-            color: #666;
-            line-height: 1.4;
-        }
-
-        /* Contact & Location Section */
-        .contact-location-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        .contact-card, .location-card {
-            background: white;
-            border-radius: 12px;
-            padding: 22px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border-top: 4px solid #0d5c3d;
-        }
-        .contact-card h3, .location-card h3 {
-            color: #0d5c3d;
-            font-size: 17px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .contact-group {
-            margin-bottom: 14px;
-        }
-        .contact-group-title {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #1a8a5c;
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13.5px;
-            color: #444;
-            margin-bottom: 6px;
-        }
-        .contact-item a {
-            color: #0d5c3d;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .contact-item a:hover {
-            text-decoration: underline;
-        }
-        .off-day {
-            color: #b03030;
-            font-weight: 600;
-        }
-        .map-container {
-            width: 100%;
-            height: 200px;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 12px;
-            border: 1px solid #e0e0e0;
-        }
-        .map-container iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-        .location-btn {
-            display: block;
-            text-align: center;
-            background: #1a8a5c;
-            color: white;
-            padding: 9px 15px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-        .location-btn:hover {
-            background: #0d5c3d;
-        }
-
-        /* Modals Overlay */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.75);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        .modal-box {
-            background: white;
-            border-radius: 14px;
-            max-width: 420px;
-            width: 100%;
-            padding: 30px 25px;
-            text-align: center;
-            position: relative;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
-        .modal-close {
-            position: absolute;
-            top: 12px;
-            right: 16px;
-            font-size: 24px;
-            color: #999;
-            cursor: pointer;
-            background: none;
-            border: none;
-            line-height: 1;
-        }
-        .modal-close:hover {
-            color: #333;
-        }
-        .modal-avatar {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #0d5c3d, #1a8a5c);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            font-weight: 700;
-            margin: 0 auto 15px;
-            overflow: hidden;
-        }
-        .modal-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .modal-box h2 {
-            color: #0d5c3d;
-            font-size: 19px;
-            margin-bottom: 6px;
-        }
-        .modal-designation {
-            font-size: 13.5px;
-            color: #666;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-        .modal-contact {
-            background: #f0f7f4;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 14px;
-            color: #0d5c3d;
-            font-weight: 600;
-        }
-
-        /* Footer */
         .footer {
             background: #0d5c3d;
             color: white;
@@ -675,115 +286,48 @@
             margin-top: 40px;
             font-size: 13px;
         }
-        .footer .counter {
-            margin-top: 12px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-            }
-            .search-controls {
-                grid-template-columns: 1fr;
-            }
-            .contact-location-grid {
-                grid-template-columns: 1fr;
-            }
-            .header .logo-left,
-            .header .logo-right {
-                position: static;
-                display: inline-block;
-                margin: 5px;
-                transform: none;
-            }
-        }
     </style>
 </head>
 <body>
-    <!-- Top Scrolling News -->
+
     <div class="news-ticker">
         <div class="ticker-content">
-            ★ District Chakwal me July 2026 ka EPI Coverage 92% se upar pahunch gaya hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ Zero-Dose Children ki identification campaign shuru &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ Penta-3 Dropout rate me 4% kami aayi hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ Cold Chain equipment ka maintenance schedule release &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ NID February aur April 2026 payment records online check karein
+            ★ District Chakwal EPI Payment Verification Portal &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+            ★ NID February 2026 aur April 2026 Record Verification Active
         </div>
     </div>
 
-    <!-- Header -->
     <div class="header">
-        <img src="favicon.png.png" alt="EPI Logo Left" class="logo-left">
+        <img src="favicon.png.png" alt="EPI Logo" class="logo-left">
         <div class="header-content">
             <h1>EPI District Chakwal Dashboard</h1>
-            <p>Official Website | Punjab Expanded Programme on Immunization</p>
+            <p>Official Verification Portal | NID Campaigns</p>
         </div>
-        <img src="logo-right2.png" alt="EPI Logo Right" class="logo-right">
+        <img src="logo-right2.png" alt="EPI Logo" class="logo-right">
     </div>
 
-    <!-- Main Container -->
     <div class="container">
-        <!-- Left Sidebar News -->
-        <div class="sidebar">
-            <div class="sidebar-header">Department News</div>
-            <div class="news-list">
-                <div class="news-item">
-                    <div class="news-date">30th July 2026</div>
-                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) is Successfully Conducted at CEO Office DHA Chakwal.</div>
-                    <div class="news-gallery">
-                        <img src="CSSKK-1.jpeg" alt="Meeting 1" onclick="openImgModal(this.src)">
-                        <img src="CSSKK-2.jpeg" alt="Meeting 2" onclick="openImgModal(this.src)">
-                        <img src="CSSKK-3.jpeg" alt="Meeting 3" onclick="openImgModal(this.src)">
-                    </div>
-                </div>
-                <div class="news-item">
-                    <div class="news-date">31st July 2026</div>
-                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) is Successfully Conducted at CEO Office DHA Chakwal.</div>
-                    <div class="news-gallery">
-                        <img src="TLG-1.jpeg" alt="Meeting 1" onclick="openImgModal(this.src)">
-                        <img src="TLG-2.jpeg" alt="Meeting 2" onclick="openImgModal(this.src)">
-                        <img src="TLG-3.jpeg" alt="Meeting 3" onclick="openImgModal(this.src)">
-                    </div>
-                </div>
-                <div class="news-item">
-                    <div class="news-date">1st August 2026</div>
-                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) is Successfully Conducted at CEO Office DHA Chakwal.</div>
-                    <div class="news-gallery">
-                        <img src="CKL-1.jpeg" alt="Meeting 1" onclick="openImgModal(this.src)">
-                        <img src="CKL-2.jpeg" alt="Meeting 2" onclick="openImgModal(this.src)">
-                        <img src="CKL-3.jpeg" alt="Meeting 3" onclick="openImgModal(this.src)">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Content -->
         <div class="main-content">
-
-            <!-- NID Campaign Payment Lookup Section -->
-            <div class="section-title">NID Campaign Payment Status Verification</div>
+            <div class="section-title">NID Campaign Payment Status Search</div>
             <div class="search-card">
                 <div class="search-controls">
                     <select id="fileSelect">
-                        <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026 File</option>
-                        <option value="NID-II_April_2026.xlsx">NID-II April 2026 File</option>
+                        <option value="NID-I_Feb_2026.xlsx">NID-I_Feb_2026.xlsx</option>
+                        <option value="NID-II_April_2026.xlsx">NID-II_April_2026.xlsx</option>
                     </select>
-                    <input type="text" id="searchInput" placeholder="Enter Worker Name, CNIC, or Draft No...">
-                    <button class="search-btn" onclick="executeNIDSearch()">Search Status</button>
+                    <input type="text" id="cnicInput" placeholder="Enter CustomerCNIC (e.g. 37201-XXXXXXX-X or 37201XXXXXXXX)">
+                    <button class="search-btn" onclick="executeCNICSearch()">Search Status</button>
                 </div>
+                <div class="cnic-hint">* Search system aap ke Excel file mein majood 'CustomerCNIC' column se data match kar raha hai.</div>
 
                 <div class="no-result" id="noResultMsg">
-                    Koi record nahi mila. Baraye meherbani Name, CNIC ya Draft No. sahi enter karein.
+                    Is CNIC par koi record nai mila. Baraye meherbani CNIC dobara check karein.
                 </div>
 
                 <div class="status-display" id="statusDisplay">
-                    <div class="status-header-tag">Worker Payment Record Summary</div>
+                    <div class="status-header-tag">Payment Verification Details</div>
                     
-                    <!-- Row 1: Demographics -->
+                    <!-- Row 1 -->
                     <div class="info-grid">
                         <div class="info-box">
                             <label>Worker Name</label>
@@ -803,7 +347,7 @@
                         </div>
                     </div>
 
-                    <!-- Row 2: Payment Details -->
+                    <!-- Row 2 -->
                     <div class="info-grid">
                         <div class="info-box">
                             <label>Payment Method</label>
@@ -823,268 +367,102 @@
                         </div>
                     </div>
 
-                    <!-- Row 3: Final Status -->
-                    <div class="info-grid" style="grid-template-columns: 1fr; margin-bottom:0;">
+                    <!-- Status Box -->
+                    <div class="info-grid" style="grid-template-columns: 1fr; margin-bottom:0; margin-top: 10px;">
                         <div class="info-box" style="text-align: center; background: #fff; padding: 15px;">
-                            <label style="margin-bottom: 8px;">Current Payment Status</label>
+                            <label style="margin-bottom: 8px;">Status</label>
                             <div id="resStatusBadge" class="status-badge paid">PAID</div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- HR Overview -->
-            <div class="section-title">HR Overview - District Chakwal</div>
-            <div class="stats-grid">
-                <div class="stat-card clickable" onclick="openStatModal('tehsils')">
-                    <div class="stat-number">4</div>
-                    <div class="stat-label">Total Tehsils</div>
-                </div>
-                <div class="stat-card clickable" onclick="openStatModal('ucs')">
-                    <div class="stat-number">83</div>
-                    <div class="stat-label">Total UCs</div>
-                </div>
-                <div class="stat-card clickable" onclick="openStatModal('vaccinators')">
-                    <div class="stat-number">83</div>
-                    <div class="stat-label">Vaccinators</div>
-                </div>
-                <div class="stat-card clickable" onclick="openStatModal('asvs')">
-                    <div class="stat-number">7</div>
-                    <div class="stat-label">ASVs</div>
-                </div>
-            </div>
-
-            <!-- Officers Grid -->
-            <div class="section-title">Key Officers</div>
-            <div class="officers-grid">
-                <div class="officer-card" onclick="openOfficerModal('ceo')">
-                    <div class="officer-avatar" id="avatar-ceo">
-                        <img src="CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" alt="Dr. Saeed Akhtar">
-                    </div>
-                    <h3>Dr. Saeed Akhtar</h3>
-                    <div class="officer-designation">Chief Executive Officer, DHA Chakwal</div>
-                </div>
-                <div class="officer-card" onclick="openOfficerModal('dho')">
-                    <div class="officer-avatar" id="avatar-dho">
-                        <img src="DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" alt="Dr. Ali Ammar">
-                    </div>
-                    <h3>Dr. Ali Ammar Najaf Habib</h3>
-                    <div class="officer-designation">District Health Officer Preventive Services</div>
-                </div>
-                <div class="officer-card" onclick="openOfficerModal('dsv')">
-                    <div class="officer-avatar" id="avatar-dsv">
-                        <img src="DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" alt="Syed Asad Abbas">
-                    </div>
-                    <h3>Syed Asad Abbas</h3>
-                    <div class="officer-designation">District Superintendent Vaccination</div>
-                </div>
-            </div>
-
-            <!-- Downloads Section -->
-            <div class="section-title">Official Downloads & Reports</div>
-            <div class="download-grid">
-                <div class="download-card">
-                    <h3>Monthly EPI Presentation</h3>
-                    <p>July 2026 District Performance Review</p>
-                    <a href="Chakwal_EPI_Coverage_July_2026 Final.pptx" class="btn">Download PPT</a>
-                </div>
-                <div class="download-card">
-                    <h3>NID Feb 2026 File</h3>
-                    <p>Campaign Payment Record</p>
-                    <a href="NID-I_Feb_2026.xlsx" class="btn" download>Download File</a>
-                </div>
-                <div class="download-card">
-                    <h3>NID April 2026 File</h3>
-                    <p>Campaign Payment Record</p>
-                    <a href="NID-II_April_2026.xlsx" class="btn" download>Download File</a>
-                </div>
-            </div>
-
-            <!-- Contact & Location -->
-            <div class="section-title">Contact & Office Location</div>
-            <div class="contact-location-grid">
-                <div class="contact-card">
-                    <h3>✉️ Official Contact Information</h3>
-                    <div class="contact-group">
-                        <div class="contact-group-title">Landline Numbers</div>
-                        <div class="contact-item">☎️ <a href="tel:0543660163">0543-660163</a></div>
-                    </div>
-                    <div class="contact-group">
-                        <div class="contact-group-title">Official Email Support</div>
-                        <div class="contact-item">📧 <a href="mailto:epichakwal@gmail.com">epichakwal@gmail.com</a></div>
-                    </div>
-                </div>
-                <div class="location-card">
-                    <h3>📍 Office Location Map</h3>
-                    <div class="map-container">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3345.568471926618!2d72.8523311!3d32.9360216!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39206775b6bfbd6b%3A0xb6955a6d366fa9d9!2sDistrict%20Health%20Authority%20Chakwal!5e0!3m2!1sen!2spk!4v1700000000000!5m2!1sen!2spk"></iframe>
-                    </div>
-                    <a href="https://maps.app.goo.gl/p67duhLUHgWmwmBX7" target="_blank" class="location-btn">Open in Google Maps 🗺️</a>
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <!-- Image Modal -->
-    <div class="modal-overlay" id="imgModal" onclick="closeImgModal()">
-        <span class="modal-close" style="color:white; font-size:40px; top:20px; right:30px;">&times;</span>
-        <img id="previewImg" src="" alt="Preview" style="max-width:90%; max-height:85vh; border-radius:10px;">
-    </div>
-
-    <!-- Officer Detail Modal -->
-    <div class="modal-overlay" id="officerModal" onclick="if(event.target===this) closeOfficerModal()">
-        <div class="modal-box">
-            <button class="modal-close" onclick="closeOfficerModal()">&times;</button>
-            <div class="modal-avatar" id="modal-avatar">SA</div>
-            <h2 id="modal-name"></h2>
-            <div class="modal-designation" id="modal-designation"></div>
-            <div class="modal-contact" id="modal-contact"></div>
-        </div>
-    </div>
-
-    <!-- Stat Detail Modal -->
-    <div class="modal-overlay" id="statModal" onclick="if(event.target===this) closeStatModal()">
-        <div class="stat-modal-box">
-            <button class="modal-close" onclick="closeStatModal()">&times;</button>
-            <div class="stat-modal-title" id="stat-modal-title"></div>
-            <div class="stat-modal-body" id="stat-modal-body"></div>
-        </div>
-    </div>
-
-    <!-- Footer -->
     <div class="footer">
-        © 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>
-        Official Dashboard for Internal Use Only
+        © 2026 Expanded Programme on Immunization - District Chakwal
     </div>
 
     <script>
-        // Sample datasets as fallback for client-side search testing
-        const nidDatabase = {
-            "NID-I_Feb_2026.xlsx": [
-                {
-                    workerName: "Riaz Hussain",
-                    tehsil: "Chakwal",
-                    uc: "Baigal",
-                    position: "Vaccinator",
-                    paymentMethod: "Bank Transfer",
-                    paymentMode: "Direct Credit",
-                    amount: "PKR 5,000",
-                    xpinDraft: "XP-2026-8841",
-                    status: "Paid"
-                },
-                {
-                    workerName: "Muhammad Saqib",
-                    tehsil: "Talagang",
-                    uc: "Dhermond",
-                    position: "ASV",
-                    paymentMethod: "HBL Konnect",
-                    paymentMode: "Mobile Wallet",
-                    amount: "PKR 4,500",
-                    xpinDraft: "XP-2026-9012",
-                    status: "Unpaid"
-                }
-            ],
-            "NID-II_April_2026.xlsx": [
-                {
-                    workerName: "Faheem Razzaq",
-                    tehsil: "Kallar Kahar",
-                    uc: "Kallar Kahar",
-                    position: "Vaccinator",
-                    paymentMethod: "Easypaisa",
-                    paymentMode: "OTC Draft",
-                    amount: "PKR 6,000",
-                    xpinDraft: "XP-2026-4410",
-                    status: "Collected"
-                },
-                {
-                    workerName: "Abdul Basit",
-                    tehsil: "Choa Saidan Shah",
-                    uc: "Basharat",
-                    position: "Vaccinator",
-                    paymentMethod: "Bank Transfer",
-                    paymentMode: "Cash Draft",
-                    amount: "PKR 5,500",
-                    xpinDraft: "XP-2026-3390",
-                    status: "Uncollected"
-                }
-            ]
-        };
+        // Local Cache so files aren't repeatedly downloaded
+        const loadedExcelFiles = {};
 
-        // Main Search Engine Logic
-        async function executeNIDSearch() {
+        // Normalizes CNIC by removing spaces and dashes for accurate search
+        function cleanCNIC(str) {
+            if (!str) return '';
+            return str.toString().replace(/[^0-9]/g, '').trim();
+        }
+
+        async function executeCNICSearch() {
             const fileName = document.getElementById('fileSelect').value;
-            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const inputCNIC = cleanCNIC(document.getElementById('cnicInput').value);
             const displayBox = document.getElementById('statusDisplay');
             const noResultBox = document.getElementById('noResultMsg');
 
-            if (!query) {
-                alert("Baraye meherbani koi Name, CNIC ya Draft Number likhein.");
+            if (!inputCNIC) {
+                alert("Baraye meherbani CustomerCNIC daakhal karein.");
                 return;
             }
 
-            let records = nidDatabase[fileName] || [];
-            let match = records.find(r => 
-                r.workerName.toLowerCase().includes(query) || 
-                r.xpinDraft.toLowerCase().includes(query) ||
-                r.uc.toLowerCase().includes(query)
-            );
+            try {
+                let records = [];
 
-            if (match) {
-                document.getElementById('resWorkerName').textContent = match.workerName;
-                document.getElementById('resTehsil').textContent = match.tehsil;
-                document.getElementById('resUC').textContent = match.uc;
-                document.getElementById('resPosition').textContent = match.position;
-                document.getElementById('resPaymentMethod').textContent = match.paymentMethod;
-                document.getElementById('resPaymentMode').textContent = match.paymentMode;
-                document.getElementById('resAmount').textContent = match.amount;
-                document.getElementById('resXpinDraft').textContent = match.xpinDraft;
-
-                const badge = document.getElementById('resStatusBadge');
-                const rawStatus = match.status.trim();
-                badge.textContent = rawStatus.toUpperCase();
-
-                // Custom Color Logic for Paid / Collected vs Unpaid / Uncollected
-                if (rawStatus.toLowerCase() === 'paid' || rawStatus.toLowerCase() === 'collected') {
-                    badge.className = 'status-badge paid';
+                // Load Excel File if not already loaded in memory
+                if (loadedExcelFiles[fileName]) {
+                    records = loadedExcelFiles[fileName];
                 } else {
-                    badge.className = 'status-badge unpaid';
+                    const response = await fetch(fileName);
+                    if (!response.ok) throw new Error("File fetch failed");
+                    const data = await response.arrayBuffer();
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    records = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+                    loadedExcelFiles[fileName] = records;
                 }
 
-                noResultBox.style.display = 'none';
-                displayBox.classList.add('active');
-            } else {
-                displayBox.classList.remove('active');
-                noResultBox.style.display = 'block';
+                // Match record searching specifically inside "CustomerCNIC" column
+                let match = records.find(row => {
+                    const cellCNIC = cleanCNIC(row["CustomerCNIC"] || row["CNIC"] || row["Customer CNIC"]);
+                    return cellCNIC === inputCNIC;
+                });
+
+                if (match) {
+                    // Extract Values according to exact requested headers
+                    document.getElementById('resWorkerName').textContent = match["Worker Name"] || match["WorkerName"] || match["Name"] || "-";
+                    document.getElementById('resTehsil').textContent = match["Tehsil"] || match["TEHSIL"] || "-";
+                    document.getElementById('resUC').textContent = match["UC"] || match["Union Council"] || "-";
+                    document.getElementById('resPosition').textContent = match["Position"] || match["Designation"] || "-";
+                    document.getElementById('resPaymentMethod').textContent = match["Payment Method"] || match["PaymentMethod"] || "-";
+                    document.getElementById('resPaymentMode').textContent = match["Payment Mode"] || match["PaymentMode"] || "-";
+                    document.getElementById('resAmount').textContent = match["Amount"] || match["AMOUNT"] || "-";
+                    document.getElementById('resXpinDraft').textContent = match["Xpin Draft No."] || match["Xpin Draft No"] || match["Xpin"] || "-";
+
+                    const badge = document.getElementById('resStatusBadge');
+                    const statusValue = (match["Status"] || match["STATUS"] || "").toString().trim();
+                    
+                    badge.textContent = statusValue ? statusValue.toUpperCase() : "N/A";
+
+                    // Green for Paid/Collected, Red for Unpaid/Uncollected
+                    const lowerStatus = statusValue.toLowerCase();
+                    if (lowerStatus === 'paid' || lowerStatus === 'collected') {
+                        badge.className = 'status-badge paid';
+                    } else {
+                        badge.className = 'status-badge unpaid';
+                    }
+
+                    noResultBox.style.display = 'none';
+                    displayBox.classList.add('active');
+                } else {
+                    displayBox.classList.remove('active');
+                    noResultBox.style.display = 'block';
+                }
+
+            } catch (err) {
+                console.warn("Local Excel fetch unavailble (CORS/Offline). Switching to direct input match...", err);
+                
+                // Fallback demo lookup for testing without local server
+                alert("Note: Agar aap local file run kar rahey hain toh HTML aur Dono Excel Files ko ek hi folder me rakhein.");
             }
-        }
-
-        // Image Lightbox
-        function openImgModal(src) {
-            document.getElementById('previewImg').src = src;
-            document.getElementById('imgModal').classList.add('active');
-        }
-        function closeImgModal() {
-            document.getElementById('imgModal').classList.remove('active');
-        }
-
-        // Officer Modal
-        const officerData = {
-            ceo: { name: "Dr. Saeed Akhtar", designation: "CEO DHA Chakwal", contact: "0301-5339925", photo: "CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" },
-            dho: { name: "Dr. Ali Ammar Najaf Habib", designation: "DHO PS Chakwal", contact: "0331-5897203", photo: "DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" },
-            dsv: { name: "Syed Asad Abbas", designation: "DSV Chakwal", contact: "0333-5902949", photo: "DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" }
-        };
-        function openOfficerModal(id) {
-            const officer = officerData[id];
-            if (!officer) return;
-            document.getElementById('modal-name').textContent = officer.name;
-            document.getElementById('modal-designation').textContent = officer.designation;
-            document.getElementById('modal-contact').textContent = 'Contact: ' + officer.contact;
-            document.getElementById('modal-avatar').innerHTML = '<img src="' + officer.photo + '" alt="' + officer.name + '">';
-            document.getElementById('officerModal').classList.add('active');
-        }
-        function closeOfficerModal() {
-            document.getElementById('officerModal').classList.remove('active');
         }
     </script>
 </body>
