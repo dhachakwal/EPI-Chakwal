@@ -465,7 +465,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.75);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -689,9 +689,9 @@
                     <div class="news-date">30th July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) is Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <div class="news-gallery">
-                        <img src="CSSKK-1.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 1" loading="lazy" onclick="openImgModal(this.src)">
-                        <img src="CSSKK-2.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 2" loading="lazy" onclick="openImgModal(this.src)">
-                        <img src="CSSKK-3.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 3" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-1-thumb.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 1" loading="lazy" onclick="openImgModal('CSSKK-1.jpeg')">
+                        <img src="CSSKK-2-thumb.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 2" loading="lazy" onclick="openImgModal('CSSKK-2.jpeg')">
+                        <img src="CSSKK-3-thumb.jpeg" alt="Choa Saidan Shah & Kallar Kahar Meeting 3" loading="lazy" onclick="openImgModal('CSSKK-3.jpeg')">
                     </div>
                 </div>
 
@@ -699,9 +699,9 @@
                     <div class="news-date">31st July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) is Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <div class="news-gallery">
-                        <img src="TLG-1.jpeg" alt="Talagang Meeting 1" loading="lazy" onclick="openImgModal(this.src)">
-                        <img src="TLG-2.jpeg" alt="Talagang Meeting 2" loading="lazy" onclick="openImgModal(this.src)">
-                        <img src="TLG-3.jpeg" alt="Talagang Meeting 3" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="TLG-1-thumb.jpeg" alt="Talagang Meeting 1" loading="lazy" onclick="openImgModal('TLG-1.jpeg')">
+                        <img src="TLG-2-thumb.jpeg" alt="Talagang Meeting 2" loading="lazy" onclick="openImgModal('TLG-2.jpeg')">
+                        <img src="TLG-3-thumb.jpeg" alt="Talagang Meeting 3" loading="lazy" onclick="openImgModal('TLG-3.jpeg')">
                     </div>
                 </div>
 
@@ -709,9 +709,9 @@
                     <div class="news-date">1st August 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) is Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <div class="news-gallery">
-                        <img src="CKL-1.jpeg" alt="Chakwal Meeting 1" loading="lazy" onclick="openImgModal(this.src)">
-                        <img src="CKL-2.jpeg" alt="Chakwal Meeting 2" loading="lazy" onclick="openImgModal(this.src)">
-                        <img src="CKL-3.jpeg" alt="Chakwal Meeting 3" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="CKL-1-thumb.jpeg" alt="Chakwal Meeting 1" loading="lazy" onclick="openImgModal('CKL-1.jpeg')">
+                        <img src="CKL-2-thumb.jpeg" alt="Chakwal Meeting 2" loading="lazy" onclick="openImgModal('CKL-2.jpeg')">
+                        <img src="CKL-3-thumb.jpeg" alt="Chakwal Meeting 3" loading="lazy" onclick="openImgModal('CKL-3.jpeg')">
                     </div>
                 </div>
             </div>
@@ -753,21 +753,21 @@
             <div class="officers-grid">
                 <div class="officer-card" onclick="openOfficerModal('ceo')">
                     <div class="officer-avatar" id="avatar-ceo">
-                        <img src="CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" alt="Dr. Saeed Akhtar" loading="lazy">
+                        <img src="CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" alt="Dr. Saeed Akhtar">
                     </div>
                     <h3>Dr. Saeed Akhtar</h3>
                     <div class="officer-designation">Chief Executive Officer, District Health Authority Chakwal</div>
                 </div>
                 <div class="officer-card" onclick="openOfficerModal('dho')">
                     <div class="officer-avatar" id="avatar-dho">
-                        <img src="DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" alt="Dr. Ali Ammar Najaf Habib" loading="lazy">
+                        <img src="DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" alt="Dr. Ali Ammar Najaf Habib">
                     </div>
                     <h3>Dr. Ali Ammar Najaf Habib</h3>
                     <div class="officer-designation">District Health Officer Preventive Services, DHA Chakwal</div>
                 </div>
                 <div class="officer-card" onclick="openOfficerModal('dsv')">
                     <div class="officer-avatar" id="avatar-dsv">
-                        <img src="DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" alt="Syed Asad Abbas" loading="lazy">
+                        <img src="DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" alt="Syed Asad Abbas">
                     </div>
                     <h3>Syed Asad Abbas</h3>
                     <div class="officer-designation">District Superintendent Vaccination, DHA Chakwal</div>
@@ -852,10 +852,10 @@
         </div>
     </div>
 
-    <!-- Image Preview Modal (Full HD Display) -->
+    <!-- Image Preview Modal -->
     <div class="modal-overlay" id="imgModal" onclick="closeImgModal()">
         <span class="modal-close" style="color:white; font-size:40px; top:20px; right:30px;">&times;</span>
-        <img id="previewImg" src="" alt="Image Preview" style="max-width:95%; max-height:90vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.8); object-fit:contain;">
+        <img id="previewImg" src="" alt="Image Preview" style="max-width:90%; max-height:85vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.5); object-fit:contain;">
     </div>
 
     <!-- Officer Detail Modal -->
