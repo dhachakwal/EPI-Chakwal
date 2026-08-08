@@ -7,121 +7,106 @@
     <link rel="icon" href="favicon.png.png" type="image/png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f0f7f4; color: #333; }
-        .news-ticker { background: #0d5c3d; color: white; padding: 10px 0; overflow: hidden; white-space: nowrap; }
-        .ticker-content { display: inline-block; padding-left: 100%; animation: ticker 75s linear infinite; font-size: 15px; }
-        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-        .header { background: linear-gradient(135deg, #0d5c3d, #1a8a5c); color: white; padding: 12px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; text-align: center; }
-        .header .logo-left { width: 70px; height: 70px; border-radius: 8px; object-fit: contain; position: absolute; left: 90px; top: 50%; transform: translateY(-50%); }
-        .header .logo-right { width: 70px; height: 70px; border-radius: 8px; object-fit: contain; position: absolute; right: 90px; top: 50%; transform: translateY(-50%); }
-        .header h1 { font-size: 24px; margin-bottom: 4px; }
-        .header p { font-size: 13px; opacity: 0.9; }
-        .container { display: flex; max-width: 1200px; margin: 25px auto; gap: 20px; padding: 0 15px; }
-        .sidebar { width: 340px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden; }
-        .sidebar-header { background: #0d5c3d; color: white; padding: 14px; font-size: 16px; font-weight: 600; text-align: center; }
-        .news-list { padding: 15px; }
-        .news-item { padding: 14px 0; border-bottom: 1px solid #e0e0e0; font-size: 13.5px; line-height: 1.5; color: #444; }
-        .news-item:last-child { border-bottom: none; }
-        .news-date { font-size: 12px; color: #1a8a5c; font-weight: 700; margin-bottom: 5px; display: inline-block; background: #e8f5e9; padding: 3px 8px; border-radius: 4px; }
-        .news-text { margin-bottom: 8px; font-weight: 500; }
-        .show-pics-btn { display: inline-block; margin-top: 6px; font-size: 12.5px; color: #0d5c3d; font-weight: 600; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
-        .show-pics-btn:hover { color: #09402b; }
-        .news-gallery { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
-        .news-gallery.show { display: grid; }
-        .news-gallery img { width: 100%; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
-        .main-content { flex: 1; }
-        .section-title { background: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); font-size: 18px; font-weight: 600; color: #0d5c3d; border-left: 5px solid #0d5c3d; }
-        .download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 25px; }
-        .download-card { background: white; border-radius: 12px; padding: 22px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #1a8a5c; transition: all 0.3s; }
-        .download-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-        .download-card h3 { color: #0d5c3d; font-size: 16px; margin-bottom: 10px; }
-        .download-card p { font-size: 13px; color: #666; margin-bottom: 15px; }
-        .btn { display: inline-block; background: #0d5c3d; color: white; padding: 9px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; border: none; cursor: pointer; }
-        .btn:hover { background: #09402b; }
-        .btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-        .btn-outline { background: white; color: #0d5c3d; border: 2px solid #0d5c3d; }
-        .btn-outline:hover { background: #0d5c3d; color: white; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: white; border-radius: 12px; padding: 18px 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-bottom: 4px solid #1a8a5c; cursor: pointer; transition: all 0.3s; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-        .stat-card .stat-number { font-size: 28px; font-weight: 700; color: #0d5c3d; }
-        .stat-card .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
-        .officers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin-bottom: 25px; }
-        .officer-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #0d5c3d; cursor: pointer; transition: all 0.3s; }
-        .officer-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-        .officer-avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; overflow: hidden; background: linear-gradient(135deg, #0d5c3d, #1a8a5c); }
-        .officer-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .officer-card h3 { color: #0d5c3d; font-size: 16px; margin-bottom: 6px; }
-        .officer-card .officer-designation { font-size: 12.5px; color: #666; line-height: 1.4; }
-        .contact-location-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
-        .contact-card, .location-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #0d5c3d; }
-        .contact-card h3, .location-card h3 { color: #0d5c3d; font-size: 17px; margin-bottom: 15px; }
-        .office-status { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; margin-bottom: 12px; }
-        .office-open { background: #e8f5e9; color: #0d5c3d; border: 1px solid #1a8a5c; }
-        .office-closed { background: #fdecea; color: #b03030; border: 1px solid #e57373; }
-        .contact-group { margin-bottom: 14px; }
-        .contact-group-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #1a8a5c; margin-bottom: 6px; }
-        .contact-item { font-size: 13.5px; color: #444; margin-bottom: 6px; }
-        .contact-item a { color: #0d5c3d; text-decoration: none; font-weight: 500; }
-        .off-day { color: #b03030; font-weight: 600; }
-        .map-container { width: 100%; height: 200px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid #e0e0e0; }
-        .map-container iframe { width: 100%; height: 100%; border: 0; }
-        .location-btn { display: block; text-align: center; background: #1a8a5c; color: white; padding: 9px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
-        .modal-overlay.active { display: flex; }
-        .modal-box { background: white; border-radius: 14px; max-width: 420px; width: 100%; padding: 30px 25px; text-align: center; position: relative; }
-        .stat-modal-box { background: white; border-radius: 14px; max-width: 560px; width: 100%; max-height: 85vh; padding: 25px; position: relative; overflow-y: auto; }
-        .modal-close { position: absolute; top: 12px; right: 16px; font-size: 24px; color: #999; cursor: pointer; background: none; border: none; }
-        .modal-avatar { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 15px; overflow: hidden; background: linear-gradient(135deg, #0d5c3d, #1a8a5c); }
-        .modal-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .modal-box h2 { color: #0d5c3d; font-size: 19px; margin-bottom: 6px; }
-        .modal-designation { font-size: 13.5px; color: #666; margin-bottom: 15px; }
-        .modal-contact { background: #f0f7f4; border-radius: 8px; padding: 10px; font-size: 14px; color: #0d5c3d; font-weight: 600; }
-        .stat-modal-title { color: #0d5c3d; font-size: 19px; font-weight: 700; margin-bottom: 15px; }
-        .tehsil-block { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
-        .tehsil-block-header { background: #f0f7f4; padding: 12px 15px; font-weight: 600; color: #0d5c3d; font-size: 14.5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .tehsil-block-header .arrow { transition: transform 0.25s; font-size: 12px; }
-        .tehsil-block-header.open .arrow { transform: rotate(90deg); }
-        .tehsil-block-content { display: none; padding: 8px 15px 12px; }
-        .tehsil-block-content.open { display: block; }
-        .tehsil-entry-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13.5px; }
-        .tehsil-entry-row:last-child { border-bottom: none; }
-        .tehsil-entry-name { font-weight: 500; }
-        .tehsil-entry-value { color: #0d5c3d; font-weight: 600; }
-        .nid-select-input, .nid-search-input { width: 100%; padding: 11px 15px; border: 2px solid #0d5c3d; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; }
-        .result-card { background: #fff; border: 1px solid #1a8a5c; border-left: 6px solid #0d5c3d; border-radius: 10px; padding: 18px; margin-top: 15px; text-align: left; }
-        .result-row { display: flex; justify-content: space-between; margin-bottom: 9px; font-size: 14px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 6px; }
-        .result-label { font-weight: 600; color: #555; }
-        .result-value { font-weight: 700; color: #0d5c3d; }
-        .status-badge-large { font-size: 18px; font-weight: 900; color: #0d5c3d; background: #e8f5e9; padding: 4px 12px; border-radius: 6px; }
-        .footer { background: #0d5c3d; color: white; text-align: center; padding: 18px; margin-top: 40px; font-size: 13px; }
-        @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            .sidebar { width: 100%; }
-            .contact-location-grid { grid-template-columns: 1fr; }
-            .header .logo-left, .header .logo-right { position: static; display: inline-block; margin: 5px; transform: none; }
-        }
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+        body{background:#f0f7f4;color:#333}
+        .news-ticker{background:#0d5c3d;color:#fff;padding:10px 0;overflow:hidden;white-space:nowrap}
+        .ticker-content{display:inline-block;padding-left:100%;animation:ticker 75s linear infinite;font-size:15px}
+        @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+        .header{background:linear-gradient(135deg,#0d5c3d,#1a8a5c);color:#fff;padding:12px 20px;box-shadow:0 4px 12px rgba(0,0,0,.15);position:relative;text-align:center}
+        .header .logo-left{width:70px;height:70px;border-radius:8px;object-fit:contain;position:absolute;left:90px;top:50%;transform:translateY(-50%)}
+        .header .logo-right{width:70px;height:70px;border-radius:8px;object-fit:contain;position:absolute;right:90px;top:50%;transform:translateY(-50%)}
+        .header h1{font-size:24px;margin-bottom:4px}
+        .header p{font-size:13px;opacity:.9}
+        .container{display:flex;max-width:1200px;margin:25px auto;gap:20px;padding:0 15px}
+        .sidebar{width:340px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.08);overflow:hidden}
+        .sidebar-header{background:#0d5c3d;color:#fff;padding:14px;font-size:16px;font-weight:600;text-align:center}
+        .news-list{padding:15px}
+        .news-item{padding:14px 0;border-bottom:1px solid #e0e0e0;font-size:13.5px;line-height:1.5;color:#444}
+        .news-item:last-child{border-bottom:none}
+        .news-date{font-size:12px;color:#1a8a5c;font-weight:700;margin-bottom:5px;display:inline-block;background:#e8f5e9;padding:3px 8px;border-radius:4px}
+        .news-text{margin-bottom:8px;font-weight:500}
+        .show-pics-btn{display:inline-block;margin-top:6px;font-size:12.5px;color:#0d5c3d;font-weight:600;cursor:pointer;text-decoration:underline;background:none;border:none;padding:0}
+        .show-pics-btn:hover{color:#09402b}
+        .news-gallery{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+        .news-gallery.show{display:grid}
+        .news-gallery img{width:100%;height:65px;object-fit:cover;border-radius:6px;border:1px solid #ddd;cursor:pointer}
+        .main-content{flex:1}
+        .section-title{background:#fff;padding:15px 20px;border-radius:12px;margin-bottom:20px;box-shadow:0 4px 15px rgba(0,0,0,.08);font-size:18px;font-weight:600;color:#0d5c3d;border-left:5px solid #0d5c3d}
+        .download-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-bottom:25px}
+        .download-card{background:#fff;border-radius:12px;padding:22px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.08);border-top:4px solid #1a8a5c;transition:all .3s}
+        .download-card:hover{transform:translateY(-5px);box-shadow:0 8px 25px rgba(0,0,0,.12)}
+        .download-card h3{color:#0d5c3d;font-size:16px;margin-bottom:10px}
+        .download-card p{font-size:13px;color:#666;margin-bottom:15px}
+        .btn{display:inline-block;background:#0d5c3d;color:#fff;padding:9px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;border:none;cursor:pointer}
+        .btn:hover{background:#09402b}
+        .btn-group{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+        .btn-outline{background:#fff;color:#0d5c3d;border:2px solid #0d5c3d}
+        .btn-outline:hover{background:#0d5c3d;color:#fff}
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:25px}
+        .stat-card{background:#fff;border-radius:12px;padding:18px 10px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.08);border-bottom:4px solid #1a8a5c;cursor:pointer;transition:all .3s}
+        .stat-card:hover{transform:translateY(-5px);box-shadow:0 8px 25px rgba(0,0,0,.12)}
+        .stat-card .stat-number{font-size:28px;font-weight:700;color:#0d5c3d}
+        .stat-card .stat-label{font-size:13px;color:#666;margin-top:4px}
+        .officers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-bottom:25px}
+        .officer-card{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.08);border-top:4px solid #0d5c3d;cursor:pointer;transition:all .3s}
+        .officer-card:hover{transform:translateY(-5px);box-shadow:0 8px 25px rgba(0,0,0,.12)}
+        .officer-avatar{width:80px;height:80px;border-radius:50%;margin:0 auto 12px;overflow:hidden;background:linear-gradient(135deg,#0d5c3d,#1a8a5c)}
+        .officer-avatar img{width:100%;height:100%;object-fit:cover}
+        .officer-card h3{color:#0d5c3d;font-size:16px;margin-bottom:6px}
+        .officer-card .officer-designation{font-size:12.5px;color:#666;line-height:1.4}
+        .contact-location-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px}
+        .contact-card,.location-card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 4px 15px rgba(0,0,0,.08);border-top:4px solid #0d5c3d}
+        .contact-card h3,.location-card h3{color:#0d5c3d;font-size:17px;margin-bottom:15px}
+        .office-status{display:inline-block;padding:6px 14px;border-radius:20px;font-weight:700;font-size:13px;margin-bottom:12px}
+        .office-open{background:#e8f5e9;color:#0d5c3d;border:1px solid #1a8a5c}
+        .office-closed{background:#fdecea;color:#b03030;border:1px solid #e57373}
+        .contact-group{margin-bottom:14px}
+        .contact-group-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#1a8a5c;margin-bottom:6px}
+        .contact-item{font-size:13.5px;color:#444;margin-bottom:6px}
+        .contact-item a{color:#0d5c3d;text-decoration:none;font-weight:500}
+        .off-day{color:#b03030;font-weight:600}
+        .map-container{width:100%;height:200px;border-radius:8px;overflow:hidden;margin-bottom:12px;border:1px solid #e0e0e0}
+        .map-container iframe{width:100%;height:100%;border:0}
+        .location-btn{display:block;text-align:center;background:#1a8a5c;color:#fff;padding:9px 15px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600}
+        .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:15px}
+        .modal-overlay.active{display:flex}
+        .modal-box{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:30px 25px;text-align:center;position:relative}
+        .stat-modal-box{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:85vh;padding:25px;position:relative;overflow-y:auto}
+        .modal-close{position:absolute;top:12px;right:16px;font-size:24px;color:#999;cursor:pointer;background:none;border:none}
+        .modal-avatar{width:100px;height:100px;border-radius:50%;margin:0 auto 15px;overflow:hidden;background:linear-gradient(135deg,#0d5c3d,#1a8a5c)}
+        .modal-avatar img{width:100%;height:100%;object-fit:cover}
+        .modal-box h2{color:#0d5c3d;font-size:19px;margin-bottom:6px}
+        .modal-designation{font-size:13.5px;color:#666;margin-bottom:15px}
+        .modal-contact{background:#f0f7f4;border-radius:8px;padding:10px;font-size:14px;color:#0d5c3d;font-weight:600}
+        .stat-modal-title{color:#0d5c3d;font-size:19px;font-weight:700;margin-bottom:15px}
+        .tehsil-block{border:1px solid #e0e0e0;border-radius:10px;margin-bottom:10px;overflow:hidden}
+        .tehsil-block-header{background:#f0f7f4;padding:12px 15px;font-weight:600;color:#0d5c3d;font-size:14.5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+        .tehsil-block-header .arrow{transition:transform .25s;font-size:12px}
+        .tehsil-block-header.open .arrow{transform:rotate(90deg)}
+        .tehsil-block-content{display:none;padding:8px 15px 12px}
+        .tehsil-block-content.open{display:block}
+        .tehsil-entry-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13.5px}
+        .tehsil-entry-row:last-child{border-bottom:none}
+        .tehsil-entry-name{font-weight:500}
+        .tehsil-entry-value{color:#0d5c3d;font-weight:600}
+        .vacant-badge{color:#b03030;font-weight:600}
+        .nid-select-input,.nid-search-input{width:100%;padding:11px 15px;border:2px solid #0d5c3d;border-radius:6px;font-size:14px;margin-bottom:12px;outline:none}
+        .result-card{background:#fff;border:1px solid #1a8a5c;border-left:6px solid #0d5c3d;border-radius:10px;padding:18px;margin-top:15px;text-align:left}
+        .result-row{display:flex;justify-content:space-between;margin-bottom:9px;font-size:14px;border-bottom:1px dashed #e0e0e0;padding-bottom:6px}
+        .result-label{font-weight:600;color:#555}
+        .result-value{font-weight:700;color:#0d5c3d}
+        .status-badge-large{font-size:18px;font-weight:900;color:#0d5c3d;background:#e8f5e9;padding:4px 12px;border-radius:6px}
+        .footer{background:#0d5c3d;color:#fff;text-align:center;padding:18px;margin-top:40px;font-size:13px}
+        @media(max-width:768px){.container{flex-direction:column}.sidebar{width:100%}.contact-location-grid{grid-template-columns:1fr}.header .logo-left,.header .logo-right{position:static;display:inline-block;margin:5px;transform:none}}
     </style>
 </head>
 <body>
-    <div class="news-ticker">
-        <div class="ticker-content">
-            ★ District Chakwal me July 2026 ka EPI Coverage 92% se upar pahunch gaya hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ Zero-Dose Children ki identification campaign shuru &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ Penta-3 Dropout rate me 4% kami aayi hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ Cold Chain equipment ka maintenance schedule release &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-            ★ MR Campaign ke results jald publish kiye jayenge
-        </div>
-    </div>
+    <div class="news-ticker"><div class="ticker-content">★ District Chakwal me July 2026 ka EPI Coverage 92% se upar pahunch gaya hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ Zero-Dose Children ki identification campaign shuru &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ Penta-3 Dropout rate me 4% kami aayi hai &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ Cold Chain equipment ka maintenance schedule release &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ MR Campaign ke results jald publish kiye jayenge</div></div>
 
     <div class="header">
-        <img src="favicon.png.png" alt="Logo Left" class="logo-left">
-        <div>
-            <h1>EPI District Chakwal Dashboard</h1>
-            <p>Official Website | Punjab Expanded Programme on Immunization</p>
-        </div>
-        <img src="logo-right2.png" alt="Logo Right" class="logo-right">
+        <img src="favicon.png.png" alt="Logo" class="logo-left">
+        <div><h1>EPI District Chakwal Dashboard</h1><p>Official Website | Punjab Expanded Programme on Immunization</p></div>
+        <img src="logo-right2.png" alt="Logo" class="logo-right">
     </div>
 
     <div class="container">
@@ -171,7 +156,7 @@
             </div>
 
             <div class="section-title">Payment Status For NID Worker</div>
-            <div class="download-grid" style="grid-template-columns:1fr;">
+            <div class="download-grid" style="grid-template-columns:1fr">
                 <div class="download-card">
                     <h3>NID Workers Payment Verification</h3>
                     <p>Check campaign payment details for NID Workers</p>
@@ -212,24 +197,24 @@
                     <h3>Coverage Report</h3>
                     <p>Antigen-wise Coverage Analysis</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View PDF</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download PDF</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon');return false">View PDF</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false">Download PDF</a>
                     </div>
                 </div>
                 <div class="download-card">
                     <h3>Zero-Dose Analysis</h3>
                     <p>Identification & Action Plan</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Report</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Report</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon');return false">View Report</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false">Download Report</a>
                     </div>
                 </div>
                 <div class="download-card">
                     <h3>Dropout Analysis</h3>
                     <p>Penta1 to Penta3 & MR Dropout</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Excel</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Excel</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon');return false">View Excel</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false">Download Excel</a>
                     </div>
                 </div>
             </div>
@@ -270,8 +255,8 @@
 
     <!-- Image Modal -->
     <div class="modal-overlay" id="imgModal" onclick="closeImgModal()">
-        <span class="modal-close" style="color:white;font-size:40px;top:20px;right:30px;">&times;</span>
-        <img id="previewImg" style="max-width:90%;max-height:85vh;border-radius:10px;">
+        <span class="modal-close" style="color:#fff;font-size:40px;top:20px;right:30px">&times;</span>
+        <img id="previewImg" style="max-width:90%;max-height:85vh;border-radius:10px">
     </div>
 
     <!-- Officer Modal -->
@@ -296,133 +281,131 @@
 
     <!-- NID Modal -->
     <div class="modal-overlay" id="nidModal" onclick="if(event.target===this)closeNidModal()">
-        <div class="modal-box" style="max-width:520px;">
+        <div class="modal-box" style="max-width:520px">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
-            <h2 style="color:#0d5c3d;margin-bottom:10px;">NID Worker Payment Search</h2>
+            <h2 style="color:#0d5c3d;margin-bottom:10px">NID Worker Payment Search</h2>
             <select id="fileSelect" class="nid-select-input">
                 <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
                 <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
             </select>
             <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="CNIC or Account Number">
-            <button class="btn" style="width:100%;" onclick="performNidSearch()">Search Payment Status 🔍</button>
+            <button class="btn" style="width:100%" onclick="performNidSearch()">Search Payment Status 🔍</button>
             <div id="nidSearchResult"></div>
         </div>
     </div>
 
-    <div class="footer">
-        © 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>
-        Official Dashboard for Internal Use Only
-    </div>
+    <div class="footer">© 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>Official Dashboard for Internal Use Only</div>
 
     <script>
-        function togglePics(btn, id) {
-            const g = document.getElementById(id);
-            if (g.classList.contains('show')) {
-                g.classList.remove('show');
-                btn.textContent = 'Show Meeting Pictures';
-            } else {
-                g.classList.add('show');
-                btn.textContent = 'Hide Meeting Pictures';
-            }
-        }
+        function togglePics(btn,id){const g=document.getElementById(id);if(g.classList.contains('show')){g.classList.remove('show');btn.textContent='Show Meeting Pictures'}else{g.classList.add('show');btn.textContent='Hide Meeting Pictures'}}
+        function openImgModal(src){document.getElementById('previewImg').src=src;document.getElementById('imgModal').classList.add('active')}
+        function closeImgModal(){document.getElementById('imgModal').classList.remove('active')}
 
-        function openImgModal(src) {
-            document.getElementById('previewImg').src = src;
-            document.getElementById('imgModal').classList.add('active');
-        }
-        function closeImgModal() {
-            document.getElementById('imgModal').classList.remove('active');
-        }
-
-        const officerData = {
-            ceo: { name: "Dr. Saeed Akhtar", designation: "Chief Executive Officer, District Health Authority Chakwal", contact: "0301-5339925", photo: "CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" },
-            dho: { name: "Dr. Ali Ammar Najaf Habib", designation: "District Health Officer Preventive Services, DHA Chakwal", contact: "0331-5897203", photo: "DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" },
-            dsv: { name: "Syed Asad Abbas", designation: "District Superintendent Vaccination, DHA Chakwal", contact: "0333-5902949", photo: "DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" }
+        const officerData={
+            ceo:{name:"Dr. Saeed Akhtar",designation:"Chief Executive Officer, District Health Authority Chakwal",contact:"0301-5339925",photo:"CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg"},
+            dho:{name:"Dr. Ali Ammar Najaf Habib",designation:"District Health Officer Preventive Services, DHA Chakwal",contact:"0331-5897203",photo:"DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png"},
+            dsv:{name:"Syed Asad Abbas",designation:"District Superintendent Vaccination, DHA Chakwal",contact:"0333-5902949",photo:"DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg"}
         };
-        function openOfficerModal(key) {
-            const d = officerData[key];
-            document.getElementById('modal-avatar').innerHTML = `<img src="${d.photo}" alt="${d.name}">`;
-            document.getElementById('modal-name').textContent = d.name;
-            document.getElementById('modal-designation').textContent = d.designation;
-            document.getElementById('modal-contact').textContent = '📱 ' + d.contact;
-            document.getElementById('officerModal').classList.add('active');
-        }
-        function closeOfficerModal() {
-            document.getElementById('officerModal').classList.remove('active');
-        }
+        function openOfficerModal(key){const d=officerData[key];document.getElementById('modal-avatar').innerHTML=`<img src="${d.photo}" alt="${d.name}">`;document.getElementById('modal-name').textContent=d.name;document.getElementById('modal-designation').textContent=d.designation;document.getElementById('modal-contact').textContent='📱 '+d.contact;document.getElementById('officerModal').classList.add('active')}
+        function closeOfficerModal(){document.getElementById('officerModal').classList.remove('active')}
 
-        function updateOfficeStatus() {
-            const el = document.getElementById('officeStatus');
-            const now = new Date();
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const pkt = new Date(utc + (5 * 60 * 60000));
-            const day = pkt.getDay();
-            const mins = pkt.getHours() * 60 + pkt.getMinutes();
-            let open = false;
-            if ((day >= 1 && day <= 4) || day === 6) open = mins >= 540 && mins < 960;
-            else if (day === 5) open = mins >= 540 && mins < 780;
-            if (open) {
-                el.className = 'office-status office-open';
-                el.innerHTML = '🟢 Office is Currently <strong>OPEN</strong>';
-            } else {
-                el.className = 'office-status office-closed';
-                el.innerHTML = '🔴 Office is Currently <strong>CLOSED</strong>';
-            }
-        }
-        updateOfficeStatus();
-        setInterval(updateOfficeStatus, 60000);
+        function updateOfficeStatus(){const el=document.getElementById('officeStatus');const now=new Date();const utc=now.getTime()+(now.getTimezoneOffset()*60000);const pkt=new Date(utc+(5*60*60000));const day=pkt.getDay();const mins=pkt.getHours()*60+pkt.getMinutes();let open=false;if((day>=1&&day<=4)||day===6)open=mins>=540&&mins<960;else if(day===5)open=mins>=540&&mins<780;if(open){el.className='office-status office-open';el.innerHTML='🟢 Office is Currently <strong>OPEN</strong>'}else{el.className='office-status office-closed';el.innerHTML='🔴 Office is Currently <strong>CLOSED</strong>'}}
+        updateOfficeStatus();setInterval(updateOfficeStatus,60000);
 
+        // ========== DETAILED HR DATA (Option 1) ==========
         const hrData = {
+            tehsilUCs: {
+                "Chakwal": [
+                    {uc:"Balkassar",population:28500},{uc:"Bheen",population:22000},{uc:"Chakral",population:18500},
+                    {uc:"Dab",population:21000},{uc:"Dhudial",population:19500},{uc:"Jand",population:24000},
+                    {uc:"Karyala",population:17500},{uc:"Khokhar Zer",population:16000},{uc:"Mangwal",population:23000},
+                    {uc:"Mureed",population:20500},{uc:"Nila",population:19000},{uc:"Padhri",population:17000},
+                    {uc:"Pinwal",population:15500},{uc:"Sarkal Kassar",population:22500},{uc:"Thanil Kamal",population:28000},
+                    {uc:"Warwal",population:14500},{uc:"Chakwal Urban-I",population:32000},{uc:"Chakwal Urban-II",population:29500},
+                    {uc:"Chakwal Urban-III",population:27000},{uc:"Choa Saidan Shah (part)",population:0}
+                ],
+                "Talagang": [
+                    {uc:"Bhillomar",population:18000},{uc:"Bidhar",population:16500},{uc:"Dhermond",population:19000},
+                    {uc:"Dhurnal",population:17500},{uc:"Jasial",population:20000},{uc:"Kot Sarang",population:21000},
+                    {uc:"Lawa Rural",population:25000},{uc:"Lawa Urban",population:18500},{uc:"Leti",population:16000},
+                    {uc:"Multan Khurd",population:17000},{uc:"Nakka Kahoot",population:15500},{uc:"Pichnand",population:19500},
+                    {uc:"Sagghar",population:14000},{uc:"Talagang East",population:22000},{uc:"Talagang West",population:20500},
+                    {uc:"Tamman",population:23000},{uc:"Tehi",population:17500},{uc:"Thoa Mehram Khan",population:19000},
+                    {uc:"Jhatla",population:15000},{uc:"Kot Qazi",population:14500},{uc:"Malakwal",population:16000}
+                ],
+                "Kallar Kahar": [
+                    {uc:"Bher Pur",population:12000},{uc:"Buchal Kallan",population:14500},{uc:"Buchal Khurd",population:13000},
+                    {uc:"Kallar Kahar",population:28000},{uc:"Khair Pur",population:11000},{uc:"Miani",population:15500},
+                    {uc:"Munara",population:14000},{uc:"Noor Pur",population:12500},{uc:"Bhoun",population:13500}
+                ],
+                "Choa Saidan Shah": [
+                    {uc:"Ara",population:9000},{uc:"Basharat",population:13500},{uc:"Choa Saiden Shah",population:22000},
+                    {uc:"Dalwal",population:15000},{uc:"Dandoot",population:11000},{uc:"Dulmial",population:16000},
+                    {uc:"Lehr Sultan Pur",population:12500},{uc:"Saloi",population:10500}
+                ]
+            },
             asvs: {
-                "Chakwal": [{name:"Wajid Maqbool Raja", mobile:"0342-5354759"}, {name:"Umer Shahzad", mobile:"0335-5221400"}],
-                "Talagang": [{name:"Qazi Muhammad Rashid", mobile:"0308-7772112"}, {name:"Abdul Wahid", mobile:"0333-5781386"}, {name:"Asif Iqbal", mobile:"0306-5588692"}],
-                "Kallar Kahar": [{name:"Zafar Iqbal", mobile:"0313-6752321"}],
-                "Choa Saidan Shah": [{name:"Ansar Mehmood", mobile:"0334-5666948"}]
+                "Chakwal": [{name:"Wajid Maqbool Raja",mobile:"0342-5354759"},{name:"Umer Shahzad",mobile:"0335-5221400"}],
+                "Talagang": [{name:"Qazi Muhammad Rashid",mobile:"0308-7772112"},{name:"Abdul Wahid",mobile:"0333-5781386"},{name:"Asif Iqbal",mobile:"0306-5588692"}],
+                "Kallar Kahar": [{name:"Zafar Iqbal",mobile:"0313-6752321"}],
+                "Choa Saidan Shah": [{name:"Ansar Mehmood",mobile:"0334-5666948"}]
             }
         };
-        const TEHSILS = ["Chakwal", "Talagang", "Kallar Kahar", "Choa Saidan Shah"];
+        const TEHSILS = ["Chakwal","Talagang","Kallar Kahar","Choa Saidan Shah"];
 
-        function toggleTehsil(id) {
+        function toggleTehsil(id){
             document.getElementById('th-'+id).classList.toggle('open');
             document.getElementById('tc-'+id).classList.toggle('open');
         }
 
-        function openStatModal(type) {
+        function openStatModal(type){
             const title = document.getElementById('stat-modal-title');
             const body = document.getElementById('stat-modal-body');
             let html = '';
 
-            if (type === 'tehsils') {
+            if(type === 'tehsils'){
                 title.textContent = 'Total Tehsils (4)';
-                TEHSILS.forEach((t,i) => {
+                TEHSILS.forEach((t,i)=>{
+                    const ucs = hrData.tehsilUCs[t] || [];
+                    const totalPop = ucs.reduce((s,u)=>s+(u.population||0),0);
                     html += `<div class="tehsil-block">
                         <div class="tehsil-block-header" id="th-t${i}" onclick="toggleTehsil('t${i}')">
-                            <span>${t}</span><span class="arrow">&#9656;</span>
+                            <span>${t} (${ucs.length} UCs)</span><span class="arrow">&#9656;</span>
                         </div>
                         <div class="tehsil-block-content" id="tc-t${i}">
-                            <div class="tehsil-entry-row"><span>Tehsil Name</span><span class="tehsil-entry-value">${t}</span></div>
+                            <div class="tehsil-entry-row"><span>Total UCs</span><span class="tehsil-entry-value">${ucs.length}</span></div>
+                            <div class="tehsil-entry-row"><span>Total Population</span><span class="tehsil-entry-value">${totalPop.toLocaleString()}</span></div>
                         </div>
                     </div>`;
                 });
             }
-            else if (type === 'ucs') {
+            else if(type === 'ucs'){
                 title.textContent = 'Total UCs (83)';
-                html = '<p style="text-align:center;padding:20px;color:#666;">Total Union Councils in District Chakwal: <strong>83</strong><br>Detailed list official reports me available hai.</p>';
+                TEHSILS.forEach((t,i)=>{
+                    const ucs = hrData.tehsilUCs[t] || [];
+                    let rows = ucs.map(u=>`<div class="tehsil-entry-row"><span class="tehsil-entry-name">${u.uc}</span><span class="tehsil-entry-value">${u.population?u.population.toLocaleString():'-'}</span></div>`).join('');
+                    html += `<div class="tehsil-block">
+                        <div class="tehsil-block-header" id="th-u${i}" onclick="toggleTehsil('u${i}')">
+                            <span>${t} (${ucs.length})</span><span class="arrow">&#9656;</span>
+                        </div>
+                        <div class="tehsil-block-content" id="tc-u${i}">${rows}</div>
+                    </div>`;
+                });
             }
-            else if (type === 'vaccinators') {
+            else if(type === 'vaccinators'){
                 title.textContent = 'Vaccinators (83 Sanctioned Posts)';
-                html = '<p style="text-align:center;padding:20px;color:#666;">Total Sanctioned Vaccinator Posts: <strong>83</strong><br>Detailed list jald update kiya jayega.</p>';
+                html = '<p style="text-align:center;padding:20px;color:#666">Total Sanctioned Vaccinator Posts: <strong>83</strong><br><br>Detailed Vaccinator list (Name + Mobile + UC) jald add kiya jayega.<br>Abhi Tehsils, UCs aur ASVs check kar sakte hain.</p>';
             }
-            else if (type === 'asvs') {
+            else if(type === 'asvs'){
                 title.textContent = 'ASVs (7)';
-                TEHSILS.forEach((t,i) => {
+                TEHSILS.forEach((t,i)=>{
                     const list = hrData.asvs[t] || [];
-                    let rows = list.map(a => `<div class="tehsil-entry-row"><span class="tehsil-entry-name">${a.name}</span><span class="tehsil-entry-value">${a.mobile}</span></div>`).join('');
+                    let rows = list.map(a=>`<div class="tehsil-entry-row"><span class="tehsil-entry-name">${a.name}</span><span class="tehsil-entry-value">${a.mobile}</span></div>`).join('');
                     html += `<div class="tehsil-block">
                         <div class="tehsil-block-header" id="th-a${i}" onclick="toggleTehsil('a${i}')">
                             <span>${t} (${list.length})</span><span class="arrow">&#9656;</span>
                         </div>
-                        <div class="tehsil-block-content" id="tc-a${i}">${rows || '<div style="padding:8px;color:#888;">No data</div>'}</div>
+                        <div class="tehsil-block-content" id="tc-a${i}">${rows||'<div style="padding:8px;color:#888">No data</div>'}</div>
                     </div>`;
                 });
             }
@@ -430,37 +413,25 @@
             body.innerHTML = html;
             document.getElementById('statModal').classList.add('active');
         }
-        function closeStatModal() {
-            document.getElementById('statModal').classList.remove('active');
-        }
+        function closeStatModal(){document.getElementById('statModal').classList.remove('active')}
 
-        function openNidModal() { document.getElementById('nidModal').classList.add('active'); }
-        function closeNidModal() { document.getElementById('nidModal').classList.remove('active'); }
-        function cleanString(s) { return s ? s.toString().replace(/[^a-zA-Z0-9]/g,'').toLowerCase() : ''; }
-        function getProp(row, keys) {
-            for (let p in row) {
-                let ck = p.replace(/\s+/g,'').toLowerCase();
-                for (let k of keys) if (ck === k.replace(/\s+/g,'').toLowerCase()) return row[p];
-            }
-            return 'N/A';
-        }
-        function performNidSearch() {
-            const file = document.getElementById('fileSelect').value;
-            const q = document.getElementById('nidSearchQuery').value.trim();
-            const res = document.getElementById('nidSearchResult');
-            if (!q) { res.innerHTML = '<div style="color:red;text-align:center;margin-top:15px;">CNIC ya Account Number darj karein</div>'; return; }
-            res.innerHTML = '<div style="text-align:center;margin-top:15px;color:#0d5c3d;">Searching...</div>';
-            fetch(file).then(r => r.arrayBuffer()).then(data => {
-                const wb = XLSX.read(data, {type:'array'});
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
-                let found = null;
-                const cq = cleanString(q);
-                for (let row of json) {
-                    for (let k in row) if (cleanString(row[k]) === cq) { found = row; break; }
-                    if (found) break;
-                }
-                if (found) {
-                    res.innerHTML = `<div class="result-card">
+        function openNidModal(){document.getElementById('nidModal').classList.add('active')}
+        function closeNidModal(){document.getElementById('nidModal').classList.remove('active')}
+        function cleanString(s){return s?s.toString().replace(/[^a-zA-Z0-9]/g,'').toLowerCase():''}
+        function getProp(row,keys){for(let p in row){let ck=p.replace(/\s+/g,'').toLowerCase();for(let k of keys)if(ck===k.replace(/\s+/g,'').toLowerCase())return row[p]}return 'N/A'}
+        function performNidSearch(){
+            const file=document.getElementById('fileSelect').value;
+            const q=document.getElementById('nidSearchQuery').value.trim();
+            const res=document.getElementById('nidSearchResult');
+            if(!q){res.innerHTML='<div style="color:red;text-align:center;margin-top:15px">CNIC ya Account Number darj karein</div>';return}
+            res.innerHTML='<div style="text-align:center;margin-top:15px;color:#0d5c3d">Searching...</div>';
+            fetch(file).then(r=>r.arrayBuffer()).then(data=>{
+                const wb=XLSX.read(data,{type:'array'});
+                const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+                let found=null;const cq=cleanString(q);
+                for(let row of json){for(let k in row)if(cleanString(row[k])===cq){found=row;break}if(found)break}
+                if(found){
+                    res.innerHTML=`<div class="result-card">
                         <div class="result-row"><span class="result-label">Worker Name:</span><span class="result-value">${getProp(found,['CustomerName','Worker Name','WorkerName'])}</span></div>
                         <div class="result-row"><span class="result-label">Tehsil:</span><span class="result-value">${getProp(found,['Tehsil'])}</span></div>
                         <div class="result-row"><span class="result-label">UC:</span><span class="result-value">${getProp(found,['UC','Union Council'])}</span></div>
@@ -470,12 +441,8 @@
                         <div class="result-row"><span class="result-label">Payment Code:</span><span class="result-value">${getProp(found,['XpinDraftNo','Payment Code','Xpin'])}</span></div>
                         <div class="result-row"><span class="result-label">Status:</span><span class="status-badge-large">${getProp(found,['Status'])}</span></div>
                     </div>`;
-                } else {
-                    res.innerHTML = '<div style="color:#b03030;text-align:center;margin-top:15px;">Koi record nahi mila</div>';
-                }
-            }).catch(e => {
-                res.innerHTML = `<div style="color:red;text-align:center;margin-top:15px;">Error: ${e.message}</div>`;
-            });
+                }else{res.innerHTML='<div style="color:#b03030;text-align:center;margin-top:15px">Koi record nahi mila</div>'}
+            }).catch(e=>{res.innerHTML=`<div style="color:red;text-align:center;margin-top:15px">Error: ${e.message}</div>`});
         }
     </script>
 </body>
