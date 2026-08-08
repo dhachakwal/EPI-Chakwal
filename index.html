@@ -29,8 +29,7 @@
         .show-pics-btn:hover { color: #09402b; }
         .news-gallery { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
         .news-gallery.show { display: grid; }
-        .news-gallery img { width: 100%; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; transition: transform 0.2s; }
-        .news-gallery img:hover { transform: scale(1.05); }
+        .news-gallery img { width: 100%; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
         .main-content { flex: 1; }
         .section-title { background: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); font-size: 18px; font-weight: 600; color: #0d5c3d; border-left: 5px solid #0d5c3d; }
         .download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 25px; }
@@ -44,15 +43,14 @@
         .btn-outline { background: white; color: #0d5c3d; border: 2px solid #0d5c3d; }
         .btn-outline:hover { background: #0d5c3d; color: white; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: white; border-radius: 12px; padding: 18px 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-bottom: 4px solid #1a8a5c; }
+        .stat-card { background: white; border-radius: 12px; padding: 18px 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-bottom: 4px solid #1a8a5c; cursor: pointer; transition: all 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
         .stat-card .stat-number { font-size: 28px; font-weight: 700; color: #0d5c3d; }
         .stat-card .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
-        .stat-card.clickable { cursor: pointer; transition: all 0.3s; }
-        .stat-card.clickable:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
         .officers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin-bottom: 25px; }
         .officer-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #0d5c3d; cursor: pointer; transition: all 0.3s; }
         .officer-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-        .officer-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #0d5c3d, #1a8a5c); margin: 0 auto 12px; overflow: hidden; }
+        .officer-avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; overflow: hidden; background: linear-gradient(135deg, #0d5c3d, #1a8a5c); }
         .officer-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .officer-card h3 { color: #0d5c3d; font-size: 16px; margin-bottom: 6px; }
         .officer-card .officer-designation { font-size: 12.5px; color: #666; line-height: 1.4; }
@@ -64,28 +62,40 @@
         .office-closed { background: #fdecea; color: #b03030; border: 1px solid #e57373; }
         .contact-group { margin-bottom: 14px; }
         .contact-group-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #1a8a5c; margin-bottom: 6px; }
-        .contact-item { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: #444; margin-bottom: 6px; }
+        .contact-item { font-size: 13.5px; color: #444; margin-bottom: 6px; }
         .contact-item a { color: #0d5c3d; text-decoration: none; font-weight: 500; }
         .off-day { color: #b03030; font-weight: 600; }
         .map-container { width: 100%; height: 200px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid #e0e0e0; }
         .map-container iframe { width: 100%; height: 100%; border: 0; }
         .location-btn { display: block; text-align: center; background: #1a8a5c; color: white; padding: 9px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; }
-        .location-btn:hover { background: #0d5c3d; }
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
         .modal-overlay.active { display: flex; }
         .modal-box { background: white; border-radius: 14px; max-width: 420px; width: 100%; padding: 30px 25px; text-align: center; position: relative; }
+        .stat-modal-box { background: white; border-radius: 14px; max-width: 560px; width: 100%; max-height: 85vh; padding: 25px; position: relative; overflow-y: auto; }
         .modal-close { position: absolute; top: 12px; right: 16px; font-size: 24px; color: #999; cursor: pointer; background: none; border: none; }
-        .modal-avatar { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #0d5c3d, #1a8a5c); margin: 0 auto 15px; overflow: hidden; }
+        .modal-avatar { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 15px; overflow: hidden; background: linear-gradient(135deg, #0d5c3d, #1a8a5c); }
         .modal-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .modal-box h2 { color: #0d5c3d; font-size: 19px; margin-bottom: 6px; }
         .modal-designation { font-size: 13.5px; color: #666; margin-bottom: 15px; }
         .modal-contact { background: #f0f7f4; border-radius: 8px; padding: 10px; font-size: 14px; color: #0d5c3d; font-weight: 600; }
+        .stat-modal-title { color: #0d5c3d; font-size: 19px; font-weight: 700; margin-bottom: 15px; }
+        .tehsil-block { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+        .tehsil-block-header { background: #f0f7f4; padding: 12px 15px; font-weight: 600; color: #0d5c3d; font-size: 14.5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .tehsil-block-header .arrow { transition: transform 0.25s; font-size: 12px; }
+        .tehsil-block-header.open .arrow { transform: rotate(90deg); }
+        .tehsil-block-content { display: none; padding: 8px 15px 12px; }
+        .tehsil-block-content.open { display: block; }
+        .tehsil-entry-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13.5px; }
+        .tehsil-entry-row:last-child { border-bottom: none; }
+        .tehsil-entry-name { font-weight: 500; }
+        .tehsil-entry-value { color: #0d5c3d; font-weight: 600; }
+        .vacant-badge { color: #b03030; font-weight: 600; }
         .nid-select-input, .nid-search-input { width: 100%; padding: 11px 15px; border: 2px solid #0d5c3d; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; }
         .result-card { background: #fff; border: 1px solid #1a8a5c; border-left: 6px solid #0d5c3d; border-radius: 10px; padding: 18px; margin-top: 15px; text-align: left; }
         .result-row { display: flex; justify-content: space-between; margin-bottom: 9px; font-size: 14px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 6px; }
         .result-label { font-weight: 600; color: #555; }
         .result-value { font-weight: 700; color: #0d5c3d; }
-        .status-badge-large { font-size: 18px !important; font-weight: 900; color: #0d5c3d; background: #e8f5e9; padding: 4px 12px; border-radius: 6px; }
+        .status-badge-large { font-size: 18px; font-weight: 900; color: #0d5c3d; background: #e8f5e9; padding: 4px 12px; border-radius: 6px; }
         .footer { background: #0d5c3d; color: white; text-align: center; padding: 18px; margin-top: 40px; font-size: 13px; }
         @media (max-width: 768px) {
             .container { flex-direction: column; }
@@ -107,79 +117,65 @@
     </div>
 
     <div class="header">
-        <img src="favicon.png.png" alt="EPI Logo Left" class="logo-left">
-        <div class="header-content">
+        <img src="favicon.png.png" alt="Logo Left" class="logo-left">
+        <div>
             <h1>EPI District Chakwal Dashboard</h1>
             <p>Official Website | Punjab Expanded Programme on Immunization</p>
         </div>
-        <img src="logo-right2.png" alt="EPI Logo Right" class="logo-right">
+        <img src="logo-right2.png" alt="Logo Right" class="logo-right">
     </div>
 
     <div class="container">
-        <!-- Left Sidebar News -->
         <div class="sidebar">
             <div class="sidebar-header">Department News</div>
             <div class="news-list">
                 <div class="news-item">
                     <div class="news-date">30th July 2026</div>
-                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) is Successfully Conducted at CEO Office DHA Chakwal.</div>
-                    <button class="show-pics-btn" onclick="togglePics(this, 'gallery-30jul')">Show Meeting Pictures</button>
-                    <div class="news-gallery" id="gallery-30jul">
-                        <img src="CSSKK-1.jpeg" alt="Meeting 1" loading="lazy" onclick="openImgModal('CSSKK-1.jpeg')">
-                        <img src="CSSKK-2.jpeg" alt="Meeting 2" loading="lazy" onclick="openImgModal('CSSKK-2.jpeg')">
-                        <img src="CSSKK-3.jpeg" alt="Meeting 3" loading="lazy" onclick="openImgModal('CSSKK-3.jpeg')">
+                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) Successfully Conducted at CEO Office DHA Chakwal.</div>
+                    <button class="show-pics-btn" onclick="togglePics(this,'g30')">Show Meeting Pictures</button>
+                    <div class="news-gallery" id="g30">
+                        <img src="CSSKK-1.jpeg" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-2.jpeg" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="CSSKK-3.jpeg" loading="lazy" onclick="openImgModal(this.src)">
                     </div>
                 </div>
                 <div class="news-item">
                     <div class="news-date">31st July 2026</div>
-                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) is Successfully Conducted at CEO Office DHA Chakwal.</div>
-                    <button class="show-pics-btn" onclick="togglePics(this, 'gallery-31jul')">Show Meeting Pictures</button>
-                    <div class="news-gallery" id="gallery-31jul">
-                        <img src="TLG-1.jpeg" alt="Meeting 1" loading="lazy" onclick="openImgModal('TLG-1.jpeg')">
-                        <img src="TLG-2.jpeg" alt="Meeting 2" loading="lazy" onclick="openImgModal('TLG-2.jpeg')">
-                        <img src="TLG-3.jpeg" alt="Meeting 3" loading="lazy" onclick="openImgModal('TLG-3.jpeg')">
+                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) Successfully Conducted at CEO Office DHA Chakwal.</div>
+                    <button class="show-pics-btn" onclick="togglePics(this,'g31')">Show Meeting Pictures</button>
+                    <div class="news-gallery" id="g31">
+                        <img src="TLG-1.jpeg" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="TLG-2.jpeg" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="TLG-3.jpeg" loading="lazy" onclick="openImgModal(this.src)">
                     </div>
                 </div>
                 <div class="news-item">
                     <div class="news-date">1st August 2026</div>
-                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) is Successfully Conducted at CEO Office DHA Chakwal.</div>
-                    <button class="show-pics-btn" onclick="togglePics(this, 'gallery-1aug')">Show Meeting Pictures</button>
-                    <div class="news-gallery" id="gallery-1aug">
-                        <img src="CKL-1.jpeg" alt="Meeting 1" loading="lazy" onclick="openImgModal('CKL-1.jpeg')">
-                        <img src="CKL-2.jpeg" alt="Meeting 2" loading="lazy" onclick="openImgModal('CKL-2.jpeg')">
-                        <img src="CKL-3.jpeg" alt="Meeting 3" loading="lazy" onclick="openImgModal('CKL-3.jpeg')">
+                    <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) Successfully Conducted at CEO Office DHA Chakwal.</div>
+                    <button class="show-pics-btn" onclick="togglePics(this,'g1')">Show Meeting Pictures</button>
+                    <div class="news-gallery" id="g1">
+                        <img src="CKL-1.jpeg" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="CKL-2.jpeg" loading="lazy" onclick="openImgModal(this.src)">
+                        <img src="CKL-3.jpeg" loading="lazy" onclick="openImgModal(this.src)">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
             <div class="section-title">HR Overview - District Chakwal</div>
             <div class="stats-grid">
-                <div class="stat-card clickable" onclick="alert('Tehsil details coming soon')">
-                    <div class="stat-number">4</div>
-                    <div class="stat-label">Total Tehsils</div>
-                </div>
-                <div class="stat-card clickable" onclick="alert('UC details coming soon')">
-                    <div class="stat-number">83</div>
-                    <div class="stat-label">Total UCs</div>
-                </div>
-                <div class="stat-card clickable" onclick="alert('Vaccinator details coming soon')">
-                    <div class="stat-number">83</div>
-                    <div class="stat-label">Vaccinators</div>
-                </div>
-                <div class="stat-card clickable" onclick="alert('ASV details coming soon')">
-                    <div class="stat-number">7</div>
-                    <div class="stat-label">ASVs</div>
-                </div>
+                <div class="stat-card" onclick="openStatModal('tehsils')"><div class="stat-number">4</div><div class="stat-label">Total Tehsils</div></div>
+                <div class="stat-card" onclick="openStatModal('ucs')"><div class="stat-number">83</div><div class="stat-label">Total UCs</div></div>
+                <div class="stat-card" onclick="openStatModal('vaccinators')"><div class="stat-number">83</div><div class="stat-label">Vaccinators</div></div>
+                <div class="stat-card" onclick="openStatModal('asvs')"><div class="stat-number">7</div><div class="stat-label">ASVs</div></div>
             </div>
 
             <div class="section-title">Payment Status For NID Worker</div>
-            <div class="download-grid" style="grid-template-columns: 1fr;">
+            <div class="download-grid" style="grid-template-columns:1fr;">
                 <div class="download-card">
                     <h3>NID Workers Payment Verification</h3>
-                    <p>Check campaign payment and disbursement details for NID Workers</p>
+                    <p>Check campaign payment details for NID Workers</p>
                     <button class="btn" onclick="openNidModal()">Check Payment Status 💳</button>
                 </div>
             </div>
@@ -189,17 +185,17 @@
                 <div class="officer-card" onclick="openOfficerModal('ceo')">
                     <div class="officer-avatar"><img src="CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" alt="CEO"></div>
                     <h3>Dr. Saeed Akhtar</h3>
-                    <div class="officer-designation">Chief Executive Officer, District Health Authority Chakwal</div>
+                    <div class="officer-designation">Chief Executive Officer, DHA Chakwal</div>
                 </div>
                 <div class="officer-card" onclick="openOfficerModal('dho')">
                     <div class="officer-avatar"><img src="DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" alt="DHO"></div>
                     <h3>Dr. Ali Ammar Najaf Habib</h3>
-                    <div class="officer-designation">District Health Officer Preventive Services, DHA Chakwal</div>
+                    <div class="officer-designation">District Health Officer Preventive Services</div>
                 </div>
                 <div class="officer-card" onclick="openOfficerModal('dsv')">
                     <div class="officer-avatar"><img src="DSV_Health_Syed_Asad_Abbas_Profile_Picture.jpg" alt="DSV"></div>
                     <h3>Syed Asad Abbas</h3>
-                    <div class="officer-designation">District Superintendent Vaccination, DHA Chakwal</div>
+                    <div class="officer-designation">District Superintendent Vaccination</div>
                 </div>
             </div>
 
@@ -217,40 +213,24 @@
                     <h3>Coverage Report</h3>
                     <p>Antigen-wise Coverage Analysis</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View PDF</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download PDF</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon');return false;">View PDF</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false;">Download PDF</a>
                     </div>
                 </div>
                 <div class="download-card">
                     <h3>Zero-Dose Analysis</h3>
                     <p>Identification & Action Plan</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Report</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Report</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon');return false;">View Report</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false;">Download Report</a>
                     </div>
                 </div>
                 <div class="download-card">
                     <h3>Dropout Analysis</h3>
                     <p>Penta1 to Penta3 & MR Dropout</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Excel</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Excel</a>
-                    </div>
-                </div>
-                <div class="download-card">
-                    <h3>UC-wise Performance</h3>
-                    <p>Union Council Ranking Report</p>
-                    <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View PDF</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download PDF</a>
-                    </div>
-                </div>
-                <div class="download-card">
-                    <h3>Stock Status Report</h3>
-                    <p>Vaccine & Logistics Availability</p>
-                    <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Report</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Report</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon');return false;">View Excel</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false;">Download Excel</a>
                     </div>
                 </div>
             </div>
@@ -259,29 +239,29 @@
             <div class="contact-location-grid">
                 <div class="contact-card">
                     <h3>✉️ Official Contact Information</h3>
-                    <div id="officeStatus" class="office-status office-closed">Checking status...</div>
+                    <div id="officeStatus" class="office-status office-closed">Checking...</div>
                     <div class="contact-group">
                         <div class="contact-group-title">Landline Numbers</div>
                         <div class="contact-item">☎️ <a href="tel:0543660163">0543-660163</a></div>
                         <div class="contact-item">☎️ <a href="tel:0543660138">0543-660138</a></div>
                     </div>
                     <div class="contact-group">
-                        <div class="contact-group-title">Official Email Support</div>
+                        <div class="contact-group-title">Official Email</div>
                         <div class="contact-item">📧 <a href="mailto:chakwalhealth@yahoo.com">chakwalhealth@yahoo.com</a></div>
                         <div class="contact-item">📧 <a href="mailto:epichakwal@gmail.com">epichakwal@gmail.com</a></div>
                         <div class="contact-item">📧 <a href="mailto:dsvchakwal@gmail.com">dsvchakwal@gmail.com</a></div>
                     </div>
                     <div class="contact-group">
                         <div class="contact-group-title">Working Hours</div>
-                        <div class="contact-item">🕒 <strong>Mon - Thu & Sat:</strong> 09:00 AM - 04:00 PM</div>
-                        <div class="contact-item">🕒 <strong>Friday:</strong> 09:00 AM - 01:00 PM</div>
-                        <div class="contact-item">🕒 <strong>Sunday:</strong> <span class="off-day">Closed (Off)</span></div>
+                        <div class="contact-item">🕒 Mon-Thu & Sat: 09:00 AM - 04:00 PM</div>
+                        <div class="contact-item">🕒 Friday: 09:00 AM - 01:00 PM</div>
+                        <div class="contact-item">🕒 Sunday: <span class="off-day">Closed</span></div>
                     </div>
                 </div>
                 <div class="location-card">
-                    <h3>📍 Office Location Map</h3>
+                    <h3>📍 Office Location</h3>
                     <div class="map-container">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3345.568471926618!2d72.8523311!3d32.9360216!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39206775b6bfbd6b%3A0xb6955a6d366fa9d9!2sDistrict%20Health%20Authority%20Chakwal!5e0!3m2!1sen!2spk!4v1700000000000!5m2!1sen!2spk" allowfullscreen loading="lazy"></iframe>
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3345.568471926618!2d72.8523311!3d32.9360216!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39206775b6bfbd6b%3A0xb6955a6d366fa9d9!2sDistrict%20Health%20Authority%20Chakwal!5e0!3m2!1sen!2spk" allowfullscreen loading="lazy"></iframe>
                     </div>
                     <a href="https://maps.app.google.com/p67duhLUHgWmwmBX7" target="_blank" class="location-btn">Open in Google Maps 🗺️</a>
                 </div>
@@ -291,12 +271,12 @@
 
     <!-- Image Modal -->
     <div class="modal-overlay" id="imgModal" onclick="closeImgModal()">
-        <span class="modal-close" style="color:white; font-size:40px; top:20px; right:30px;">&times;</span>
-        <img id="previewImg" src="" style="max-width:90%; max-height:85vh; border-radius:10px;">
+        <span class="modal-close" style="color:white;font-size:40px;top:20px;right:30px;">&times;</span>
+        <img id="previewImg" style="max-width:90%;max-height:85vh;border-radius:10px;">
     </div>
 
     <!-- Officer Modal -->
-    <div class="modal-overlay" id="officerModal" onclick="if(event.target===this) closeOfficerModal()">
+    <div class="modal-overlay" id="officerModal" onclick="if(event.target===this)closeOfficerModal()">
         <div class="modal-box">
             <button class="modal-close" onclick="closeOfficerModal()">&times;</button>
             <div class="modal-avatar" id="modal-avatar"></div>
@@ -306,20 +286,26 @@
         </div>
     </div>
 
+    <!-- Stat Modal -->
+    <div class="modal-overlay" id="statModal" onclick="if(event.target===this)closeStatModal()">
+        <div class="stat-modal-box">
+            <button class="modal-close" onclick="closeStatModal()">&times;</button>
+            <div class="stat-modal-title" id="stat-modal-title"></div>
+            <div id="stat-modal-body"></div>
+        </div>
+    </div>
+
     <!-- NID Modal -->
-    <div class="modal-overlay" id="nidModal" onclick="if(event.target===this) closeNidModal()">
+    <div class="modal-overlay" id="nidModal" onclick="if(event.target===this)closeNidModal()">
         <div class="modal-box" style="max-width:520px;">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
-            <h2 style="color:#0d5c3d; margin-bottom:10px;">NID Worker Payment Search</h2>
-            <p style="font-size:13px; color:#666; margin-bottom:15px;">Campaign select karein aur CNIC ya Account Number enter karein:</p>
-            <form onsubmit="handleNidSearchSubmit(event)">
-                <select id="fileSelect" class="nid-select-input">
-                    <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
-                    <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
-                </select>
-                <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="CNIC or Account Number" autocomplete="off">
-                <button type="submit" class="btn" style="width:100%;">Search Payment Status 🔍</button>
-            </form>
+            <h2 style="color:#0d5c3d;margin-bottom:10px;">NID Worker Payment Search</h2>
+            <select id="fileSelect" class="nid-select-input">
+                <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
+                <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
+            </select>
+            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="CNIC or Account Number">
+            <button class="btn" style="width:100%;" onclick="performNidSearch()">Search Payment Status 🔍</button>
             <div id="nidSearchResult"></div>
         </div>
     </div>
@@ -330,14 +316,14 @@
     </div>
 
     <script>
-        // Toggle Meeting Pictures
-        function togglePics(btn, galleryId) {
-            const gallery = document.getElementById(galleryId);
-            if (gallery.classList.contains('show')) {
-                gallery.classList.remove('show');
+        // Toggle Pictures
+        function togglePics(btn, id) {
+            const g = document.getElementById(id);
+            if (g.classList.contains('show')) {
+                g.classList.remove('show');
                 btn.textContent = 'Show Meeting Pictures';
             } else {
-                gallery.classList.add('show');
+                g.classList.add('show');
                 btn.textContent = 'Hide Meeting Pictures';
             }
         }
@@ -369,17 +355,17 @@
             document.getElementById('officerModal').classList.remove('active');
         }
 
-        // Office Open/Closed Status (Pakistan Time)
+        // Office Status
         function updateOfficeStatus() {
             const el = document.getElementById('officeStatus');
             const now = new Date();
             const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const pkt = new Date(utc + (5 * 60 * 60000)); // UTC+5
+            const pkt = new Date(utc + (5 * 60 * 60000));
             const day = pkt.getDay();
             const mins = pkt.getHours() * 60 + pkt.getMinutes();
             let open = false;
-            if ((day >= 1 && day <= 4) || day === 6) open = mins >= 540 && mins < 960; // 9AM-4PM
-            else if (day === 5) open = mins >= 540 && mins < 780; // 9AM-1PM
+            if ((day >= 1 && day <= 4) || day === 6) open = mins >= 540 && mins < 960;
+            else if (day === 5) open = mins >= 540 && mins < 780;
             if (open) {
                 el.className = 'office-status office-open';
                 el.innerHTML = '🟢 Office is Currently <strong>OPEN</strong>';
@@ -391,12 +377,74 @@
         updateOfficeStatus();
         setInterval(updateOfficeStatus, 60000);
 
-        // NID Search (same as before)
+        // HR Data & Modal
+        const hrData = {
+            asvs: {
+                "Chakwal": [{name:"Wajid Maqbool Raja", mobile:"0342-5354759"}, {name:"Umer Shahzad", mobile:"0335-5221400"}],
+                "Talagang": [{name:"Qazi Muhammad Rashid", mobile:"0308-7772112"}, {name:"Abdul Wahid", mobile:"0333-5781386"}, {name:"Asif Iqbal", mobile:"0306-5588692"}],
+                "Kallar Kahar": [{name:"Zafar Iqbal", mobile:"0313-6752321"}],
+                "Choa Saidan Shah": [{name:"Ansar Mehmood", mobile:"0334-5666948"}]
+            }
+        };
+        const TEHSILS = ["Chakwal", "Talagang", "Kallar Kahar", "Choa Saidan Shah"];
+
+        function toggleTehsil(id) {
+            document.getElementById('th-'+id).classList.toggle('open');
+            document.getElementById('tc-'+id).classList.toggle('open');
+        }
+
+        function openStatModal(type) {
+            const title = document.getElementById('stat-modal-title');
+            const body = document.getElementById('stat-modal-body');
+            let html = '';
+
+            if (type === 'tehsils') {
+                title.textContent = 'Total Tehsils (4)';
+                TEHSILS.forEach((t,i) => {
+                    html += `<div class="tehsil-block">
+                        <div class="tehsil-block-header" id="th-t${i}" onclick="toggleTehsil('t${i}')">
+                            <span>${t}</span><span class="arrow">&#9656;</span>
+                        </div>
+                        <div class="tehsil-block-content" id="tc-t${i}">
+                            <div class="tehsil-entry-row"><span>Tehsil Name</span><span class="tehsil-entry-value">${t}</span></div>
+                        </div>
+                    </div>`;
+                });
+            }
+            else if (type === 'ucs') {
+                title.textContent = 'Total UCs (83)';
+                html = '<p style="text-align:center;padding:20px;color:#666;">Detailed UC list is available in official reports.<br>Total Union Councils in District Chakwal: <strong>83</strong></p>';
+            }
+            else if (type === 'vaccinators') {
+                title.textContent = 'Vaccinators (83 Sanctioned Posts)';
+                html = '<p style="text-align:center;padding:20px;color:#666;">Total Sanctioned Vaccinator Posts: <strong>83</strong><br>Detailed list will be updated soon.</p>';
+            }
+            else if (type === 'asvs') {
+                title.textContent = 'ASVs (7)';
+                TEHSILS.forEach((t,i) => {
+                    const list = hrData.asvs[t] || [];
+                    let rows = list.map(a => `<div class="tehsil-entry-row"><span class="tehsil-entry-name">${a.name}</span><span class="tehsil-entry-value">${a.mobile}</span></div>`).join('');
+                    html += `<div class="tehsil-block">
+                        <div class="tehsil-block-header" id="th-a${i}" onclick="toggleTehsil('a${i}')">
+                            <span>${t} (${list.length})</span><span class="arrow">&#9656;</span>
+                        </div>
+                        <div class="tehsil-block-content" id="tc-a${i}">${rows || '<div style="padding:8px;color:#888;">No data</div>'}</div>
+                    </div>`;
+                });
+            }
+
+            body.innerHTML = html;
+            document.getElementById('statModal').classList.add('active');
+        }
+        function closeStatModal() {
+            document.getElementById('statModal').classList.remove('active');
+        }
+
+        // NID Search
         function openNidModal() { document.getElementById('nidModal').classList.add('active'); }
         function closeNidModal() { document.getElementById('nidModal').classList.remove('active'); }
-        function handleNidSearchSubmit(e) { e.preventDefault(); performNidSearch(); }
         function cleanString(s) { return s ? s.toString().replace(/[^a-zA-Z0-9]/g,'').toLowerCase() : ''; }
-        function getPropValue(row, keys) {
+        function getProp(row, keys) {
             for (let p in row) {
                 let ck = p.replace(/\s+/g,'').toLowerCase();
                 for (let k of keys) if (ck === k.replace(/\s+/g,'').toLowerCase()) return row[p];
@@ -405,43 +453,35 @@
         }
         function performNidSearch() {
             const file = document.getElementById('fileSelect').value;
-            const query = document.getElementById('nidSearchQuery').value.trim();
+            const q = document.getElementById('nidSearchQuery').value.trim();
             const res = document.getElementById('nidSearchResult');
-            if (!query) { res.innerHTML = '<div style="color:red;text-align:center;margin-top:15px;">CNIC ya Account Number darj karein!</div>'; return; }
+            if (!q) { res.innerHTML = '<div style="color:red;text-align:center;margin-top:15px;">CNIC ya Account Number darj karein</div>'; return; }
             res.innerHTML = '<div style="text-align:center;margin-top:15px;color:#0d5c3d;">Searching...</div>';
             fetch(file).then(r => r.arrayBuffer()).then(data => {
                 const wb = XLSX.read(data, {type:'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
                 let found = null;
-                const cq = cleanString(query);
+                const cq = cleanString(q);
                 for (let row of json) {
                     for (let k in row) if (cleanString(row[k]) === cq) { found = row; break; }
                     if (found) break;
                 }
                 if (found) {
-                    const name = getPropValue(found, ['CustomerName','Worker Name','WorkerName']);
-                    const tehsil = getPropValue(found, ['Tehsil']);
-                    const uc = getPropValue(found, ['UC','Union Council']);
-                    const pos = getPropValue(found, ['Position','Designation']);
-                    const mode = getPropValue(found, ['PaymentMode','Payment Method','PaymentMethod']);
-                    const amount = getPropValue(found, ['Amount']);
-                    const code = getPropValue(found, ['XpinDraftNo','Xpin Draft No','Payment Code','Xpin']);
-                    const status = getPropValue(found, ['Status']);
                     res.innerHTML = `<div class="result-card">
-                        <div class="result-row"><span class="result-label">Worker Name:</span><span class="result-value">${name}</span></div>
-                        <div class="result-row"><span class="result-label">Tehsil:</span><span class="result-value">${tehsil}</span></div>
-                        <div class="result-row"><span class="result-label">UC:</span><span class="result-value">${uc}</span></div>
-                        <div class="result-row"><span class="result-label">Position:</span><span class="result-value">${pos}</span></div>
-                        <div class="result-row"><span class="result-label">Payment Method:</span><span class="result-value">${mode}</span></div>
-                        <div class="result-row"><span class="result-label">Amount:</span><span class="result-value">Rs. ${amount}</span></div>
-                        <div class="result-row"><span class="result-label">Payment Code:</span><span class="result-value">${code}</span></div>
-                        <div class="result-row"><span class="result-label">Status:</span><span class="status-badge-large">${status}</span></div>
+                        <div class="result-row"><span class="result-label">Worker Name:</span><span class="result-value">${getProp(found,['CustomerName','Worker Name','WorkerName'])}</span></div>
+                        <div class="result-row"><span class="result-label">Tehsil:</span><span class="result-value">${getProp(found,['Tehsil'])}</span></div>
+                        <div class="result-row"><span class="result-label">UC:</span><span class="result-value">${getProp(found,['UC','Union Council'])}</span></div>
+                        <div class="result-row"><span class="result-label">Position:</span><span class="result-value">${getProp(found,['Position','Designation'])}</span></div>
+                        <div class="result-row"><span class="result-label">Payment Method:</span><span class="result-value">${getProp(found,['PaymentMode','Payment Method'])}</span></div>
+                        <div class="result-row"><span class="result-label">Amount:</span><span class="result-value">Rs. ${getProp(found,['Amount'])}</span></div>
+                        <div class="result-row"><span class="result-label">Payment Code:</span><span class="result-value">${getProp(found,['XpinDraftNo','Payment Code','Xpin'])}</span></div>
+                        <div class="result-row"><span class="result-label">Status:</span><span class="status-badge-large">${getProp(found,['Status'])}</span></div>
                     </div>`;
                 } else {
-                    res.innerHTML = '<div style="color:#b03030;text-align:center;margin-top:15px;">Koi record nahi mila.</div>';
+                    res.innerHTML = '<div style="color:#b03030;text-align:center;margin-top:15px;">Koi record nahi mila</div>';
                 }
-            }).catch(err => {
-                res.innerHTML = `<div style="color:red;text-align:center;margin-top:15px;">Error: ${err.message}</div>`;
+            }).catch(e => {
+                res.innerHTML = `<div style="color:red;text-align:center;margin-top:15px;">Error: ${e.message}</div>`;
             });
         }
     </script>
