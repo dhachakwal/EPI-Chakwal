@@ -6,6 +6,7 @@
     <title>EPI District Chakwal Dashboard | Official Website</title>
     <link rel="icon" href="favicon.png.png" type="image/png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
         body{background:#f0f7f4;color:#333}
@@ -99,6 +100,43 @@
         .status-badge-large{font-size:18px;font-weight:900;color:#0d5c3d;background:#e8f5e9;padding:4px 12px;border-radius:6px}
         .footer{background:#0d5c3d;color:#fff;text-align:center;padding:18px;margin-top:40px;font-size:13px}
         @media(max-width:768px){.container{flex-direction:column}.sidebar{width:100%}.contact-location-grid{grid-template-columns:1fr}.header .logo-left,.header .logo-right{position:static;display:inline-block;margin:5px;transform:none}}
+    
+        .coverage-modal-box{background:#fff;border-radius:14px;max-width:920px;width:100%;max-height:90vh;padding:25px;position:relative;overflow-y:auto}
+        .cov-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+        .cov-table th{background:#0d5c3d;color:#fff;padding:8px 6px;text-align:center}
+        .cov-table td{padding:7px 6px;border-bottom:1px solid #e0e0e0;text-align:center}
+        .cov-table tr:nth-child(even){background:#f8faf9}
+        .cov-table .name-col{text-align:left;font-weight:600}
+        .pct-good{color:#0d5c3d;font-weight:700}
+        .pct-mid{color:#c47f00;font-weight:700}
+        .pct-low{color:#b03030;font-weight:700}
+        .dif-pos{color:#b03030}
+        .dif-neg{color:#0d5c3d}
+        .cov-section-title{color:#0d5c3d;font-size:16px;font-weight:700;margin:18px 0 8px;border-bottom:2px solid #1a8a5c;padding-bottom:4px}
+        .chart-wrap{position:relative;height:280px;margin:15px 0}
+        .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0}
+        .kpi-box{background:#f0f7f4;border-radius:10px;padding:12px;text-align:center;border:1px solid #c8e6c9}
+        .kpi-box .kpi-val{font-size:22px;font-weight:800;color:#0d5c3d}
+        .kpi-box .kpi-lbl{font-size:11px;color:#555;margin-top:2px}
+
+    
+        .cov-modal-box{background:#fff;border-radius:14px;max-width:720px;width:100%;max-height:90vh;padding:25px;position:relative;overflow-y:auto}
+        .cov-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+        .cov-kpi-item{background:#f0f7f4;border-radius:10px;padding:12px;text-align:center;border:1px solid #c8e6c9}
+        .cov-kpi-num{font-size:22px;font-weight:700;color:#0d5c3d}
+        .cov-kpi-label{font-size:12px;color:#666;margin-top:2px}
+        .cov-bar-row{margin-bottom:10px}
+        .cov-bar-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+        .cov-bar-track{height:18px;background:#e8f5e9;border-radius:9px;overflow:hidden}
+        .cov-bar-fill{height:100%;border-radius:9px;background:linear-gradient(90deg,#1a8a5c,#0d5c3d);display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:11px;font-weight:600;min-width:28px}
+        .cov-bar-fill.low{background:linear-gradient(90deg,#e57373,#c62828)}
+        .cov-bar-fill.mid{background:linear-gradient(90deg,#ffb74d,#f57c00)}
+        .cov-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+        .cov-table th{background:#0d5c3d;color:#fff;padding:8px 6px;text-align:center}
+        .cov-table td{padding:7px 6px;border-bottom:1px solid #e0e0e0;text-align:center}
+        .cov-table tr:nth-child(even){background:#f9fbf9}
+        .cov-section-title{color:#0d5c3d;font-size:15px;font-weight:700;margin:18px 0 10px;border-bottom:2px solid #1a8a5c;padding-bottom:4px}
+
     </style>
 </head>
 <body>
@@ -195,11 +233,11 @@
                     </div>
                 </div>
                 <div class="download-card">
-                    <h3>Coverage Report</h3>
-                    <p>Antigen-wise Coverage Analysis</p>
+                    <h3>Coverage Reports For the Month of July</h3>
+                    <p>July 2026 Antigen-wise Coverage, MIS vs EMR &amp; Stock Analysis</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon');return false">View PDF</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false">Download PDF</a>
+                        <button class="btn" onclick="openCoverageModal()">View Report</button>
+                        <a href="Chakwal EPI Report July 2026.xlsx" class="btn btn-outline" download>Download Excel</a>
                     </div>
                 </div>
                 <div class="download-card">
@@ -311,6 +349,69 @@
         </div>
     </div>
 
+    
+    <!-- Coverage Report Modal -->
+    <div class="modal-overlay" id="coverageModal" onclick="if(event.target===this)closeCoverageModal()">
+        <div class="coverage-modal-box">
+            <button class="modal-close" onclick="closeCoverageModal()">&times;</button>
+            <h2 style="color:#0d5c3d;margin-bottom:4px">Coverage Reports — July 2026</h2>
+            <p style="color:#666;font-size:13px;margin-bottom:12px">District Chakwal | Routine EPI Administrative Coverage</p>
+
+            <div class="kpi-row">
+                <div class="kpi-box"><div class="kpi-val">82.8%</div><div class="kpi-lbl">BCG Coverage</div></div>
+                <div class="kpi-box"><div class="kpi-val">77.4%</div><div class="kpi-lbl">Penta-3</div></div>
+                <div class="kpi-box"><div class="kpi-val">83.0%</div><div class="kpi-lbl">MR-1</div></div>
+                <div class="kpi-box"><div class="kpi-val">31.8%</div><div class="kpi-lbl">Hep-B (Low)</div></div>
+                <div class="kpi-box"><div class="kpi-val">4,148</div><div class="kpi-lbl">Newborn Target</div></div>
+            </div>
+
+            <div class="cov-section-title">1. Antigen-wise Coverage (District Summary)</div>
+            <div class="chart-wrap"><canvas id="covChart"></canvas></div>
+            <table class="cov-table">
+                <thead><tr><th>#</th><th class="name-col">Antigen</th><th>Target</th><th>Coverage</th><th>%</th></tr></thead>
+                <tbody id="covSummaryBody"></tbody>
+            </table>
+
+            <div class="cov-section-title">2. MIS vs EMR Comparison (Tehsil-wise)</div>
+            <p style="font-size:12px;color:#666;margin-bottom:8px">Difference = MIS − EMR (positive means MIS higher than EMR)</p>
+            <div style="overflow-x:auto">
+                <table class="cov-table" id="misEmrTable">
+                    <thead>
+                        <tr>
+                            <th>Tehsil</th>
+                            <th colspan="3">BCG</th>
+                            <th colspan="3">Penta-3</th>
+                            <th colspan="3">MR-1</th>
+                            <th colspan="3">DTP</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th>MIS</th><th>EMR</th><th>Dif</th>
+                            <th>MIS</th><th>EMR</th><th>Dif</th>
+                            <th>MIS</th><th>EMR</th><th>Dif</th>
+                            <th>MIS</th><th>EMR</th><th>Dif</th>
+                        </tr>
+                    </thead>
+                    <tbody id="misEmrBody"></tbody>
+                </table>
+            </div>
+
+            <div class="cov-section-title">3. Key Observations</div>
+            <ul style="font-size:13.5px;line-height:1.7;color:#444;padding-left:18px">
+                <li><strong>BCG</strong> district coverage <strong>82.8%</strong> (Target 4,451 / Achieved 3,687)</li>
+                <li><strong>Hep-B Birth Dose</strong> is critically low at <strong>31.8%</strong> — needs urgent focus</li>
+                <li><strong>Penta-3</strong> at <strong>77.4%</strong> and <strong>MR-1</strong> at <strong>83.0%</strong> are relatively strong</li>
+                <li><strong>MIS vs EMR gap</strong> is significant (District BCG gap = 1,707) — data quality / reporting lag</li>
+                <li>Largest MIS–EMR differences are in <strong>Chakwal</strong> and <strong>Talagang</strong> tehsils</li>
+                <li>Full UC-wise coverage + vaccine stock details available in the Excel download</li>
+            </ul>
+
+            <div style="text-align:center;margin-top:18px">
+                <a href="Chakwal EPI Report July 2026.xlsx" class="btn" download>Download Full Excel Report</a>
+            </div>
+        </div>
+    </div>
+
     <div class="footer">© 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>Official Dashboard for Internal Use Only</div>
 
     <script>
@@ -384,6 +485,89 @@
                 </div>`}else{res.innerHTML='<div style="color:#b03030;text-align:center;margin-top:15px">Koi record nahi mila</div>'}
             }).catch(e=>{res.innerHTML=`<div style="color:red;text-align:center;margin-top:15px">Error: ${e.message}</div>`});
         }
+
+        // ===== Coverage Report July 2026 =====
+        const covSummary = [
+            {n:'BCG', t:4451, c:3687, p:82.8},
+            {n:'Hep-B', t:4451, c:1416, p:31.8},
+            {n:'OPV-0', t:4451, c:3771, p:84.7},
+            {n:'Penta-1', t:4184, c:3226, p:77.1},
+            {n:'Penta-2', t:4184, c:3039, p:72.6},
+            {n:'Penta-3', t:4184, c:3238, p:77.4},
+            {n:'MR-1', t:4184, c:3472, p:83.0},
+            {n:'MR-2', t:4184, c:3067, p:73.3},
+            {n:'DTP', t:4184, c:3026, p:72.3},
+            {n:'TT-1', t:4540, c:2927, p:64.5},
+            {n:'TT-2', t:4540, c:2621, p:57.7}
+        ];
+        const misEmrRows = [
+            {t:'Chakwal', bcg:[2374,1283,1091], p3:[1330,1078,252], mr1:[1519,1314,205], dtp:[1264,1117,147]},
+            {t:'Talagang', bcg:[1447,929,518], p3:[1319,1105,214], mr1:[1378,1210,168], dtp:[1202,1066,136]},
+            {t:'Kallar Kahar', bcg:[260,215,45], p3:[324,306,18], mr1:[335,317,18], dtp:[313,287,26]},
+            {t:'Choa Saidan Shah', bcg:[214,161,53], p3:[316,234,82], mr1:[310,272,38], dtp:[244,249,-5]},
+            {t:'District Total', bcg:[4295,2588,1707], p3:[3289,2723,566], mr1:[3542,3113,429], dtp:[3023,2719,304]}
+        ];
+        let covChartObj = null;
+        function pctClass(p){ return p>=80?'pct-high':(p>=60?'pct-mid':'pct-low'); }
+        function openCoverageModal(){
+            const tbody = document.getElementById('covSummaryBody');
+            if(tbody){
+                tbody.innerHTML = covSummary.map((r,i)=>`<tr>
+                    <td>${i+1}</td>
+                    <td class="name-col"><strong>${r.n}</strong></td>
+                    <td>${r.t.toLocaleString()}</td>
+                    <td>${r.c.toLocaleString()}</td>
+                    <td class="${pctClass(r.p)}">${r.p}%</td>
+                </tr>`).join('');
+            }
+            // MIS vs EMR mini table fill if empty cells exist
+            const misBody = document.getElementById('misEmrBody');
+            if(misBody){
+                misBody.innerHTML = misEmrRows.map(r=>`<tr>
+                    <td style="text-align:left;font-weight:600">${r.t}</td>
+                    <td>${r.bcg[0].toLocaleString()}</td><td>${r.bcg[1].toLocaleString()}</td><td style="color:${r.bcg[2]>0?'#c62828':'#0d5c3d'}">${r.bcg[2]>0?'+':''}${r.bcg[2].toLocaleString()}</td>
+                    <td>${r.p3[0].toLocaleString()}</td><td>${r.p3[1].toLocaleString()}</td><td style="color:${r.p3[2]>0?'#c62828':'#0d5c3d'}">${r.p3[2]>0?'+':''}${r.p3[2].toLocaleString()}</td>
+                    <td>${r.mr1[0].toLocaleString()}</td><td>${r.mr1[1].toLocaleString()}</td><td style="color:${r.mr1[2]>0?'#c62828':'#0d5c3d'}">${r.mr1[2]>0?'+':''}${r.mr1[2].toLocaleString()}</td>
+                    <td>${r.dtp[0].toLocaleString()}</td><td>${r.dtp[1].toLocaleString()}</td><td style="color:${r.dtp[2]>0?'#c62828':'#0d5c3d'}">${r.dtp[2]>0?'+':''}${r.dtp[2].toLocaleString()}</td>
+                </tr>`).join('');
+            }
+            document.getElementById('coverageModal').classList.add('active');
+            // Chart
+            setTimeout(()=>{
+                const canvas = document.getElementById('covChart');
+                if(!canvas || typeof Chart === 'undefined') return;
+                if(covChartObj){ covChartObj.destroy(); }
+                covChartObj = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: covSummary.map(x=>x.n),
+                        datasets: [{
+                            label: 'Coverage %',
+                            data: covSummary.map(x=>x.p),
+                            backgroundColor: covSummary.map(x => x.p>=80 ? '#1a8a5c' : (x.p>=60 ? '#f57c00' : '#c62828')),
+                            borderRadius: 5,
+                            maxBarThickness: 28
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {display:false},
+                            tooltip: {callbacks: {label: ctx => ctx.raw + '%'}}
+                        },
+                        scales: {
+                            y: {beginAtZero:true, max:100, ticks:{callback:v=>v+'%'}, grid:{color:'#eee'}},
+                            x: {ticks:{font:{size:11}}, grid:{display:false}}
+                        }
+                    }
+                });
+            }, 80);
+        }
+        function closeCoverageModal(){
+            document.getElementById('coverageModal').classList.remove('active');
+        }
+
     </script>
 </body>
 </html>
