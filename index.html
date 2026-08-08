@@ -89,7 +89,6 @@
         .tehsil-entry-row:last-child { border-bottom: none; }
         .tehsil-entry-name { font-weight: 500; }
         .tehsil-entry-value { color: #0d5c3d; font-weight: 600; }
-        .vacant-badge { color: #b03030; font-weight: 600; }
         .nid-select-input, .nid-search-input { width: 100%; padding: 11px 15px; border: 2px solid #0d5c3d; border-radius: 6px; font-size: 14px; margin-bottom: 12px; outline: none; }
         .result-card { background: #fff; border: 1px solid #1a8a5c; border-left: 6px solid #0d5c3d; border-radius: 10px; padding: 18px; margin-top: 15px; text-align: left; }
         .result-row { display: flex; justify-content: space-between; margin-bottom: 9px; font-size: 14px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 6px; }
@@ -205,7 +204,7 @@
                     <h3>Monthly EPI Presentation</h3>
                     <p>July 2026 District Performance Review</p>
                     <div class="btn-group">
-                        <a href="Chakwal_EPI_Coverage_July_2026 Final.pptx" class="btn" target="_blank">View PPT</a>
+                        <a href="https://docs.google.com/gview?url=https://vickykhan7152.github.io/EPI-Chakwal/Chakwal_EPI_Coverage_July_2026%20Final.pptx&embedded=true" class="btn" target="_blank">View PPT</a>
                         <a href="Chakwal_EPI_Coverage_July_2026 Final.pptx" class="btn btn-outline" download>Download PPT</a>
                     </div>
                 </div>
@@ -213,24 +212,24 @@
                     <h3>Coverage Report</h3>
                     <p>Antigen-wise Coverage Analysis</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon');return false;">View PDF</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false;">Download PDF</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View PDF</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download PDF</a>
                     </div>
                 </div>
                 <div class="download-card">
                     <h3>Zero-Dose Analysis</h3>
                     <p>Identification & Action Plan</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon');return false;">View Report</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false;">Download Report</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Report</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Report</a>
                     </div>
                 </div>
                 <div class="download-card">
                     <h3>Dropout Analysis</h3>
                     <p>Penta1 to Penta3 & MR Dropout</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon');return false;">View Excel</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false;">Download Excel</a>
+                        <a href="#" class="btn" onclick="alert('Coming Soon'); return false;">View Excel</a>
+                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon'); return false;">Download Excel</a>
                     </div>
                 </div>
             </div>
@@ -316,7 +315,6 @@
     </div>
 
     <script>
-        // Toggle Pictures
         function togglePics(btn, id) {
             const g = document.getElementById(id);
             if (g.classList.contains('show')) {
@@ -328,7 +326,6 @@
             }
         }
 
-        // Image Modal
         function openImgModal(src) {
             document.getElementById('previewImg').src = src;
             document.getElementById('imgModal').classList.add('active');
@@ -337,7 +334,6 @@
             document.getElementById('imgModal').classList.remove('active');
         }
 
-        // Officer Modal
         const officerData = {
             ceo: { name: "Dr. Saeed Akhtar", designation: "Chief Executive Officer, District Health Authority Chakwal", contact: "0301-5339925", photo: "CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" },
             dho: { name: "Dr. Ali Ammar Najaf Habib", designation: "District Health Officer Preventive Services, DHA Chakwal", contact: "0331-5897203", photo: "DHOPS_Health_Dr_Ali_Ammar_Profile_Picture.png" },
@@ -355,7 +351,6 @@
             document.getElementById('officerModal').classList.remove('active');
         }
 
-        // Office Status
         function updateOfficeStatus() {
             const el = document.getElementById('officeStatus');
             const now = new Date();
@@ -377,7 +372,6 @@
         updateOfficeStatus();
         setInterval(updateOfficeStatus, 60000);
 
-        // HR Data & Modal
         const hrData = {
             asvs: {
                 "Chakwal": [{name:"Wajid Maqbool Raja", mobile:"0342-5354759"}, {name:"Umer Shahzad", mobile:"0335-5221400"}],
@@ -413,11 +407,11 @@
             }
             else if (type === 'ucs') {
                 title.textContent = 'Total UCs (83)';
-                html = '<p style="text-align:center;padding:20px;color:#666;">Detailed UC list is available in official reports.<br>Total Union Councils in District Chakwal: <strong>83</strong></p>';
+                html = '<p style="text-align:center;padding:20px;color:#666;">Total Union Councils in District Chakwal: <strong>83</strong><br>Detailed list official reports me available hai.</p>';
             }
             else if (type === 'vaccinators') {
                 title.textContent = 'Vaccinators (83 Sanctioned Posts)';
-                html = '<p style="text-align:center;padding:20px;color:#666;">Total Sanctioned Vaccinator Posts: <strong>83</strong><br>Detailed list will be updated soon.</p>';
+                html = '<p style="text-align:center;padding:20px;color:#666;">Total Sanctioned Vaccinator Posts: <strong>83</strong><br>Detailed list jald update kiya jayega.</p>';
             }
             else if (type === 'asvs') {
                 title.textContent = 'ASVs (7)';
@@ -440,7 +434,6 @@
             document.getElementById('statModal').classList.remove('active');
         }
 
-        // NID Search
         function openNidModal() { document.getElementById('nidModal').classList.add('active'); }
         function closeNidModal() { document.getElementById('nidModal').classList.remove('active'); }
         function cleanString(s) { return s ? s.toString().replace(/[^a-zA-Z0-9]/g,'').toLowerCase() : ''; }
