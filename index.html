@@ -286,17 +286,27 @@
                     Teams submit daily field reports; summary, graphs and table update live from Google Sheet.
                 </p>
 
+                
                 <div class="sweep-hero" id="sweepHero">
-                    <div class="sweep-stat"><div class="sweep-stat-num" id="swReports">—</div><div class="sweep-stat-lbl">Reports</div></div>
-                    <div class="sweep-stat"><div class="sweep-stat-num" id="swPartial">—</div><div class="sweep-stat-lbl">Partial Children</div></div>
-                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#e65100" onclick="toggleRemainingUCs()" title="Click to see pending UCs">
+                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#2e7d32" onclick="showSweepPanel('submitted')" title="Click for Tehsil / UC status">
+                        <div class="sweep-stat-num" id="swReports" style="color:#2e7d32">—</div>
+                        <div class="sweep-stat-lbl">Submit Reports</div>
+                    </div>
+                    <div class="sweep-stat" style="cursor:pointer" onclick="showSweepPanel('partial')" title="Click for Tehsil / UC numbers">
+                        <div class="sweep-stat-num" id="swPartial">—</div>
+                        <div class="sweep-stat-lbl">Partial Children</div>
+                    </div>
+                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#e65100" onclick="showSweepPanel('remaining')" title="Click for pending Tehsil / UC">
                         <div class="sweep-stat-num" id="swRemaining" style="color:#e65100">—</div>
                         <div class="sweep-stat-lbl">Remaining Reports</div>
                     </div>
                 </div>
-                <div id="remainingUCList" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13.5px">
-                    <strong style="color:#e65100">Pending Union Councils:</strong>
-                    <div id="remainingUCItems" style="margin-top:8px;line-height:1.8;color:#555"></div>
+                <div id="sweepDetailPanel" style="display:none;background:#fff;border:1px solid #c8e6c9;border-radius:12px;padding:14px 16px;margin-bottom:16px;max-height:380px;overflow-y:auto">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <strong id="sweepPanelTitle" style="color:#0d5c3d;font-size:14.5px">Details</strong>
+                        <button onclick="document.getElementById('sweepDetailPanel').style.display='none'" style="border:none;background:#f0f0f0;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">Close ✕</button>
+                    </div>
+                    <div id="sweepPanelBody" style="font-size:13.5px;line-height:1.6;color:#333"></div>
                 </div>
 
                 <div class="sweep-toolbar">
@@ -902,23 +912,110 @@
             if(w && !w.contains(e.target)) clearSearch();
         });
 
-        // ===== Urban Sweep-up Live Data =====
         
-        // Expected Urban UCs for Sweep-up (edit this list if needed)
-        const URBAN_UCS = [
-            'Chakwal Urban-1',
-            'Chakwal Urban-2',
-            'Chakwal Urban-3',
-            'Chakwal Urban-4',
-            'Chakwal Urban-5'
-        ];
-        function toggleRemainingUCs(){
-            const box = document.getElementById('remainingUCList');
-            if(!box) return;
-            box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+        function showSweepPanel(mode){
+            const panel = document.getElementById('sweepDetailPanel');
+            const title = document.getElementById('sweepPanelTitle');
+            const body = document.getElementById('sweepPanelBody');
+            if(!panel || !body) return;
+
+            const submitted = window._sweepSubmitted || {};
+            const master = (typeof hrData !== 'undefined' && hrData.tehsilUCs) ? hrData.tehsilUCs : {};
+            const tehsilOrder = ['Chakwal','Talagang','Kallar Kahar','Choa Saidan Shah'];
+
+            // Normalize helper
+            function norm(s){ return (s||'').toString().trim().toLowerCase(); }
+
+            // All submitted UC names set
+            const subSet = {};
+            Object.keys(submitted).forEach(function(t){
+                Object.keys(submitted[t]).forEach(function(u){ subSet[norm(u)] = {tehsil:t, uc:u, data:submitted[t][u]}; });
+            });
+
+            let htmlOut = '';
+
+            if(mode === 'submitted'){
+                title.textContent = 'Submit Reports — Tehsil & UC Status';
+                title.style.color = '#2e7d32';
+                const tehsils = Object.keys(submitted);
+                if(!tehsils.length){
+                    htmlOut = '<p style="color:#888">Abhi koi report submit nahi hui.</p>';
+                } else {
+                    tehsilOrder.concat(tehsils.filter(function(t){ return tehsilOrder.indexOf(t)<0; })).forEach(function(t){
+                        if(!submitted[t]) return;
+                        const ucs = Object.keys(submitted[t]);
+                        let rows = ucs.map(function(u){
+                            const d = submitted[t][u];
+                            return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e8f5e9">'
+                                + '<span>✅ <strong>'+u+'</strong></span>'
+                                + '<span style="color:#2e7d32;font-weight:600">'+d.n+' report(s)</span></div>';
+                        }).join('');
+                        htmlOut += '<div style="margin-bottom:14px"><div style="background:#e8f5e9;padding:8px 12px;border-radius:8px;font-weight:700;color:#0d5c3d;margin-bottom:6px">'+t+' <span style="font-weight:500;font-size:12px;color:#666">('+ucs.length+' UC)</span></div>'+rows+'</div>';
+                    });
+                }
+            }
+            else if(mode === 'partial'){
+                title.textContent = 'Partial Children — Tehsil & UC';
+                title.style.color = '#0d5c3d';
+                const tehsils = Object.keys(submitted);
+                if(!tehsils.length){
+                    htmlOut = '<p style="color:#888">Abhi data nahi hai.</p>';
+                } else {
+                    tehsilOrder.concat(tehsils.filter(function(t){ return tehsilOrder.indexOf(t)<0; })).forEach(function(t){
+                        if(!submitted[t]) return;
+                        const ucs = Object.keys(submitted[t]);
+                        let tehsilTotal = 0;
+                        let rows = ucs.map(function(u){
+                            const d = submitted[t][u];
+                            tehsilTotal += d.partial;
+                            return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee">'
+                                + '<span>'+u+'</span>'
+                                + '<span style="font-weight:700;color:#0d5c3d">'+d.partial.toLocaleString()+'</span></div>';
+                        }).join('');
+                        htmlOut += '<div style="margin-bottom:14px"><div style="background:#f0f7f4;padding:8px 12px;border-radius:8px;font-weight:700;color:#0d5c3d;margin-bottom:6px">'+t+' — Total: '+tehsilTotal.toLocaleString()+'</div>'+rows+'</div>';
+                    });
+                }
+            }
+            else if(mode === 'remaining'){
+                title.textContent = 'Remaining Reports — Tehsil & UC';
+                title.style.color = '#e65100';
+                let any = false;
+                tehsilOrder.forEach(function(t){
+                    const list = master[t] || [];
+                    const pending = list.filter(function(item){
+                        const name = (item.uc || item || '').toString();
+                        return name && !subSet[norm(name)];
+                    });
+                    // Also show form tehsils that might not be in master with zero pending from master
+                    if(pending.length){
+                        any = true;
+                        let rows = pending.map(function(item){
+                            const name = (item.uc || item || '').toString();
+                            return '<div style="padding:5px 0;border-bottom:1px solid #ffe0b2">⏳ '+name+'</div>';
+                        }).join('');
+                        htmlOut += '<div style="margin-bottom:14px"><div style="background:#fff3e0;padding:8px 12px;border-radius:8px;font-weight:700;color:#e65100;margin-bottom:6px">'+t+' <span style="font-weight:500;font-size:12px">('+pending.length+' pending)</span></div>'+rows+'</div>';
+                    } else if(list.length){
+                        htmlOut += '<div style="margin-bottom:10px"><div style="background:#e8f5e9;padding:8px 12px;border-radius:8px;font-weight:600;color:#2e7d32">'+t+' — All submitted ✓</div></div>';
+                    }
+                });
+                // Form UCs that submitted but not in master - ignore for remaining
+                if(!Object.keys(master).length){
+                    htmlOut = '<p style="color:#888">Master UC list load nahi hui. Page refresh karein.</p>';
+                } else if(!any && htmlOut.indexOf('All submitted')>=0){
+                    // fine
+                } else if(!any){
+                    htmlOut = '<p style="color:#2e7d32;font-weight:600">All UCs in the master list have submitted reports ✓</p>';
+                }
+            }
+
+            body.innerHTML = htmlOut;
+            panel.style.display = 'block';
+            panel.scrollIntoView({behavior:'smooth', block:'nearest'});
         }
 
-        const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
+
+        // ===== Urban Sweep-up Live Data =====
+const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
         const SW_I = {tehsil:2, uc:3, partial:4, penta1:5, bcg:6, penta2:7, penta3:8, ipv1:9, mr1:10, ipv2:11, mr2:12, dtp:13, hpv:14};
         let sweepAntigenChartObj = null, sweepUCChartObj = null;
 
@@ -997,26 +1094,50 @@
                     byUC[uc].partial += partial;
                 });
 
+                
                 const setTxt = function(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; };
                 setTxt('swReports', dataRows.length);
                 setTxt('swPartial', totPartial.toLocaleString());
 
-                // Remaining Reports = Urban UCs not yet submitted
-                const submittedUCs = {};
+                // Build submitted map: tehsil -> { uc -> {partial, count, ...} }
+                window._sweepSubmitted = {};
+                window._sweepRows = dataRows;
                 dataRows.forEach(function(vals){
-                    const uc = (vals[SW_I.uc]||'').trim();
-                    if(uc) submittedUCs[uc] = true;
-                });
-                const pending = URBAN_UCS.filter(function(uc){ return !submittedUCs[uc]; });
-                setTxt('swRemaining', pending.length);
-                const pendingBox = document.getElementById('remainingUCItems');
-                if(pendingBox){
-                    if(pending.length === 0){
-                        pendingBox.innerHTML = '<span style="color:#2e7d32;font-weight:600">All listed Urban UCs have submitted ✓</span>';
-                    } else {
-                        pendingBox.innerHTML = pending.map(function(uc){ return '• '+uc; }).join('<br>');
+                    const tehsil = (vals[SW_I.tehsil]||'—').trim();
+                    const uc = (vals[SW_I.uc]||'—').trim();
+                    if(!window._sweepSubmitted[tehsil]) window._sweepSubmitted[tehsil] = {};
+                    if(!window._sweepSubmitted[tehsil][uc]) {
+                        window._sweepSubmitted[tehsil][uc] = {n:0, partial:0, bcg:0, p1:0, p2:0, p3:0, mr1:0};
                     }
+                    const o = window._sweepSubmitted[tehsil][uc];
+                    o.n += 1;
+                    o.partial += num(vals[SW_I.partial]);
+                    o.bcg += num(vals[SW_I.bcg]);
+                    o.p1 += num(vals[SW_I.penta1]);
+                    o.p2 += num(vals[SW_I.penta2]);
+                    o.p3 += num(vals[SW_I.penta3]);
+                    o.mr1 += num(vals[SW_I.mr1]);
+                });
+
+                // Master UC list from hrData (all 4 tehsils)
+                const master = (typeof hrData !== 'undefined' && hrData.tehsilUCs) ? hrData.tehsilUCs : {};
+                const submittedUCSet = {};
+                Object.keys(window._sweepSubmitted).forEach(function(t){
+                    Object.keys(window._sweepSubmitted[t]).forEach(function(u){ submittedUCSet[u.toLowerCase()] = true; });
+                });
+                let pendingCount = 0;
+                Object.keys(master).forEach(function(t){
+                    (master[t]||[]).forEach(function(item){
+                        const name = (item.uc||item||'').toString();
+                        if(name && !submittedUCSet[name.toLowerCase()]) pendingCount++;
+                    });
+                });
+                // Also count form-only expected? If master empty, use inverse
+                if(Object.keys(master).length === 0){
+                    pendingCount = 0;
                 }
+                setTxt('swRemaining', pendingCount);
+
 
                 const ordered = dataRows.slice().reverse();
                 if(body){
