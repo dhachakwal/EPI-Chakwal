@@ -203,9 +203,22 @@
         .btn-sm{padding:9px 16px;font-size:13px}
         @media(max-width:700px){.sweep-charts{grid-template-columns:1fr}}
 
+    
+        .search-detail-modal .modal-box{max-width:480px;text-align:left}
+        .sd-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #e0e0e0;font-size:14px}
+        .sd-label{color:#666;font-weight:600}
+        .sd-value{color:#0d5c3d;font-weight:700;text-align:right}
+        .admin-bar{display:none;background:#fff3e0;border-bottom:2px solid #ffb74d;padding:8px 15px;text-align:center;font-size:13px;color:#e65100;font-weight:600}
+        .admin-bar.active{display:block}
+        .edit-btn{background:#e65100;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-weight:600;margin-top:10px}
+        .edit-btn:hover{background:#bf360c}
+        .edit-field{width:100%;padding:8px 10px;border:2px solid #0d5c3d;border-radius:6px;font-size:14px;margin:4px 0 10px;box-sizing:border-box}
+
     </style>
 </head>
 <body>
+    <div class="admin-bar" id="adminBar">🔓 Admin Mode ON — aap data edit kar sakte hain &nbsp; <button onclick="exitAdmin()" style="margin-left:8px;padding:3px 10px;border:1px solid #e65100;background:#fff;border-radius:4px;cursor:pointer;color:#e65100;font-weight:600">Exit Admin</button></div>
+
     <div class="news-ticker"><div class="ticker-content">★ DQS (Data Quality Self-Assessment) for the 2nd Quarter has been successfully completed &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ TPVIC Round-3 results have been released — details are available in the Downloads section below &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ Tehsil-level Vaccinators' meeting on TPVIC Survey held on Saturday, 8th August at 4:00 PM in every DDHO Office under the supervision of DDHO/ASV &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ New EMR update released — QR Code scanning is now mandatory; all vaccinators have completed the update</div></div>
 
     <div class="header">
@@ -628,6 +641,18 @@
         </div>
     </div>
 
+    
+    <!-- Search Detail Modal -->
+    <div class="modal-overlay" id="searchDetailModal" onclick="if(event.target===this)closeSearchDetail()">
+        <div class="modal-box search-detail-modal" style="max-width:480px;text-align:left;padding:24px">
+            <button class="modal-close" onclick="closeSearchDetail()">&times;</button>
+            <h2 id="sdTitle" style="color:#0d5c3d;font-size:18px;margin-bottom:6px"></h2>
+            <div id="sdSub" style="font-size:13px;color:#666;margin-bottom:14px"></div>
+            <div id="sdBody"></div>
+            <div id="sdActions" style="margin-top:12px"></div>
+        </div>
+    </div>
+
     <div class="footer">© 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>Official Dashboard for Internal Use Only</div>
 
     <script>
@@ -857,61 +882,266 @@
             document.getElementById('dropoutModal').classList.remove('active');
         }
 
-        // ===== Site Search =====
-        const SEARCH_INDEX = [
-            {title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs'},
-            {title:'Urban Sweep-up Activity', desc:'Live urban RI sweep-up reports & graphs', id:'section-sweep'},
-            {title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC'},
-            {title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', fn:'openCoverageModal'},
-            {title:'Dropout Analysis', desc:'Tehsil drop-out rates', fn:'openDropoutModal'},
-            {title:'Key Officers', desc:'CEO, DHO, DSV profiles'},
-            {title:'NID Worker Payment', desc:'Search payment status', fn:'openNidModal'},
-            {title:'Contact & Office Location', desc:'Phone, email, map, office status'},
-            {title:'TPVIC R-3', desc:'Third-party verification survey'},
-            {title:'Monthly EPI Presentation', desc:'July 2026 performance PPT'}
-        ];
+        
+        // ===== Site Search (full) + Admin Edit =====
+        // Simple admin password (internal use only — not military-grade security)
+        const ADMIN_PASS = 'epi@chakwal2026';
+        let isAdmin = false;
+
+        function tryAdminLogin(){
+            const p = prompt('Admin password darj karein:');
+            if(p === null) return false;
+            if(p === ADMIN_PASS){
+                isAdmin = true;
+                try{ sessionStorage.setItem('epi_admin','1'); }catch(e){}
+                const bar = document.getElementById('adminBar');
+                if(bar) bar.classList.add('active');
+                alert('Admin mode ON. Ab search se detail open karke Edit kar sakte hain.');
+                return true;
+            }
+            alert('Galat password.');
+            return false;
+        }
+        function exitAdmin(){
+            isAdmin = false;
+            try{ sessionStorage.removeItem('epi_admin'); }catch(e){}
+            const bar = document.getElementById('adminBar');
+            if(bar) bar.classList.remove('active');
+        }
+        function ensureAdmin(){
+            if(isAdmin) return true;
+            return tryAdminLogin();
+        }
+        // restore admin session
+        try{ if(sessionStorage.getItem('epi_admin')==='1'){ isAdmin=true; const b=document.getElementById('adminBar'); if(b) b.classList.add('active'); } }catch(e){}
+
+        // Load vaccinator overrides from localStorage
+        function getVacOverrides(){
+            try{ return JSON.parse(localStorage.getItem('epi_vac_edits')||'{}'); }catch(e){ return {}; }
+        }
+        function saveVacOverride(key, data){
+            const all = getVacOverrides();
+            all[key] = data;
+            localStorage.setItem('epi_vac_edits', JSON.stringify(all));
+        }
+
+        function buildSearchIndex(){
+            const idx = [
+                {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs', action:'scroll', target:'HR Overview'},
+                {type:'section', title:'Urban Sweep-up Activity', desc:'Live reports, graphs, remaining UCs', action:'scroll', target:'Urban Sweep-up'},
+                {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
+                {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
+                {type:'section', title:'Dropout Analysis', desc:'Drop-out rates by tehsil', action:'fn', target:'openDropoutModal'},
+                {type:'section', title:'Key Officers', desc:'CEO, DHO, DSV', action:'scroll', target:'Key Officers'},
+                {type:'section', title:'NID Worker Payment', desc:'Payment status search', action:'fn', target:'openNidModal'},
+                {type:'section', title:'Contact & Office Location', desc:'Phone, email, map', action:'scroll', target:'Contact & Office'},
+                {type:'section', title:'TPVIC R-3', desc:'Survey results & handout', action:'scroll', target:'Official Downloads'},
+                {type:'section', title:'Monthly EPI Presentation', desc:'July 2026 PPT', action:'scroll', target:'Official Downloads'},
+                {type:'section', title:'Admin Login', desc:'Edit access (password required)', action:'admin'}
+            ];
+            // Officers
+            if(typeof officerData !== 'undefined'){
+                Object.keys(officerData).forEach(function(k){
+                    const o = officerData[k];
+                    idx.push({type:'officer', title:o.name, desc:o.designation+' · '+o.contact, action:'officer', target:k, data:o});
+                });
+            }
+            // Vaccinators + ASVs from hrData
+            if(typeof hrData !== 'undefined'){
+                const overrides = getVacOverrides();
+                const tehsils = Object.keys(hrData.vaccinators||{});
+                tehsils.forEach(function(t){
+                    (hrData.vaccinators[t]||[]).forEach(function(v, i){
+                        const key = t+'|'+i;
+                        const ov = overrides[key];
+                        const name = (ov && ov.name) || v.name;
+                        const mobile = (ov && ov.mobile) || v.mobile;
+                        const uc = (ov && ov.uc) || v.uc;
+                        const vacant = ov ? !!ov.vacant : !!v.vacant;
+                        idx.push({
+                            type:'vaccinator',
+                            title: name,
+                            desc: (vacant?'Vacant · ':'') + t + ' · UC: ' + uc + ' · ' + mobile,
+                            action:'vaccinator',
+                            target:key,
+                            data:{tehsil:t, index:i, name:name, mobile:mobile, uc:uc, vacant:vacant}
+                        });
+                    });
+                });
+                Object.keys(hrData.asvs||{}).forEach(function(t){
+                    (hrData.asvs[t]||[]).forEach(function(a){
+                        idx.push({
+                            type:'asv',
+                            title: a.name,
+                            desc: 'ASV · '+t+' · '+a.mobile,
+                            action:'asv',
+                            data:{tehsil:t, name:a.name, mobile:a.mobile}
+                        });
+                    });
+                });
+                // UCs
+                Object.keys(hrData.tehsilUCs||{}).forEach(function(t){
+                    (hrData.tehsilUCs[t]||[]).forEach(function(u){
+                        idx.push({
+                            type:'uc',
+                            title: u.uc,
+                            desc: 'UC · '+t+' · Pop: '+(u.population?u.population.toLocaleString():'—'),
+                            action:'uc',
+                            data:{tehsil:t, uc:u.uc, population:u.population}
+                        });
+                    });
+                });
+            }
+            return idx;
+        }
+
         function runSiteSearch(q){
             const box = document.getElementById('searchResults');
             if(!box) return;
             q = (q||'').trim().toLowerCase();
             if(!q){ box.classList.remove('active'); box.innerHTML=''; return; }
-            const hits = SEARCH_INDEX.filter(i => (i.title+' '+i.desc).toLowerCase().includes(q));
+            if(q === 'admin' || q === 'login'){
+                box.innerHTML = '<div class="search-item" onclick="tryAdminLogin();clearSearch()"><strong>Admin Login</strong><span>Password required for edit access</span></div>';
+                box.classList.add('active');
+                return;
+            }
+            const idx = buildSearchIndex();
+            const hits = idx.filter(function(i){
+                return (i.title+' '+i.desc+' '+i.type).toLowerCase().indexOf(q) >= 0;
+            }).slice(0, 25);
             if(!hits.length){
                 box.innerHTML = '<div class="search-item">No results found</div>';
-                box.classList.add('active'); return;
+                box.classList.add('active');
+                return;
             }
             box._hits = hits;
-            box.innerHTML = hits.map((h,idx)=>`<div class="search-item" onclick="goSearchResult(${idx})"><strong>${h.title}</strong><span>${h.desc}</span></div>`).join('');
+            box.innerHTML = hits.map(function(h, i){
+                const badge = h.type==='vaccinator'?'💉':(h.type==='officer'?'👤':(h.type==='asv'?'🩺':(h.type==='uc'?'📍':'📄')));
+                return '<div class="search-item" onclick="goSearchResult('+i+')"><strong>'+badge+' '+h.title+'</strong><span>'+h.desc+'</span></div>';
+            }).join('');
             box.classList.add('active');
         }
-        function goSearchResult(idx){
+
+        function goSearchResult(i){
             const box = document.getElementById('searchResults');
-            const h = (box._hits||[])[idx];
+            const h = (box._hits||[])[i];
             if(!h) return;
-            box.classList.remove('active');
-            const inp = document.getElementById('siteSearch');
-            if(inp) inp.value = '';
-            if(h.fn && typeof window[h.fn]==='function'){ window[h.fn](); return; }
-            if(h.id){
-                const el = document.getElementById(h.id);
-                if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+            clearSearch();
+            if(h.action === 'admin'){ tryAdminLogin(); return; }
+            if(h.action === 'fn' && typeof window[h.target]==='function'){ window[h.target](); return; }
+            if(h.action === 'scroll'){
+                document.querySelectorAll('.section-title').forEach(function(t){
+                    if(t.textContent.indexOf(h.target.split(' ')[0])>=0 || t.textContent.indexOf(h.target)>=0)
+                        t.scrollIntoView({behavior:'smooth',block:'start'});
+                });
+                return;
             }
-            document.querySelectorAll('.section-title').forEach(t=>{
-                if(t.textContent.indexOf(h.title.split(' ')[0])>=0 || t.textContent.indexOf(h.title)>=0)
-                    t.scrollIntoView({behavior:'smooth',block:'start'});
-            });
+            if(h.action === 'officer'){ openOfficerModal(h.target); return; }
+            // Detail modal for vaccinator / asv / uc
+            openSearchDetail(h);
         }
+
+        function openSearchDetail(h){
+            const modal = document.getElementById('searchDetailModal');
+            const title = document.getElementById('sdTitle');
+            const sub = document.getElementById('sdSub');
+            const body = document.getElementById('sdBody');
+            const actions = document.getElementById('sdActions');
+            if(!modal) return;
+            const d = h.data || {};
+            title.textContent = h.title;
+            if(h.type === 'vaccinator'){
+                sub.textContent = 'Vaccinator · '+d.tehsil;
+                body.innerHTML =
+                    '<div class="sd-row"><span class="sd-label">Name</span><span class="sd-value">'+(d.vacant?'Vacant':d.name)+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Tehsil</span><span class="sd-value">'+d.tehsil+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Union Council</span><span class="sd-value">'+d.uc+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Mobile</span><span class="sd-value">'+(d.mobile||'—')+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Status</span><span class="sd-value">'+(d.vacant?'Vacant':'Filled')+'</span></div>';
+                actions.innerHTML = '<button class="edit-btn" onclick="editVaccinator(\''+d.tehsil+'\','+d.index+')">✏️ Edit (Admin)</button>';
+            } else if(h.type === 'asv'){
+                sub.textContent = 'Assistant Superintendent Vaccination';
+                body.innerHTML =
+                    '<div class="sd-row"><span class="sd-label">Name</span><span class="sd-value">'+d.name+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Tehsil</span><span class="sd-value">'+d.tehsil+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Mobile</span><span class="sd-value">'+d.mobile+'</span></div>';
+                actions.innerHTML = '';
+            } else if(h.type === 'uc'){
+                sub.textContent = 'Union Council';
+                body.innerHTML =
+                    '<div class="sd-row"><span class="sd-label">UC Name</span><span class="sd-value">'+d.uc+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Tehsil</span><span class="sd-value">'+d.tehsil+'</span></div>'+
+                    '<div class="sd-row"><span class="sd-label">Population</span><span class="sd-value">'+(d.population?d.population.toLocaleString():'—')+'</span></div>';
+                actions.innerHTML = '';
+            } else {
+                sub.textContent = h.desc;
+                body.innerHTML = '';
+                actions.innerHTML = '';
+            }
+            modal.classList.add('active');
+        }
+        function closeSearchDetail(){
+            document.getElementById('searchDetailModal').classList.remove('active');
+        }
+
+        function editVaccinator(tehsil, index){
+            if(!ensureAdmin()) return;
+            if(typeof hrData === 'undefined' || !hrData.vaccinators[tehsil]) return;
+            const v = hrData.vaccinators[tehsil][index];
+            if(!v) return;
+            const key = tehsil+'|'+index;
+            const ov = getVacOverrides()[key] || {};
+            const name = prompt('Vaccinator Name:', ov.name || v.name);
+            if(name === null) return;
+            const mobile = prompt('Mobile:', ov.mobile || v.mobile);
+            if(mobile === null) return;
+            const uc = prompt('UC:', ov.uc || v.uc);
+            if(uc === null) return;
+            const vacant = confirm('Kya yeh post Vacant hai?\nOK = Vacant, Cancel = Filled');
+            const data = {name:name.trim(), mobile:mobile.trim(), uc:uc.trim(), vacant:vacant};
+            // Apply live to hrData
+            hrData.vaccinators[tehsil][index].name = data.name;
+            hrData.vaccinators[tehsil][index].mobile = data.mobile;
+            hrData.vaccinators[tehsil][index].uc = data.uc;
+            hrData.vaccinators[tehsil][index].vacant = data.vacant;
+            saveVacOverride(key, data);
+            closeSearchDetail();
+            alert('Saved on this browser (Admin).\n\nNote: Yeh change is device/browser pe save hai. Permanent team-wide change ke liye GitHub HTML update ya Google Sheet HR list use karein.');
+        }
+
         function clearSearch(){
             const inp = document.getElementById('siteSearch');
             const box = document.getElementById('searchResults');
             if(inp) inp.value='';
-            if(box) box.classList.remove('active');
+            if(box){ box.classList.remove('active'); box.innerHTML=''; }
         }
         document.addEventListener('click', function(e){
             const w = document.querySelector('.search-wrap');
             if(w && !w.contains(e.target)) clearSearch();
         });
 
+
+        
+        // Apply saved vaccinator edits
+        (function applyVacEdits(){
+            if(typeof hrData === 'undefined') return;
+            const all = getVacOverrides();
+            Object.keys(all).forEach(function(key){
+                const parts = key.split('|');
+                const t = parts[0];
+                const i = parseInt(parts[1],10);
+                if(hrData.vaccinators[t] && hrData.vaccinators[t][i] && all[key]){
+                    hrData.vaccinators[t][i].name = all[key].name;
+                    hrData.vaccinators[t][i].mobile = all[key].mobile;
+                    hrData.vaccinators[t][i].uc = all[key].uc;
+                    hrData.vaccinators[t][i].vacant = all[key].vacant;
+                }
+            });
+        })();
+
+        // ===== Urban Sweep-up Live Data =====
+
+        // Google Form Union Council options (exact list from form)
         
         function showSweepPanel(mode){
             const panel = document.getElementById('sweepDetailPanel');
@@ -920,13 +1150,9 @@
             if(!panel || !body) return;
 
             const submitted = window._sweepSubmitted || {};
-            const master = (typeof hrData !== 'undefined' && hrData.tehsilUCs) ? hrData.tehsilUCs : {};
             const tehsilOrder = ['Chakwal','Talagang','Kallar Kahar','Choa Saidan Shah'];
-
-            // Normalize helper
             function norm(s){ return (s||'').toString().trim().toLowerCase(); }
 
-            // All submitted UC names set
             const subSet = {};
             Object.keys(submitted).forEach(function(t){
                 Object.keys(submitted[t]).forEach(function(u){ subSet[norm(u)] = {tehsil:t, uc:u, data:submitted[t][u]}; });
@@ -977,20 +1203,15 @@
                 }
             }
             else if(mode === 'remaining'){
-                title.textContent = 'Remaining Reports — Tehsil & UC';
+                title.textContent = 'Remaining Reports — Form Urban UCs';
                 title.style.color = '#e65100';
                 let any = false;
                 tehsilOrder.forEach(function(t){
-                    const list = master[t] || [];
-                    const pending = list.filter(function(item){
-                        const name = (item.uc || item || '').toString();
-                        return name && !subSet[norm(name)];
-                    });
-                    // Also show form tehsils that might not be in master with zero pending from master
+                    const list = (typeof FORM_URBAN_UCS !== 'undefined' && FORM_URBAN_UCS[t]) ? FORM_URBAN_UCS[t] : [];
+                    const pending = list.filter(function(name){ return name && !subSet[norm(name)]; });
                     if(pending.length){
                         any = true;
-                        let rows = pending.map(function(item){
-                            const name = (item.uc || item || '').toString();
+                        let rows = pending.map(function(name){
                             return '<div style="padding:5px 0;border-bottom:1px solid #ffe0b2">⏳ '+name+'</div>';
                         }).join('');
                         htmlOut += '<div style="margin-bottom:14px"><div style="background:#fff3e0;padding:8px 12px;border-radius:8px;font-weight:700;color:#e65100;margin-bottom:6px">'+t+' <span style="font-weight:500;font-size:12px">('+pending.length+' pending)</span></div>'+rows+'</div>';
@@ -998,13 +1219,8 @@
                         htmlOut += '<div style="margin-bottom:10px"><div style="background:#e8f5e9;padding:8px 12px;border-radius:8px;font-weight:600;color:#2e7d32">'+t+' — All submitted ✓</div></div>';
                     }
                 });
-                // Form UCs that submitted but not in master - ignore for remaining
-                if(!Object.keys(master).length){
-                    htmlOut = '<p style="color:#888">Master UC list load nahi hui. Page refresh karein.</p>';
-                } else if(!any && htmlOut.indexOf('All submitted')>=0){
-                    // fine
-                } else if(!any){
-                    htmlOut = '<p style="color:#2e7d32;font-weight:600">All UCs in the master list have submitted reports ✓</p>';
+                if(!any){
+                    htmlOut = '<p style="color:#2e7d32;font-weight:600">All Form Urban UCs have submitted reports ✓</p>' + htmlOut;
                 }
             }
 
@@ -1014,8 +1230,15 @@
         }
 
 
-        // ===== Urban Sweep-up Live Data =====
-const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
+        const FORM_URBAN_UCS = {
+            'Chakwal': ['Chakwal Urban-1','Chakwal Urban-2','Chakwal Urban-3','Chakwal Urban-4','Chakwal Urban-5'],
+            'Choa Saidan Shah': ['Choa Saidan Shah Urban'],
+            'Kallar Kahar': ['Kallar Kahar Urban'],
+            'Talagang': ['Talagang Urban-1','Talagang Urban-2','Talagang Urban-3']
+        };
+        const FORM_UC_FLAT = [].concat.apply([], Object.keys(FORM_URBAN_UCS).map(function(t){ return FORM_URBAN_UCS[t]; }));
+
+        const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
         const SW_I = {tehsil:2, uc:3, partial:4, penta1:5, bcg:6, penta2:7, penta3:8, ipv1:9, mr1:10, ipv2:11, mr2:12, dtp:13, hpv:14};
         let sweepAntigenChartObj = null, sweepUCChartObj = null;
 
@@ -1119,23 +1342,15 @@ const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
                     o.mr1 += num(vals[SW_I.mr1]);
                 });
 
-                // Master UC list from hrData (all 4 tehsils)
-                const master = (typeof hrData !== 'undefined' && hrData.tehsilUCs) ? hrData.tehsilUCs : {};
+                // Remaining = Form Urban UCs not yet submitted
                 const submittedUCSet = {};
                 Object.keys(window._sweepSubmitted).forEach(function(t){
-                    Object.keys(window._sweepSubmitted[t]).forEach(function(u){ submittedUCSet[u.toLowerCase()] = true; });
+                    Object.keys(window._sweepSubmitted[t]).forEach(function(u){ submittedUCSet[u.toLowerCase().trim()] = true; });
                 });
                 let pendingCount = 0;
-                Object.keys(master).forEach(function(t){
-                    (master[t]||[]).forEach(function(item){
-                        const name = (item.uc||item||'').toString();
-                        if(name && !submittedUCSet[name.toLowerCase()]) pendingCount++;
-                    });
+                FORM_UC_FLAT.forEach(function(uc){
+                    if(!submittedUCSet[uc.toLowerCase().trim()]) pendingCount++;
                 });
-                // Also count form-only expected? If master empty, use inverse
-                if(Object.keys(master).length === 0){
-                    pendingCount = 0;
-                }
                 setTxt('swRemaining', pendingCount);
 
 
