@@ -148,6 +148,22 @@
         .do-note{font-size:12.5px;color:#555;background:#f5f5f5;padding:10px 12px;border-radius:8px;border-left:4px solid #0d5c3d;margin-top:8px}
         .do-chart-wrap{position:relative;height:280px;margin:12px 0 18px}
 
+    
+        .sweep-card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 4px 15px rgba(0,0,0,.08);border-top:4px solid #1a8a5c;margin-bottom:25px}
+        .sweep-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+        .sweep-meta{font-size:12.5px;color:#666;margin-left:auto}
+        .sweep-table-wrap{overflow-x:auto;border:1px solid #e0e0e0;border-radius:10px}
+        .sweep-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
+        .sweep-table th{background:#0d5c3d;color:#fff;padding:10px 8px;text-align:center;white-space:nowrap;position:sticky;top:0}
+        .sweep-table td{padding:8px;border-bottom:1px solid #eee;text-align:center}
+        .sweep-table tr:nth-child(even){background:#f7faf7}
+        .sweep-table td:nth-child(1),
+        .sweep-table td:nth-child(3),
+        .sweep-table td:nth-child(4){text-align:left}
+        .sweep-empty{text-align:center;padding:28px;color:#888;font-size:14px}
+        .sweep-loading{text-align:center;padding:20px;color:#0d5c3d}
+        .btn-sm{padding:8px 14px;font-size:12.5px}
+
     </style>
 </head>
 <body>
@@ -211,6 +227,28 @@
                     <h3>NID Workers Payment Verification</h3>
                     <p>Check campaign payment details for NID Workers</p>
                     <button class="btn" onclick="openNidModal()">Check Payment Status 💳</button>
+                </div>
+            </div>
+
+            
+            <div class="section-title">Urban Sweep-up Activity</div>
+            <div class="sweep-card">
+                <p style="font-size:13.5px;color:#555;margin-bottom:14px">
+                    Routine Immunization Sweep-up in <strong>District Chakwal Urban UCs</strong>.
+                    Field teams submit daily reports via Google Form; data appears here live.
+                </p>
+                <div class="sweep-toolbar">
+                    <a href="https://docs.google.com/forms/d/e/FORM_ID/viewform" id="sweepFormLink" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report (Google Form)</a>
+                    <button class="btn btn-outline btn-sm" onclick="loadSweepData()">🔄 Refresh Live Data</button>
+                    <a href="https://docs.google.com/spreadsheets/d/1n2ntXbpmXjAKseX6sGCAmRDQoDPIgqKnHas5dddQh8g/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Sheet</a>
+                    <span class="sweep-meta" id="sweepMeta">Last updated: —</span>
+                </div>
+                <div id="sweepStatus" class="sweep-loading">Loading live data…</div>
+                <div class="sweep-table-wrap" id="sweepTableWrap" style="display:none">
+                    <table class="sweep-table">
+                        <thead id="sweepHead"></thead>
+                        <tbody id="sweepBody"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -718,6 +756,151 @@
         function closeDropoutModal(){
             document.getElementById('dropoutModal').classList.remove('active');
         }
+
+
+        // ===== Urban Sweep-up Live Data (Google Sheet) =====
+        const SWEEP_SHEET_ID = '1n2ntXbpmXjAKseX6sGCAmRDQoDPIgqKnHas5dddQh8g';
+        // Preferred columns order for display (short labels)
+        const SWEEP_COL_MAP = {
+            'Timestamp': 'Date / Time',
+            'Email Address': 'Email',
+            'Tehsil': 'Tehsil',
+            'Union Council': 'UC',
+            'Total Number of Partially Vaccinated Children ': 'Partial Children',
+            'Total Number of Partially Vaccinated Children': 'Partial Children',
+            'Penta 1 Vaccinated ': 'Penta-1',
+            'Penta 1 Vaccinated': 'Penta-1',
+            'BCG Vaccinated': 'BCG',
+            'Penta 2 Vaccinated ': 'Penta-2',
+            'Penta 2 Vaccinated': 'Penta-2',
+            'Penta 3 Vaccinated ': 'Penta-3',
+            'Penta 3 Vaccinated': 'Penta-3',
+            'IPV-1 Vaccinated ': 'IPV-1',
+            'IPV-1 Vaccinated': 'IPV-1',
+            'MR-1 Vaccinate': 'MR-1',
+            'MR-1 Vaccinated': 'MR-1',
+            'IPV-2 Vaccinated': 'IPV-2',
+            'MR2 Vaccinated': 'MR-2',
+            'DTP Booster Vaccinated': 'DTP Booster',
+            'HPV Vaccinated Girls': 'HPV Girls'
+        };
+
+        function parseGviz(text){
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}') + 1;
+            if(start < 0) throw new Error('Invalid response');
+            return JSON.parse(text.slice(start, end));
+        }
+
+        function cellVal(c){
+            if(!c) return '';
+            if(c.f != null && c.f !== '') return String(c.f);
+            if(c.v == null) return '';
+            return String(c.v);
+        }
+
+        async function loadSweepData(){
+            const status = document.getElementById('sweepStatus');
+            const wrap = document.getElementById('sweepTableWrap');
+            const head = document.getElementById('sweepHead');
+            const body = document.getElementById('sweepBody');
+            const meta = document.getElementById('sweepMeta');
+            if(!status) return;
+
+            status.style.display = 'block';
+            status.className = 'sweep-loading';
+            status.textContent = 'Loading live data…';
+            wrap.style.display = 'none';
+
+            const url = `https://docs.google.com/spreadsheets/d/${SWEEP_SHEET_ID}/gviz/tq?tqx=out:json&gid=0&_=${Date.now()}`;
+
+            try {
+                const res = await fetch(url);
+                if(!res.ok) throw new Error('HTTP ' + res.status);
+                const text = await res.text();
+                const data = parseGviz(text);
+                if(data.status !== 'ok') throw new Error('Sheet status: ' + (data.status || 'error'));
+
+                const rows = (data.table && data.table.rows) || [];
+                if(rows.length === 0){
+                    status.className = 'sweep-empty';
+                    status.textContent = 'No data yet. Submit the first report via Google Form.';
+                    meta.textContent = 'Last updated: ' + new Date().toLocaleString();
+                    return;
+                }
+
+                // First row is header labels (form columns)
+                const headerCells = rows[0].c || [];
+                const headers = headerCells.map(cellVal);
+
+                // Decide which columns to show (skip email + long Urdu Q if needed)
+                const skipExact = [
+                    'Email Address',
+                    'کیا آپ نے تمام بچوں کے ای پی آئی کارڈز کی تصویریں وقاص کو بھیج دی ہیں ؟'
+                ];
+                const showIdx = [];
+                headers.forEach((h, i) => {
+                    const t = (h || '').trim();
+                    if(!t) return;
+                    if(skipExact.some(s => t === s || t.includes('ای پی آئی کارڈز'))) return;
+                    showIdx.push(i);
+                });
+
+                // Data rows = everything after header
+                const dataRows = rows.slice(1).filter(r => {
+                    const vals = (r.c || []).map(cellVal);
+                    return vals.some(v => v && v.trim());
+                });
+
+                // Build header
+                head.innerHTML = '<tr>' + showIdx.map(i => {
+                    const raw = headers[i].trim();
+                    const label = SWEEP_COL_MAP[raw] || SWEEP_COL_MAP[raw + ' '] || raw;
+                    return `<th>${label}</th>`;
+                }).join('') + '</tr>';
+
+                if(dataRows.length === 0){
+                    body.innerHTML = '';
+                    status.className = 'sweep-empty';
+                    status.textContent = 'Headers ready. Waiting for first field submission…';
+                    wrap.style.display = 'block';
+                    meta.textContent = 'Last updated: ' + new Date().toLocaleString();
+                    return;
+                }
+
+                // Newest first
+                const ordered = dataRows.slice().reverse();
+                body.innerHTML = ordered.map(r => {
+                    const cells = r.c || [];
+                    return '<tr>' + showIdx.map(i => {
+                        let v = cellVal(cells[i]);
+                        // Shorten timestamp
+                        if(i === 0 && v.includes(' ')) {
+                            try {
+                                const d = new Date(v);
+                                if(!isNaN(d)) v = d.toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+                            } catch(e){}
+                        }
+                        return `<td>${v || '—'}</td>`;
+                    }).join('') + '</tr>';
+                }).join('');
+
+                status.style.display = 'none';
+                wrap.style.display = 'block';
+                meta.textContent = `Last updated: ${new Date().toLocaleString()} · ${ordered.length} report(s)`;
+            } catch(err){
+                console.error(err);
+                status.className = 'sweep-empty';
+                status.innerHTML = `Could not load live data.<br><span style="font-size:12px;color:#999">${err.message}</span><br>
+                    <span style="font-size:12px">Sheet ko <strong>Anyone with the link → Viewer</strong> rakhein, phir Refresh dabayein.</span>`;
+                meta.textContent = 'Last updated: failed';
+            }
+        }
+
+        // Auto-load on page open
+        document.addEventListener('DOMContentLoaded', function(){ loadSweepData(); });
+        // Also try immediately (in case DOMContentLoaded already fired)
+        setTimeout(loadSweepData, 300);
 
     </script>
 </body>
