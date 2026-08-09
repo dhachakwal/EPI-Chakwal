@@ -164,6 +164,45 @@
         .sweep-loading{text-align:center;padding:20px;color:#0d5c3d}
         .btn-sm{padding:8px 14px;font-size:12.5px}
 
+    
+        .search-wrap{max-width:1200px;margin:0 auto;padding:12px 15px 0;position:relative}
+        .search-box{display:flex;align-items:center;background:#fff;border-radius:30px;box-shadow:0 2px 12px rgba(0,0,0,.1);padding:6px 8px 6px 18px;border:2px solid #c8e6c9;transition:border-color .2s}
+        .search-box:focus-within{border-color:#0d5c3d}
+        .search-box input{flex:1;border:none;outline:none;font-size:15px;padding:8px 6px;background:transparent;color:#333}
+        .search-box input::placeholder{color:#999}
+        .search-btn{background:#0d5c3d;color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer}
+        .search-btn:hover{background:#09402b}
+        .search-results{display:none;position:absolute;left:15px;right:15px;top:100%;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:200;max-height:320px;overflow-y:auto;margin-top:6px}
+        .search-results.active{display:block}
+        .search-item{padding:12px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px}
+        .search-item:hover{background:#f0f7f4}
+        .search-item strong{color:#0d5c3d}
+        .search-item span{display:block;font-size:12px;color:#888;margin-top:2px}
+
+    
+        .sweep-card{background:linear-gradient(180deg,#ffffff 0%,#f0f7f4 100%);border-radius:16px;padding:24px;box-shadow:0 6px 24px rgba(13,92,61,.12);border:1px solid #c8e6c9;margin-bottom:25px}
+        .sweep-hero{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+        .sweep-stat{flex:1;min-width:120px;background:#fff;border-radius:12px;padding:14px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border-bottom:3px solid #1a8a5c}
+        .sweep-stat-num{font-size:26px;font-weight:800;color:#0d5c3d}
+        .sweep-stat-lbl{font-size:11.5px;color:#666;margin-top:3px;font-weight:600}
+        .sweep-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+        .sweep-meta{font-size:12.5px;color:#666;margin-left:auto}
+        .sweep-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+        .sweep-chart-box{background:#fff;border-radius:12px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+        .sweep-chart-title{font-size:13px;font-weight:700;color:#0d5c3d;margin-bottom:8px;text-align:center}
+        .sweep-chart-wrap{position:relative;height:220px}
+        .sweep-table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #c8e6c9;background:#fff}
+        .sweep-table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+        .sweep-table th{background:#0d5c3d;color:#fff;padding:12px 10px;text-align:center;font-size:12.5px;white-space:nowrap}
+        .sweep-table td{padding:11px 10px;border-bottom:1px solid #e8f5e9;text-align:center;font-weight:600;color:#333}
+        .sweep-table tr:nth-child(even){background:#f4faf6}
+        .sweep-table tr:hover{background:#e8f5e9}
+        .sweep-table td:first-child,.sweep-table td:nth-child(2){text-align:left;color:#0d5c3d}
+        .sweep-empty{text-align:center;padding:32px;color:#888;font-size:14.5px}
+        .sweep-loading{text-align:center;padding:24px;color:#0d5c3d;font-weight:600}
+        .btn-sm{padding:9px 16px;font-size:13px}
+        @media(max-width:700px){.sweep-charts{grid-template-columns:1fr}}
+
     </style>
 </head>
 <body>
@@ -173,6 +212,14 @@
         <img src="favicon.png.png" alt="Logo" class="logo-left">
         <div><h1>EPI District Chakwal Dashboard</h1><p>Official Website | Punjab Expanded Programme on Immunization</p></div>
         <img src="logo-right2.png" alt="Logo" class="logo-right">
+    </div>
+
+    <div class="search-wrap">
+        <div class="search-box">
+            <input type="text" id="siteSearch" placeholder="Search officers, reports, tehsils, UCs, sweep-up..." autocomplete="off" oninput="runSiteSearch(this.value)" onkeydown="if(event.key==='Escape')clearSearch()">
+            <button class="search-btn" onclick="runSiteSearch(document.getElementById('siteSearch').value)">Search</button>
+        </div>
+        <div class="search-results" id="searchResults"></div>
     </div>
 
     <div class="container">
@@ -231,22 +278,60 @@
             </div>
 
             
-            <div class="section-title">Urban Sweep-up Activity</div>
+            
+            <div class="section-title" id="section-sweep">Urban Sweep-up Activity</div>
             <div class="sweep-card">
-                <p style="font-size:13.5px;color:#555;margin-bottom:14px">
-                    Routine Immunization Sweep-up in <strong>District Chakwal Urban UCs</strong>.
-                    Field teams submit daily reports via Google Form; data appears here live.
+                <p style="font-size:14px;color:#444;margin-bottom:16px;line-height:1.5">
+                    <strong>Routine Immunization Sweep-up</strong> — District Chakwal <strong>Urban UCs</strong>.
+                    Teams submit daily field reports; summary, graphs and table update live from Google Sheet.
                 </p>
+
+                <div class="sweep-hero" id="sweepHero">
+                    <div class="sweep-stat"><div class="sweep-stat-num" id="swReports">—</div><div class="sweep-stat-lbl">Reports</div></div>
+                    <div class="sweep-stat"><div class="sweep-stat-num" id="swPartial">—</div><div class="sweep-stat-lbl">Partial Children</div></div>
+                    <div class="sweep-stat"><div class="sweep-stat-num" id="swBCG">—</div><div class="sweep-stat-lbl">BCG</div></div>
+                    <div class="sweep-stat"><div class="sweep-stat-num" id="swPenta3">—</div><div class="sweep-stat-lbl">Penta-3</div></div>
+                    <div class="sweep-stat"><div class="sweep-stat-num" id="swMR1">—</div><div class="sweep-stat-lbl">MR-1</div></div>
+                </div>
+
                 <div class="sweep-toolbar">
-                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSfE7rTRn8VUIgwYRy7lALBjxQRHN4yByn7AnM0Fc8V592T5xg/viewform" id="sweepFormLink" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report (Google Form)</a>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSfE7rTRn8VUIgwYRy7lALBjxQRHN4yByn7AnM0Fc8V592T5xg/viewform" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report</a>
                     <button class="btn btn-outline btn-sm" onclick="loadSweepData()">🔄 Refresh Live Data</button>
-                    <a href="https://docs.google.com/spreadsheets/d/1n2ntXbpmXjAKseX6sGCAmRDQoDPIgqKnHas5dddQh8g/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Sheet</a>
+                    <a href="https://docs.google.com/spreadsheets/d/11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Full Sheet</a>
                     <span class="sweep-meta" id="sweepMeta">Last updated: —</span>
                 </div>
+
+                <div class="sweep-charts" id="sweepCharts" style="display:none">
+                    <div class="sweep-chart-box">
+                        <div class="sweep-chart-title">Antigen-wise Total Doses</div>
+                        <div class="sweep-chart-wrap"><canvas id="sweepAntigenChart"></canvas></div>
+                    </div>
+                    <div class="sweep-chart-box">
+                        <div class="sweep-chart-title">UC-wise Partial Children</div>
+                        <div class="sweep-chart-wrap"><canvas id="sweepUCChart"></canvas></div>
+                    </div>
+                </div>
+
                 <div id="sweepStatus" class="sweep-loading">Loading live data…</div>
                 <div class="sweep-table-wrap" id="sweepTableWrap" style="display:none">
                     <table class="sweep-table">
-                        <thead id="sweepHead"></thead>
+                        <thead>
+                            <tr>
+                                <th>Tehsil</th>
+                                <th>Union Council</th>
+                                <th>Partial Children</th>
+                                <th>BCG</th>
+                                <th>Penta-1</th>
+                                <th>Penta-2</th>
+                                <th>Penta-3</th>
+                                <th>IPV-1</th>
+                                <th>MR-1</th>
+                                <th>IPV-2</th>
+                                <th>MR-2</th>
+                                <th>DTP</th>
+                                <th>HPV</th>
+                            </tr>
+                        </thead>
                         <tbody id="sweepBody"></tbody>
                     </table>
                 </div>
@@ -757,150 +842,200 @@
             document.getElementById('dropoutModal').classList.remove('active');
         }
 
+        // ===== Site Search =====
+        const SEARCH_INDEX = [
+            {title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs'},
+            {title:'Urban Sweep-up Activity', desc:'Live urban RI sweep-up reports & graphs', id:'section-sweep'},
+            {title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC'},
+            {title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', fn:'openCoverageModal'},
+            {title:'Dropout Analysis', desc:'Tehsil drop-out rates', fn:'openDropoutModal'},
+            {title:'Key Officers', desc:'CEO, DHO, DSV profiles'},
+            {title:'NID Worker Payment', desc:'Search payment status', fn:'openNidModal'},
+            {title:'Contact & Office Location', desc:'Phone, email, map, office status'},
+            {title:'TPVIC R-3', desc:'Third-party verification survey'},
+            {title:'Monthly EPI Presentation', desc:'July 2026 performance PPT'}
+        ];
+        function runSiteSearch(q){
+            const box = document.getElementById('searchResults');
+            if(!box) return;
+            q = (q||'').trim().toLowerCase();
+            if(!q){ box.classList.remove('active'); box.innerHTML=''; return; }
+            const hits = SEARCH_INDEX.filter(i => (i.title+' '+i.desc).toLowerCase().includes(q));
+            if(!hits.length){
+                box.innerHTML = '<div class="search-item">No results found</div>';
+                box.classList.add('active'); return;
+            }
+            box._hits = hits;
+            box.innerHTML = hits.map((h,idx)=>`<div class="search-item" onclick="goSearchResult(${idx})"><strong>${h.title}</strong><span>${h.desc}</span></div>`).join('');
+            box.classList.add('active');
+        }
+        function goSearchResult(idx){
+            const box = document.getElementById('searchResults');
+            const h = (box._hits||[])[idx];
+            if(!h) return;
+            box.classList.remove('active');
+            const inp = document.getElementById('siteSearch');
+            if(inp) inp.value = '';
+            if(h.fn && typeof window[h.fn]==='function'){ window[h.fn](); return; }
+            if(h.id){
+                const el = document.getElementById(h.id);
+                if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+            }
+            document.querySelectorAll('.section-title').forEach(t=>{
+                if(t.textContent.indexOf(h.title.split(' ')[0])>=0 || t.textContent.indexOf(h.title)>=0)
+                    t.scrollIntoView({behavior:'smooth',block:'start'});
+            });
+        }
+        function clearSearch(){
+            const inp = document.getElementById('siteSearch');
+            const box = document.getElementById('searchResults');
+            if(inp) inp.value='';
+            if(box) box.classList.remove('active');
+        }
+        document.addEventListener('click', function(e){
+            const w = document.querySelector('.search-wrap');
+            if(w && !w.contains(e.target)) clearSearch();
+        });
 
-        // ===== Urban Sweep-up Live Data (Google Sheet) =====
-        const SWEEP_SHEET_ID = '1n2ntXbpmXjAKseX6sGCAmRDQoDPIgqKnHas5dddQh8g';
-        // Preferred columns order for display (short labels)
-        const SWEEP_COL_MAP = {
-            'Timestamp': 'Date / Time',
-            'Email Address': 'Email',
-            'Tehsil': 'Tehsil',
-            'Union Council': 'UC',
-            'Total Number of Partially Vaccinated Children ': 'Partial Children',
-            'Total Number of Partially Vaccinated Children': 'Partial Children',
-            'Penta 1 Vaccinated ': 'Penta-1',
-            'Penta 1 Vaccinated': 'Penta-1',
-            'BCG Vaccinated': 'BCG',
-            'Penta 2 Vaccinated ': 'Penta-2',
-            'Penta 2 Vaccinated': 'Penta-2',
-            'Penta 3 Vaccinated ': 'Penta-3',
-            'Penta 3 Vaccinated': 'Penta-3',
-            'IPV-1 Vaccinated ': 'IPV-1',
-            'IPV-1 Vaccinated': 'IPV-1',
-            'MR-1 Vaccinate': 'MR-1',
-            'MR-1 Vaccinated': 'MR-1',
-            'IPV-2 Vaccinated': 'IPV-2',
-            'MR2 Vaccinated': 'MR-2',
-            'DTP Booster Vaccinated': 'DTP Booster',
-            'HPV Vaccinated Girls': 'HPV Girls'
-        };
+        // ===== Urban Sweep-up Live Data =====
+        const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
+        const SW_I = {tehsil:2, uc:3, partial:4, penta1:5, bcg:6, penta2:7, penta3:8, ipv1:9, mr1:10, ipv2:11, mr2:12, dtp:13, hpv:14};
+        let sweepAntigenChartObj = null, sweepUCChartObj = null;
 
         function parseGviz(text){
             const start = text.indexOf('{');
-            const end = text.lastIndexOf('}') + 1;
-            if(start < 0) throw new Error('Invalid response');
-            return JSON.parse(text.slice(start, end));
+            const end = text.lastIndexOf('}')+1;
+            if(start<0) throw new Error('Invalid sheet response');
+            return JSON.parse(text.slice(start,end));
         }
-
         function cellVal(c){
             if(!c) return '';
-            if(c.f != null && c.f !== '') return String(c.f);
-            if(c.v == null) return '';
+            if(c.f!=null && c.f!=='') return String(c.f);
+            if(c.v==null) return '';
             return String(c.v);
+        }
+        function num(v){
+            const n = parseFloat(String(v).replace(/,/g,''));
+            return isNaN(n) ? 0 : n;
         }
 
         async function loadSweepData(){
             const status = document.getElementById('sweepStatus');
             const wrap = document.getElementById('sweepTableWrap');
-            const head = document.getElementById('sweepHead');
             const body = document.getElementById('sweepBody');
             const meta = document.getElementById('sweepMeta');
+            const charts = document.getElementById('sweepCharts');
             if(!status) return;
-
             status.style.display = 'block';
             status.className = 'sweep-loading';
             status.textContent = 'Loading live data…';
-            wrap.style.display = 'none';
+            if(wrap) wrap.style.display = 'none';
+            if(charts) charts.style.display = 'none';
 
-            const url = `https://docs.google.com/spreadsheets/d/${SWEEP_SHEET_ID}/gviz/tq?tqx=out:json&gid=0&_=${Date.now()}`;
-
-            try {
+            const url = 'https://docs.google.com/spreadsheets/d/'+SWEEP_SHEET_ID+'/gviz/tq?tqx=out:json&gid=0&_='+Date.now();
+            try{
                 const res = await fetch(url);
-                if(!res.ok) throw new Error('HTTP ' + res.status);
-                const text = await res.text();
-                const data = parseGviz(text);
-                if(data.status !== 'ok') throw new Error('Sheet status: ' + (data.status || 'error'));
+                if(!res.ok) throw new Error('HTTP '+res.status);
+                const data = parseGviz(await res.text());
+                if(data.status!=='ok') throw new Error('Sheet error');
 
-                const rows = (data.table && data.table.rows) || [];
-                if(rows.length === 0){
+                const rawRows = (data.table && data.table.rows) || [];
+                let startIdx = 0;
+                if(rawRows.length){
+                    const first = (rawRows[0].c||[]).map(cellVal).join(' ').toLowerCase();
+                    if(first.includes('timestamp') || first.includes('tehsil') || first.includes('email')) startIdx = 1;
+                }
+                const dataRows = rawRows.slice(startIdx).map(r => (r.c||[]).map(cellVal)).filter(vals => vals.some(v => v && String(v).trim()));
+
+                if(!dataRows.length){
                     status.className = 'sweep-empty';
-                    status.textContent = 'No data yet. Submit the first report via Google Form.';
-                    meta.textContent = 'Last updated: ' + new Date().toLocaleString();
+                    status.textContent = 'No reports yet. Submit the first report via Google Form.';
+                    ['swReports','swPartial','swBCG','swPenta3','swMR1'].forEach(function(id){ const e=document.getElementById(id); if(e) e.textContent='0'; });
+                    if(meta) meta.textContent = 'Last updated: '+new Date().toLocaleString();
                     return;
                 }
 
-                // First row is header labels (form columns)
-                const headerCells = rows[0].c || [];
-                const headers = headerCells.map(cellVal);
-
-                // Decide which columns to show (skip email + long Urdu Q if needed)
-                const skipExact = [
-                    'Email Address',
-                    'کیا آپ نے تمام بچوں کے ای پی آئی کارڈز کی تصویریں وقاص کو بھیج دی ہیں ؟'
-                ];
-                const showIdx = [];
-                headers.forEach((h, i) => {
-                    const t = (h || '').trim();
-                    if(!t) return;
-                    if(skipExact.some(s => t === s || t.includes('ای پی آئی کارڈز'))) return;
-                    showIdx.push(i);
+                let totPartial=0, totBCG=0, totP1=0, totP2=0, totP3=0, totIPV1=0, totMR1=0, totIPV2=0, totMR2=0, totDTP=0, totHPV=0;
+                const byUC = {};
+                dataRows.forEach(function(vals){
+                    const tehsil = vals[SW_I.tehsil]||'—';
+                    const uc = vals[SW_I.uc]||'—';
+                    const partial = num(vals[SW_I.partial]);
+                    const bcg = num(vals[SW_I.bcg]);
+                    const p1 = num(vals[SW_I.penta1]);
+                    const p2 = num(vals[SW_I.penta2]);
+                    const p3 = num(vals[SW_I.penta3]);
+                    const ipv1 = num(vals[SW_I.ipv1]);
+                    const mr1 = num(vals[SW_I.mr1]);
+                    const ipv2 = num(vals[SW_I.ipv2]);
+                    const mr2 = num(vals[SW_I.mr2]);
+                    const dtp = num(vals[SW_I.dtp]);
+                    const hpv = num(vals[SW_I.hpv]);
+                    totPartial+=partial; totBCG+=bcg; totP1+=p1; totP2+=p2; totP3+=p3;
+                    totIPV1+=ipv1; totMR1+=mr1; totIPV2+=ipv2; totMR2+=mr2; totDTP+=dtp; totHPV+=hpv;
+                    if(!byUC[uc]) byUC[uc] = {tehsil:tehsil, uc:uc, partial:0};
+                    byUC[uc].partial += partial;
                 });
 
-                // Data rows = everything after header
-                const dataRows = rows.slice(1).filter(r => {
-                    const vals = (r.c || []).map(cellVal);
-                    return vals.some(v => v && v.trim());
-                });
+                const setTxt = function(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; };
+                setTxt('swReports', dataRows.length);
+                setTxt('swPartial', totPartial.toLocaleString());
+                setTxt('swBCG', totBCG.toLocaleString());
+                setTxt('swPenta3', totP3.toLocaleString());
+                setTxt('swMR1', totMR1.toLocaleString());
 
-                // Build header
-                head.innerHTML = '<tr>' + showIdx.map(i => {
-                    const raw = headers[i].trim();
-                    const label = SWEEP_COL_MAP[raw] || SWEEP_COL_MAP[raw + ' '] || raw;
-                    return `<th>${label}</th>`;
-                }).join('') + '</tr>';
-
-                if(dataRows.length === 0){
-                    body.innerHTML = '';
-                    status.className = 'sweep-empty';
-                    status.textContent = 'Headers ready. Waiting for first field submission…';
-                    wrap.style.display = 'block';
-                    meta.textContent = 'Last updated: ' + new Date().toLocaleString();
-                    return;
-                }
-
-                // Newest first
                 const ordered = dataRows.slice().reverse();
-                body.innerHTML = ordered.map(r => {
-                    const cells = r.c || [];
-                    return '<tr>' + showIdx.map(i => {
-                        let v = cellVal(cells[i]);
-                        // Shorten timestamp
-                        if(i === 0 && v.includes(' ')) {
-                            try {
-                                const d = new Date(v);
-                                if(!isNaN(d)) v = d.toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-                            } catch(e){}
-                        }
-                        return `<td>${v || '—'}</td>`;
-                    }).join('') + '</tr>';
-                }).join('');
+                if(body){
+                    body.innerHTML = ordered.map(function(vals){
+                        const g = function(i){ return (vals[i]!==undefined && vals[i]!=='') ? vals[i] : '—'; };
+                        return '<tr><td>'+g(SW_I.tehsil)+'</td><td>'+g(SW_I.uc)+'</td><td>'+g(SW_I.partial)+'</td><td>'+g(SW_I.bcg)+'</td><td>'+g(SW_I.penta1)+'</td><td>'+g(SW_I.penta2)+'</td><td>'+g(SW_I.penta3)+'</td><td>'+g(SW_I.ipv1)+'</td><td>'+g(SW_I.mr1)+'</td><td>'+g(SW_I.ipv2)+'</td><td>'+g(SW_I.mr2)+'</td><td>'+g(SW_I.dtp)+'</td><td>'+g(SW_I.hpv)+'</td></tr>';
+                    }).join('');
+                }
 
                 status.style.display = 'none';
-                wrap.style.display = 'block';
-                meta.textContent = `Last updated: ${new Date().toLocaleString()} · ${ordered.length} report(s)`;
-            } catch(err){
+                if(wrap) wrap.style.display = 'block';
+                if(charts) charts.style.display = 'grid';
+                if(meta) meta.textContent = 'Last updated: '+new Date().toLocaleString()+' · '+dataRows.length+' report(s)';
+
+                setTimeout(function(){
+                    if(typeof Chart === 'undefined') return;
+                    const antCtx = document.getElementById('sweepAntigenChart');
+                    const ucCtx = document.getElementById('sweepUCChart');
+                    if(antCtx){
+                        if(sweepAntigenChartObj) sweepAntigenChartObj.destroy();
+                        sweepAntigenChartObj = new Chart(antCtx, {
+                            type:'bar',
+                            data:{
+                                labels:['BCG','Penta-1','Penta-2','Penta-3','IPV-1','MR-1','IPV-2','MR-2','DTP','HPV'],
+                                datasets:[{data:[totBCG,totP1,totP2,totP3,totIPV1,totMR1,totIPV2,totMR2,totDTP,totHPV],
+                                    backgroundColor:['#0d5c3d','#1a8a5c','#2e7d32','#43a047','#66bb6a','#26a69a','#00897b','#00838f','#6d4c41','#5e35b1'],
+                                    borderRadius:5, maxBarThickness:28}]
+                            },
+                            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+                                scales:{y:{beginAtZero:true,grid:{color:'#eee'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+                        });
+                    }
+                    if(ucCtx){
+                        const ucList = Object.values(byUC).sort(function(a,b){return b.partial-a.partial;});
+                        if(sweepUCChartObj) sweepUCChartObj.destroy();
+                        sweepUCChartObj = new Chart(ucCtx, {
+                            type:'bar',
+                            data:{labels:ucList.map(function(u){return u.uc;}),
+                                datasets:[{data:ucList.map(function(u){return u.partial;}), backgroundColor:'#1a8a5c', borderRadius:5, maxBarThickness:30}]},
+                            options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+                                scales:{x:{beginAtZero:true,grid:{color:'#eee'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+                        });
+                    }
+                }, 100);
+            }catch(err){
                 console.error(err);
                 status.className = 'sweep-empty';
-                status.innerHTML = `Could not load live data.<br><span style="font-size:12px;color:#999">${err.message}</span><br>
-                    <span style="font-size:12px">Sheet ko <strong>Anyone with the link → Viewer</strong> rakhein, phir Refresh dabayein.</span>`;
-                meta.textContent = 'Last updated: failed';
+                status.innerHTML = 'Live data load nahi hui.<br><span style="font-size:12px;color:#999">'+err.message+'</span><br><span style="font-size:12px">Sheet share: Anyone with the link → Viewer</span>';
+                if(meta) meta.textContent = 'Last updated: failed';
             }
         }
-
-        // Auto-load on page open
         document.addEventListener('DOMContentLoaded', function(){ loadSweepData(); });
-        // Also try immediately (in case DOMContentLoaded already fired)
-        setTimeout(loadSweepData, 300);
+        setTimeout(loadSweepData, 400);
 
     </script>
 </body>
