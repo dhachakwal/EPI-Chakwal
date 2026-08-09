@@ -137,6 +137,17 @@
         .cov-table tr:nth-child(even){background:#f9fbf9}
         .cov-section-title{color:#0d5c3d;font-size:15px;font-weight:700;margin:18px 0 10px;border-bottom:2px solid #1a8a5c;padding-bottom:4px}
 
+    
+        .do-modal-box{background:#fff;border-radius:14px;max-width:780px;width:100%;max-height:92vh;padding:22px 24px;position:relative;overflow-y:auto}
+        .do-table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 16px}
+        .do-table th{background:#0d5c3d;color:#fff;padding:10px 8px;text-align:center}
+        .do-table td{padding:10px 8px;border-bottom:1px solid #e0e0e0;text-align:center;font-weight:600}
+        .do-table td:first-child{text-align:left;font-weight:600;color:#333}
+        .do-good{background:#2e7d32;color:#fff;border-radius:6px;padding:4px 8px;display:inline-block;min-width:70px}
+        .do-bad{background:#c62828;color:#fff;border-radius:6px;padding:4px 8px;display:inline-block;min-width:70px}
+        .do-note{font-size:12.5px;color:#555;background:#f5f5f5;padding:10px 12px;border-radius:8px;border-left:4px solid #0d5c3d;margin-top:8px}
+        .do-chart-wrap{position:relative;height:280px;margin:12px 0 18px}
+
     </style>
 </head>
 <body>
@@ -231,10 +242,10 @@
                 </div>
                 <div class="download-card">
                     <h3>Dropout Analysis</h3>
-                    <p>Penta1 to Penta3 & MR Dropout</p>
+                    <p>Tehsil-wise Drop-out Rates (BCG→P1, P1→P3, MR1→MR2)</p>
                     <div class="btn-group">
-                        <a href="#" class="btn" onclick="alert('Coming Soon');return false">View Excel</a>
-                        <a href="#" class="btn btn-outline" onclick="alert('Coming Soon');return false">Download Excel</a>
+                        <button class="btn" onclick="openDropoutModal()">View Report</button>
+                        <a href="#" class="btn btn-outline" onclick="alert('Full Excel coming soon');return false">Download Excel</a>
                     </div>
                 </div>
                 <div class="download-card">
@@ -350,6 +361,73 @@
     </div>
 
     
+    
+    <!-- Dropout Analysis Modal -->
+    <div class="modal-overlay" id="dropoutModal" onclick="if(event.target===this)closeDropoutModal()">
+        <div class="do-modal-box">
+            <button class="modal-close" onclick="closeDropoutModal()">&times;</button>
+            <div class="stat-modal-title" style="color:#0d5c3d">Tehsil-wise Summary — Drop-out Rates</div>
+            <p style="font-size:13px;color:#666;margin-bottom:12px">District Chakwal | High drop-out: &gt;+10% or &lt;−2% between consecutive doses</p>
+
+            <div class="do-chart-wrap"><canvas id="dropoutChart"></canvas></div>
+
+            <table class="do-table">
+                <thead>
+                    <tr>
+                        <th>Tehsil</th>
+                        <th>Avg BCG→P1</th>
+                        <th>Avg P1→P3</th>
+                        <th>Avg MR1→MR2</th>
+                        <th>UCs with High DO (&gt;10%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Chakwal</td>
+                        <td><span class="do-good">+4.9%</span></td>
+                        <td><span class="do-good">−2.0%</span></td>
+                        <td><span class="do-bad">+10.5%</span></td>
+                        <td>36</td>
+                    </tr>
+                    <tr>
+                        <td>Choa Saidan Shah</td>
+                        <td><span class="do-bad">−33.4%</span></td>
+                        <td><span class="do-bad">−11.0%</span></td>
+                        <td><span class="do-bad">+10.3%</span></td>
+                        <td>8</td>
+                    </tr>
+                    <tr>
+                        <td>Kallar Kahar</td>
+                        <td><span class="do-bad">−40.8%</span></td>
+                        <td><span class="do-bad">−220.8%</span></td>
+                        <td><span class="do-bad">+10.2%</span></td>
+                        <td>9</td>
+                    </tr>
+                    <tr>
+                        <td>Talagang</td>
+                        <td><span class="do-bad">−18.4%</span></td>
+                        <td><span class="do-bad">−33.3%</span></td>
+                        <td><span class="do-bad">+19.7%</span></td>
+                        <td>29</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="cov-section-title" style="margin-top:8px">Key Observations</div>
+            <ul style="font-size:13.5px;line-height:1.75;color:#444;padding-left:18px">
+                <li><strong>Chakwal</strong> is relatively better on BCG→P1 and P1→P3; MR1→MR2 drop-out still high (+10.5%).</li>
+                <li><strong>Kallar Kahar</strong> shows extreme P1→P3 anomaly (−220.8%) — likely data quality / reporting issue; needs urgent verification.</li>
+                <li><strong>Choa Saidan Shah</strong> &amp; <strong>Talagang</strong> have high drop-out across BCG→P1 and P1→P3 pathways.</li>
+                <li>Total UCs with high drop-out (&gt;10%): <strong>82</strong> (Chakwal 36 + Talagang 29 + Kallar Kahar 9 + Choa 8).</li>
+                <li>Action: Investigate defaulters, session quality, and data anomalies in high-DO UCs.</li>
+            </ul>
+
+            <div class="do-note">
+                <strong>Note:</strong> High drop-out is defined as &gt;+10% or &lt;−2% between consecutive doses. Negative values often indicate catch-up vaccination or data inconsistency.
+            </div>
+        </div>
+    </div>
+
     <!-- Coverage Report Modal -->
     <div class="modal-overlay" id="coverageModal" onclick="if(event.target===this)closeCoverageModal()">
         <div class="coverage-modal-box">
@@ -566,6 +644,79 @@
         }
         function closeCoverageModal(){
             document.getElementById('coverageModal').classList.remove('active');
+        }
+
+
+        // ===== Dropout Analysis =====
+        let dropoutChartObj = null;
+        function openDropoutModal(){
+            document.getElementById('dropoutModal').classList.add('active');
+            setTimeout(()=>{
+                const canvas = document.getElementById('dropoutChart');
+                if(!canvas || typeof Chart === 'undefined') return;
+                if(dropoutChartObj) dropoutChartObj.destroy();
+                dropoutChartObj = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Chakwal', 'Choa Saidan Shah', 'Kallar Kahar', 'Talagang'],
+                        datasets: [
+                            {
+                                label: 'BCG → P1 (%)',
+                                data: [4.9, -33.4, -40.8, -18.4],
+                                backgroundColor: '#1a8a5c',
+                                borderRadius: 4,
+                                maxBarThickness: 22
+                            },
+                            {
+                                label: 'P1 → P3 (%)',
+                                data: [-2.0, -11.0, -50, -33.3],  // -220 capped for readable scale; real value in table
+                                backgroundColor: '#f57c00',
+                                borderRadius: 4,
+                                maxBarThickness: 22
+                            },
+                            {
+                                label: 'MR1 → MR2 (%)',
+                                data: [10.5, 10.3, 10.2, 19.7],
+                                backgroundColor: '#c62828',
+                                borderRadius: 4,
+                                maxBarThickness: 22
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        // show real Kallar P1→P3 in tooltip
+                                        if(ctx.datasetIndex===1 && ctx.dataIndex===2) return 'P1 → P3 (%): -220.8%';
+                                        return ctx.dataset.label + ': ' + ctx.raw + '%';
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Drop-out Rates by Tehsil (P1→P3 for Kallar Kahar shown capped; actual −220.8%)',
+                                font: { size: 12 },
+                                color: '#555'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                grid: { color: '#eee' },
+                                ticks: { callback: v => v + '%' }
+                            },
+                            x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                        }
+                    }
+                });
+            }, 80);
+        }
+        function closeDropoutModal(){
+            document.getElementById('dropoutModal').classList.remove('active');
         }
 
     </script>
