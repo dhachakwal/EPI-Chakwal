@@ -289,9 +289,14 @@
                 <div class="sweep-hero" id="sweepHero">
                     <div class="sweep-stat"><div class="sweep-stat-num" id="swReports">—</div><div class="sweep-stat-lbl">Reports</div></div>
                     <div class="sweep-stat"><div class="sweep-stat-num" id="swPartial">—</div><div class="sweep-stat-lbl">Partial Children</div></div>
-                    <div class="sweep-stat"><div class="sweep-stat-num" id="swBCG">—</div><div class="sweep-stat-lbl">BCG</div></div>
-                    <div class="sweep-stat"><div class="sweep-stat-num" id="swPenta3">—</div><div class="sweep-stat-lbl">Penta-3</div></div>
-                    <div class="sweep-stat"><div class="sweep-stat-num" id="swMR1">—</div><div class="sweep-stat-lbl">MR-1</div></div>
+                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#e65100" onclick="toggleRemainingUCs()" title="Click to see pending UCs">
+                        <div class="sweep-stat-num" id="swRemaining" style="color:#e65100">—</div>
+                        <div class="sweep-stat-lbl">Remaining Reports</div>
+                    </div>
+                </div>
+                <div id="remainingUCList" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13.5px">
+                    <strong style="color:#e65100">Pending Union Councils:</strong>
+                    <div id="remainingUCItems" style="margin-top:8px;line-height:1.8;color:#555"></div>
                 </div>
 
                 <div class="sweep-toolbar">
@@ -898,6 +903,21 @@
         });
 
         // ===== Urban Sweep-up Live Data =====
+        
+        // Expected Urban UCs for Sweep-up (edit this list if needed)
+        const URBAN_UCS = [
+            'Chakwal Urban-1',
+            'Chakwal Urban-2',
+            'Chakwal Urban-3',
+            'Chakwal Urban-4',
+            'Chakwal Urban-5'
+        ];
+        function toggleRemainingUCs(){
+            const box = document.getElementById('remainingUCList');
+            if(!box) return;
+            box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+        }
+
         const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
         const SW_I = {tehsil:2, uc:3, partial:4, penta1:5, bcg:6, penta2:7, penta3:8, ipv1:9, mr1:10, ipv2:11, mr2:12, dtp:13, hpv:14};
         let sweepAntigenChartObj = null, sweepUCChartObj = null;
@@ -950,7 +970,7 @@
                 if(!dataRows.length){
                     status.className = 'sweep-empty';
                     status.textContent = 'No reports yet. Submit the first report via Google Form.';
-                    ['swReports','swPartial','swBCG','swPenta3','swMR1'].forEach(function(id){ const e=document.getElementById(id); if(e) e.textContent='0'; });
+                    ['swReports','swPartial','swRemaining'].forEach(function(id){ const e=document.getElementById(id); if(e) e.textContent='0'; });
                     if(meta) meta.textContent = 'Last updated: '+new Date().toLocaleString();
                     return;
                 }
@@ -980,9 +1000,23 @@
                 const setTxt = function(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; };
                 setTxt('swReports', dataRows.length);
                 setTxt('swPartial', totPartial.toLocaleString());
-                setTxt('swBCG', totBCG.toLocaleString());
-                setTxt('swPenta3', totP3.toLocaleString());
-                setTxt('swMR1', totMR1.toLocaleString());
+
+                // Remaining Reports = Urban UCs not yet submitted
+                const submittedUCs = {};
+                dataRows.forEach(function(vals){
+                    const uc = (vals[SW_I.uc]||'').trim();
+                    if(uc) submittedUCs[uc] = true;
+                });
+                const pending = URBAN_UCS.filter(function(uc){ return !submittedUCs[uc]; });
+                setTxt('swRemaining', pending.length);
+                const pendingBox = document.getElementById('remainingUCItems');
+                if(pendingBox){
+                    if(pending.length === 0){
+                        pendingBox.innerHTML = '<span style="color:#2e7d32;font-weight:600">All listed Urban UCs have submitted ✓</span>';
+                    } else {
+                        pendingBox.innerHTML = pending.map(function(uc){ return '• '+uc; }).join('<br>');
+                    }
+                }
 
                 const ordered = dataRows.slice().reverse();
                 if(body){
