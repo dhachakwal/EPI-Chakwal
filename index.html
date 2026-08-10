@@ -214,6 +214,24 @@
         .edit-btn:hover{background:#bf360c}
         .edit-field{width:100%;padding:8px 10px;border:2px solid #0d5c3d;border-radius:6px;font-size:14px;margin:4px 0 10px;box-sizing:border-box}
 
+    
+        .train-card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 4px 15px rgba(0,0,0,.08);border-top:4px solid #5e35b1;text-align:left}
+        .train-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 16px}
+        .train-tab{padding:8px 14px;border-radius:20px;border:2px solid #5e35b1;background:#fff;color:#5e35b1;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .2s}
+        .train-tab:hover{background:#ede7f6}
+        .train-tab.active{background:#5e35b1;color:#fff}
+        .train-panel{display:none}
+        .train-panel.active{display:block}
+        .train-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:14px 12px;border:1px solid #e8e0f0;border-radius:10px;margin-bottom:10px;background:linear-gradient(135deg,#faf8ff,#fff)}
+        .train-item-info{flex:1;min-width:180px}
+        .train-item-info h4{color:#4a148c;font-size:14.5px;margin-bottom:4px}
+        .train-item-info p{font-size:12.5px;color:#666;margin:0}
+        .train-btns{display:flex;gap:8px;flex-wrap:wrap}
+        .btn-purple{background:#5e35b1;color:#fff}
+        .btn-purple:hover{background:#4527a0}
+        .btn-purple-outline{background:#fff;color:#5e35b1;border:2px solid #5e35b1}
+        .btn-purple-outline:hover{background:#5e35b1;color:#fff}
+
     </style>
 </head>
 <body>
@@ -419,6 +437,125 @@
                         </div>
                     </div>
                 </div>
+            
+                <div class="download-card train-card" style="grid-column:1/-1;text-align:left">
+                    <h3 style="color:#5e35b1;margin-bottom:6px">📚 EPI Training Material / Library</h3>
+                    <p style="margin-bottom:4px">Manuals, books, guidelines &amp; refresher training resources</p>
+
+                    <div class="train-tabs" id="trainTabs">
+                        <button type="button" class="train-tab active" onclick="showTrainTab('manuals', this)">Field Manuals</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('guidelines', this)">Guidelines</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('refresher', this)">Refresher Training</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('books', this)">Books &amp; Handouts</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('other', this)">Other Material</button>
+                    </div>
+
+                    <div id="train-manuals" class="train-panel active">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>EPI Field Vaccinator Manual</h4>
+                                <p>Core field guide for routine immunization sessions</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Cold Chain &amp; Vaccine Management Manual</h4>
+                                <p>Storage, temperature monitoring &amp; logistics</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-guidelines" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>National EPI Guidelines</h4>
+                                <p>Official policy &amp; operational guidelines</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>AEFI Guidelines</h4>
+                                <p>Adverse Events Following Immunization — reporting &amp; response</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-refresher" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Refresher Training Module — Vaccinators</h4>
+                                <p>Session plans &amp; presentation for refresher batches</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Refresher — Data Tools (EMR / MIS)</h4>
+                                <p>Practical guide for digital reporting updates</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-books" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Immunization Handbook</h4>
+                                <p>Reference handbook for supervisors &amp; trainers</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Training Handouts (Printable)</h4>
+                                <p>One-pagers &amp; job aids for field staff</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-other" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Additional Training Resources</h4>
+                                <p>Videos, SOPs &amp; miscellaneous material — links jald add hongi</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="#" class="btn btn-purple btn-sm" onclick="alert('Drive link jald add hoga');return false">View</a>
+                                <a href="#" class="btn btn-purple-outline btn-sm" onclick="alert('Drive link jald add hoga');return false">Download</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div class="section-title">Key Officers</div>
@@ -1143,6 +1280,15 @@
 
         // Google Form Union Council options (exact list from form)
         
+        
+        function showTrainTab(id, btn){
+            document.querySelectorAll('.train-panel').forEach(function(p){ p.classList.remove('active'); });
+            document.querySelectorAll('.train-tab').forEach(function(t){ t.classList.remove('active'); });
+            const panel = document.getElementById('train-'+id);
+            if(panel) panel.classList.add('active');
+            if(btn) btn.classList.add('active');
+        }
+
         function showSweepPanel(mode){
             const panel = document.getElementById('sweepDetailPanel');
             const title = document.getElementById('sweepPanelTitle');
