@@ -1428,7 +1428,7 @@
         const FORM_UC_FLAT = [].concat.apply([], Object.keys(FORM_URBAN_UCS).map(function(t){ return FORM_URBAN_UCS[t]; }));
 
         const SWEEP_SHEET_ID = '11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks';
-        const SW_I = {tehsil:2, uc:3, partial:4, penta1:5, bcg:6, penta2:7, penta3:8, ipv1:9, mr1:10, ipv2:11, mr2:12, dtp:13, hpv:14};
+        const SW_I = {tehsil:2, uc:3, partial:4, bcg:5, penta1:6, penta2:7, penta3:8, ipv1:9, mr1:10, ipv2:11, mr2:12, dtp:13, hpv:14};
         let sweepAntigenChartObj = null, sweepUCChartObj = null;
 
         function parseGviz(text){
@@ -1474,7 +1474,12 @@
                     const first = (rawRows[0].c||[]).map(cellVal).join(' ').toLowerCase();
                     if(first.includes('timestamp') || first.includes('tehsil') || first.includes('email')) startIdx = 1;
                 }
-                const dataRows = rawRows.slice(startIdx).map(r => (r.c||[]).map(cellVal)).filter(vals => vals.some(v => v && String(v).trim()));
+                const dataRows = rawRows.slice(startIdx).map(r => (r.c||[]).map(cellVal)).filter(vals => vals.some(v => v && String(v).trim())).filter(function(vals){
+                    const ucVal = String(vals[SW_I.uc]||'').trim().toLowerCase();
+                    const tehsilVal = String(vals[SW_I.tehsil]||'').trim().toLowerCase();
+                    // Exclude the sheet's own summary "Total" row so it isn't double-counted
+                    return ucVal !== 'total' && tehsilVal !== 'total';
+                });
 
                 if(!dataRows.length){
                     status.className = 'sweep-empty';
@@ -1545,10 +1550,13 @@
 
                 const ordered = dataRows.slice().reverse();
                 if(body){
-                    body.innerHTML = ordered.map(function(vals){
+                    let rowsHtml = ordered.map(function(vals){
                         const g = function(i){ return (vals[i]!==undefined && vals[i]!=='') ? vals[i] : '—'; };
                         return '<tr><td>'+g(SW_I.tehsil)+'</td><td>'+g(SW_I.uc)+'</td><td>'+g(SW_I.partial)+'</td><td>'+g(SW_I.bcg)+'</td><td>'+g(SW_I.penta1)+'</td><td>'+g(SW_I.penta2)+'</td><td>'+g(SW_I.penta3)+'</td><td>'+g(SW_I.ipv1)+'</td><td>'+g(SW_I.mr1)+'</td><td>'+g(SW_I.ipv2)+'</td><td>'+g(SW_I.mr2)+'</td><td>'+g(SW_I.dtp)+'</td><td>'+g(SW_I.hpv)+'</td></tr>';
                     }).join('');
+                    // Correctly-computed Total row, always shown at the bottom (not double-counted)
+                    rowsHtml += '<tr style="font-weight:800;background:#e8f5e9"><td>—</td><td>Total</td><td>'+totPartial.toLocaleString()+'</td><td>'+totBCG.toLocaleString()+'</td><td>'+totP1.toLocaleString()+'</td><td>'+totP2.toLocaleString()+'</td><td>'+totP3.toLocaleString()+'</td><td>'+totIPV1.toLocaleString()+'</td><td>'+totMR1.toLocaleString()+'</td><td>'+totIPV2.toLocaleString()+'</td><td>'+totMR2.toLocaleString()+'</td><td>'+totDTP.toLocaleString()+'</td><td>'+totHPV.toLocaleString()+'</td></tr>';
+                    body.innerHTML = rowsHtml;
                 }
 
                 status.style.display = 'none';
