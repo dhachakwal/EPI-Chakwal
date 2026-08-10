@@ -203,17 +203,19 @@
         .btn-sm{padding:9px 16px;font-size:13px}
         @media(max-width:700px){.sweep-charts{grid-template-columns:1fr}}
 
-        .sweep-date-badge{display:inline-flex;align-items:center;gap:8px;background:#e8f5e9;border:1px solid #1a8a5c;color:#0d5c3d;font-weight:700;font-size:14px;padding:8px 16px;border-radius:20px;margin-bottom:14px}
-        .sweep-date-badge .live-dot{width:10px;height:10px;border-radius:50%;background:#2e7d32;animation:pulse 1.5s infinite}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-        .sweep-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+        .sweep-tabs-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+        .sweep-tabs{display:flex;flex-wrap:wrap;gap:8px}
         .sweep-tab{padding:8px 16px;border-radius:20px;border:2px solid #0d5c3d;background:#fff;color:#0d5c3d;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
         .sweep-tab:hover{background:#e8f5e9}
         .sweep-tab.active{background:#0d5c3d;color:#fff}
+        .sweep-date-badge{display:inline-flex;align-items:center;gap:8px;background:#e8f5e9;border:1px solid #1a8a5c;color:#0d5c3d;font-weight:700;font-size:13.5px;padding:8px 16px;border-radius:20px;margin-left:auto;white-space:nowrap}
+        .sweep-date-badge .live-dot{width:10px;height:10px;border-radius:50%;background:#2e7d32;animation:pulse 1.5s infinite;flex-shrink:0}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         .sweep-history-bar{display:none;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;padding:12px;background:#f0f7f4;border-radius:10px;border:1px solid #c8e6c9}
         .sweep-history-bar.active{display:flex}
         .sweep-history-bar label{font-size:13px;font-weight:600;color:#0d5c3d}
         .sweep-history-bar select{padding:8px 12px;border:2px solid #0d5c3d;border-radius:8px;font-size:13px;font-weight:600;color:#0d5c3d;background:#fff;min-width:180px}
+        @media(max-width:600px){.sweep-date-badge{margin-left:0;width:100%;justify-content:center}}
 
     
         .search-detail-modal .modal-box{max-width:480px;text-align:left}
@@ -371,20 +373,21 @@
                     Teams submit daily field reports; live data + day-wise history update automatically from Google Sheet.
                 </p>
 
-                <div class="sweep-tabs" id="sweepTabs">
-                    <button type="button" class="sweep-tab active" id="sweepTabLive" onclick="switchSweepTab('live')">📡 Live / Today</button>
-                    <button type="button" class="sweep-tab" id="sweepTabHistory" onclick="switchSweepTab('history')">📅 Day-wise History</button>
+                <div class="sweep-tabs-row">
+                    <div class="sweep-tabs" id="sweepTabs">
+                        <button type="button" class="sweep-tab active" id="sweepTabLive" onclick="switchSweepTab('live')">📡 Live / Today</button>
+                        <button type="button" class="sweep-tab" id="sweepTabHistory" onclick="switchSweepTab('history')">📅 Day-wise History</button>
+                    </div>
+                    <div class="sweep-date-badge" id="sweepDateBadge">
+                        <span class="live-dot" id="sweepLiveDot"></span>
+                        <span id="sweepDateLabel">Date: —</span>
+                    </div>
                 </div>
 
                 <div class="sweep-history-bar" id="sweepHistoryBar">
                     <label for="sweepDateSelect">Select Date:</label>
                     <select id="sweepDateSelect" onchange="onHistoryDateChange()"></select>
                     <span style="font-size:12px;color:#666" id="sweepHistoryHint">Pehle ke dinon ka data yahan dekhain</span>
-                </div>
-
-                <div class="sweep-date-badge" id="sweepDateBadge">
-                    <span class="live-dot" id="sweepLiveDot"></span>
-                    <span id="sweepDateLabel">Date: —</span>
                 </div>
                 
                 <div class="sweep-hero" id="sweepHero">
