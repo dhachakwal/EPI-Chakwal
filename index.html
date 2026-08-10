@@ -1516,6 +1516,17 @@
             return parseInt(parts[2],10) + ' ' + (months[m]||parts[1]) + ' ' + parts[0];
         }
 
+        /** Today's date in Pakistan Standard Time (UTC+5) as YYYY-MM-DD */
+        function getTodayPKT(){
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const pkt = new Date(utc + (5 * 60 * 60000));
+            const y = pkt.getFullYear();
+            const m = String(pkt.getMonth() + 1).padStart(2, '0');
+            const d = String(pkt.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+
         function switchSweepTab(tab){
             window._sweepTab = tab;
             const liveBtn = document.getElementById('sweepTabLive');
@@ -1528,14 +1539,15 @@
             if(liveDot) liveDot.style.display = (tab === 'live') ? 'inline-block' : 'none';
 
             if(tab === 'live'){
-                if(window._sweepLatestDate) renderSweepForDate(window._sweepLatestDate, true);
+                // Live = only today's PKT calendar date (empty if no reports yet today)
+                renderSweepForDate(getTodayPKT(), true);
             } else {
                 const sel = document.getElementById('sweepDateSelect');
                 if(sel && sel.value) renderSweepForDate(sel.value, false);
-                else if(window._sweepLatestDate){
-                    // pick previous day if available
-                    const dates = Object.keys(window._sweepByDate).sort().reverse();
-                    const prev = dates.find(function(d){ return d !== window._sweepLatestDate; }) || window._sweepLatestDate;
+                else {
+                    const today = getTodayPKT();
+                    const dates = Object.keys(window._sweepByDate || {}).filter(function(d){ return d !== 'unknown'; }).sort().reverse();
+                    const prev = dates.find(function(d){ return d !== today; }) || dates[0] || today;
                     if(sel) sel.value = prev;
                     renderSweepForDate(prev, false);
                 }
@@ -1550,16 +1562,18 @@
         function populateHistorySelect(){
             const sel = document.getElementById('sweepDateSelect');
             if(!sel) return;
-            const dates = Object.keys(window._sweepByDate).sort().reverse();
-            const latest = window._sweepLatestDate;
+            const today = getTodayPKT();
+            // History dropdown: all dates that have data (past + today if any)
+            const dates = Object.keys(window._sweepByDate || {}).filter(function(d){ return d !== 'unknown'; }).sort().reverse();
             sel.innerHTML = dates.map(function(d){
-                const label = formatSweepDate(d) + (d === latest ? ' (Latest)' : '');
+                let label = formatSweepDate(d);
+                if(d === today) label += ' (Today)';
                 return '<option value="'+d+'">'+label+'</option>';
             }).join('');
-            // default select previous day if exists
-            const prev = dates.find(function(d){ return d !== latest; });
+            // Default to most recent past day (not today)
+            const prev = dates.find(function(d){ return d !== today; });
             if(prev) sel.value = prev;
-            else if(latest) sel.value = latest;
+            else if(dates.length) sel.value = dates[0];
         }
 
         /** Build submitted map + totals from a list of rows; remaining is cumulative up to endDate (inclusive) */
@@ -1628,9 +1642,14 @@
             // Date badge
             const label = document.getElementById('sweepDateLabel');
             const liveDot = document.getElementById('sweepLiveDot');
+            const today = getTodayPKT();
             if(label){
                 if(isLive){
-                    label.textContent = 'Live Data — ' + formatSweepDate(ymd) + (ymd === window._sweepLatestDate ? ' (Today / Latest)' : '');
+                    if(ymd === today){
+                        label.textContent = 'Live Data — ' + formatSweepDate(ymd) + ' (Today)';
+                    } else {
+                        label.textContent = 'Live Data — ' + formatSweepDate(ymd);
+                    }
                 } else {
                     label.textContent = 'Historical Data — ' + formatSweepDate(ymd);
                 }
@@ -1644,7 +1663,15 @@
             const meta = document.getElementById('sweepMeta');
 
             if(!dayRows.length){
-                if(status){ status.style.display='block'; status.className='sweep-empty'; status.textContent = 'Is date ('+formatSweepDate(ymd)+') par koi report nahi mili.'; }
+                if(status){
+                    status.style.display='block';
+                    status.className='sweep-empty';
+                    if(isLive){
+                        status.innerHTML = 'Aaj ('+formatSweepDate(ymd)+') abhi koi report submit nahi hui.<br><span style="font-size:13px;color:#888">Pehle ke din ka data <strong>Day-wise History</strong> tab se dekhain.</span>';
+                    } else {
+                        status.textContent = 'Is date ('+formatSweepDate(ymd)+') par koi report nahi mili.';
+                    }
+                }
                 if(wrap) wrap.style.display='none';
                 if(charts) charts.style.display='none';
                 if(meta) meta.textContent = 'Viewing: '+formatSweepDate(ymd)+' · 0 reports';
@@ -1767,7 +1794,7 @@
 
                 populateHistorySelect();
 
-                // Default to live tab + latest date
+                // Default to Live tab = today's PKT date only (empty after midnight until new reports)
                 window._sweepTab = 'live';
                 const liveBtn = document.getElementById('sweepTabLive');
                 const histBtn = document.getElementById('sweepTabHistory');
@@ -1776,9 +1803,7 @@
                 if(histBtn) histBtn.classList.remove('active');
                 if(histBar) histBar.classList.remove('active');
 
-                if(window._sweepLatestDate){
-                    renderSweepForDate(window._sweepLatestDate, true);
-                }
+                renderSweepForDate(getTodayPKT(), true);
             }catch(err){
                 console.error(err);
                 status.className = 'sweep-empty';
@@ -1799,6 +1824,21 @@
         }
         document.addEventListener('DOMContentLoaded', function(){ loadSweepData(); sortNewsList(); });
         setTimeout(loadSweepData, 400);
+
+        // Auto-clear Live after midnight (PKT): if page left open, re-render when calendar day changes
+        (function watchMidnightPKT(){
+            var lastDay = getTodayPKT();
+            setInterval(function(){
+                var today = getTodayPKT();
+                if(today !== lastDay){
+                    lastDay = today;
+                    if(window._sweepTab === 'live'){
+                        renderSweepForDate(today, true);
+                    }
+                    populateHistorySelect();
+                }
+            }, 30000); // check every 30 sec
+        })();
 
     </script>
 </body>
