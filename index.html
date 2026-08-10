@@ -255,8 +255,29 @@
 
     <div class="container">
         <div class="sidebar">
-            <div class="sidebar-header">Official Events & Updates</div>
+            <div class="sidebar-header">Official Events &amp; Updates</div>
             <div class="news-list">
+
+                <div class="news-item">
+                    <div class="news-date">10th August 2026</div>
+                    <div class="news-text">Sweep-up Activity for improving EPI coverage has started in District Chakwal. Phase-1 covers all Urban UCs across every tehsil; Phase-2 will cover the remaining UCs. An emergency meeting of Vaccinators and ASVs was held: Tehsil Chakwal vaccinators at CEO Office, DHA Chakwal, while vaccinators of other tehsils met at their respective DDHO Offices under DDHO/ASV supervision, remaining connected with the District via Zoom.</div>
+                    <button class="show-pics-btn" onclick="togglePics(this,'g_sweep')">Show Meeting Pictures</button>
+                    <div class="news-gallery" id="g_sweep">
+                        <img src="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQBhf89bfpf5Qb3XsuKdXrKMAW-b8gRg5QtjLYLScBTOYIk" loading="lazy" onclick="openImgModal(this.src)" alt="Meeting 1" onerror="this.style.display='none'">
+                        <img src="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQD7GDUrL_zwTbgYnPFk8dyMAZ3nnMcUToHqjIK1QvO7Fn4" loading="lazy" onclick="openImgModal(this.src)" alt="Meeting 2" onerror="this.style.display='none'">
+                        <img src="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQBf-tmDKCsPQJSPeuRv0NbnAdJqvMkJEbHdLDEnwq1Yduk" loading="lazy" onclick="openImgModal(this.src)" alt="Meeting 3" onerror="this.style.display='none'">
+                        <img src="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQASfGC_mYk9RKAoGUSYmgLjAQV-uuen2kNfkHURJRnZvhw" loading="lazy" onclick="openImgModal(this.src)" alt="Meeting 4" onerror="this.style.display='none'">
+                        <img src="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQACUnMdUxvyRJ2Pdfevv3n_AbJMxNLsF8o6NkFDxBt_xRQ" loading="lazy" onclick="openImgModal(this.src)" alt="Meeting 5" onerror="this.style.display='none'">
+                    </div>
+                    <div style="margin-top:8px;font-size:12px">
+                        <a href="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQBhf89bfpf5Qb3XsuKdXrKMAW-b8gRg5QtjLYLScBTOYIk" target="_blank" rel="noopener" style="color:#0d5c3d;margin-right:8px">Pic 1</a>
+                        <a href="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQD7GDUrL_zwTbgYnPFk8dyMAZ3nnMcUToHqjIK1QvO7Fn4" target="_blank" rel="noopener" style="color:#0d5c3d;margin-right:8px">Pic 2</a>
+                        <a href="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQBf-tmDKCsPQJSPeuRv0NbnAdJqvMkJEbHdLDEnwq1Yduk" target="_blank" rel="noopener" style="color:#0d5c3d;margin-right:8px">Pic 3</a>
+                        <a href="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQASfGC_mYk9RKAoGUSYmgLjAQV-uuen2kNfkHURJRnZvhw" target="_blank" rel="noopener" style="color:#0d5c3d;margin-right:8px">Pic 4</a>
+                        <a href="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQACUnMdUxvyRJ2Pdfevv3n_AbJMxNLsF8o6NkFDxBt_xRQ" target="_blank" rel="noopener" style="color:#0d5c3d">Pic 5</a>
+                    </div>
+                </div>
+
                 <div class="news-item">
                     <div class="news-date">30th July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) Successfully Conducted at CEO Office DHA Chakwal.</div>
@@ -344,6 +365,7 @@
                     <a href="https://docs.google.com/forms/d/e/1FAIpQLSfE7rTRn8VUIgwYRy7lALBjxQRHN4yByn7AnM0Fc8V592T5xg/viewform" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report</a>
                     <button class="btn btn-outline btn-sm" onclick="loadSweepData()">🔄 Refresh Live Data</button>
                     <a href="https://docs.google.com/spreadsheets/d/11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Full Sheet</a>
+                    <a href="location.html" class="btn btn-outline btn-sm">📍 Location Check-in</a>
                     <span class="sweep-meta" id="sweepMeta">Last updated: —</span>
                 </div>
 
