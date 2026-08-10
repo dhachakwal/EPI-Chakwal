@@ -232,6 +232,24 @@
         .btn-purple-outline{background:#fff;color:#5e35b1;border:2px solid #5e35b1}
         .btn-purple-outline:hover{background:#5e35b1;color:#fff}
 
+    
+        .mid-row{display:flex;gap:18px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap}
+        .mid-left{flex:1;min-width:280px}
+        .mid-right{width:340px;max-width:100%;flex-shrink:0}
+        .mid-right .section-title{font-size:16px}
+        .mid-right .sweep-card{margin-bottom:18px}
+        .mid-right .download-grid{margin-bottom:12px}
+        .mid-right .download-card{padding:16px}
+        .mid-right .sweep-hero{flex-direction:column}
+        .mid-right .sweep-stat{min-width:0}
+        .mid-right .sweep-charts{grid-template-columns:1fr}
+        .mid-right .sweep-chart-wrap{height:180px}
+        .mid-left .download-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+        @media(max-width:900px){
+            .mid-row{flex-direction:column}
+            .mid-right{width:100%}
+        }
+
     </style>
 </head>
 <body>
@@ -259,7 +277,7 @@
             <div class="news-list">
 
                 <div class="news-item">
-                    <div class="news-date">8th August 2026</div>
+                    <div class="news-date">10th August 2026</div>
                     <div class="news-text">Sweep-up Activity for improving EPI coverage has started in District Chakwal. Phase-1 covers all Urban UCs across every tehsil; Phase-2 will cover the remaining UCs. An emergency meeting of Vaccinators and ASVs was held: Tehsil Chakwal vaccinators at CEO Office, DHA Chakwal, while vaccinators of other tehsils met at their respective DDHO Offices under DDHO/ASV supervision, remaining connected with the District via Zoom.</div>
                     <button class="show-pics-btn" onclick="togglePics(this,'g_sweep')">Show Meeting Pictures</button>
                     <div class="news-gallery" id="g_sweep">
@@ -277,6 +295,12 @@
                         <a href="https://zahidbhai78678678-my.sharepoint.com/:i:/g/personal/waqassafdar20_zahidbhai78678678_onmicrosoft_com/IQACUnMdUxvyRJ2Pdfevv3n_AbJMxNLsF8o6NkFDxBt_xRQ" target="_blank" rel="noopener" style="color:#0d5c3d">Pic 5</a>
                     </div>
                 </div>
+
+                <div class="news-item">
+                    <div class="news-date">10th August 2026</div>
+                    <div class="news-text">During the Routine Immunization Sweep-up in Urban UCs, the District Health Officer (Preventive Services) and DSV Chakwal carried out field supervision visits. They checked vaccination teams on ground, visited households, and asked parents about their children’s immunization status. Clear instructions were issued to vaccinators that no child should be found unvaccinated.</div>
+                </div>
+
 
                 <div class="news-item">
                     <div class="news-date">30th July 2026</div>
@@ -320,92 +344,10 @@
                 <div class="stat-card" onclick="openStatModal('asvs')"><div class="stat-number">7</div><div class="stat-label">ASVs</div></div>
             </div>
 
-            <div class="section-title">Payment Status For NID Worker</div>
-            <div class="download-grid" style="grid-template-columns:1fr">
-                <div class="download-card">
-                    <h3>NID Workers Payment Verification</h3>
-                    <p>Check campaign payment details for NID Workers</p>
-                    <button class="btn" onclick="openNidModal()">Check Payment Status 💳</button>
-                </div>
-            </div>
-
             
-            
-            <div class="section-title" id="section-sweep">Urban Sweep-up Activity</div>
-            <div class="sweep-card">
-                <p style="font-size:14px;color:#444;margin-bottom:16px;line-height:1.5">
-                    <strong>Routine Immunization Sweep-up</strong> — District Chakwal <strong>Urban UCs</strong>.
-                    Teams submit daily field reports; summary, graphs and table update live from Google Sheet.
-                </p>
-
-                
-                <div class="sweep-hero" id="sweepHero">
-                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#2e7d32" onclick="showSweepPanel('submitted')" title="Click for Tehsil / UC status">
-                        <div class="sweep-stat-num" id="swReports" style="color:#2e7d32">—</div>
-                        <div class="sweep-stat-lbl">Submit Reports</div>
-                    </div>
-                    <div class="sweep-stat" style="cursor:pointer" onclick="showSweepPanel('partial')" title="Click for Tehsil / UC numbers">
-                        <div class="sweep-stat-num" id="swPartial">—</div>
-                        <div class="sweep-stat-lbl">Partial Children</div>
-                    </div>
-                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#e65100" onclick="showSweepPanel('remaining')" title="Click for pending Tehsil / UC">
-                        <div class="sweep-stat-num" id="swRemaining" style="color:#e65100">—</div>
-                        <div class="sweep-stat-lbl">Remaining Reports</div>
-                    </div>
-                </div>
-                <div id="sweepDetailPanel" style="display:none;background:#fff;border:1px solid #c8e6c9;border-radius:12px;padding:14px 16px;margin-bottom:16px;max-height:380px;overflow-y:auto">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                        <strong id="sweepPanelTitle" style="color:#0d5c3d;font-size:14.5px">Details</strong>
-                        <button onclick="document.getElementById('sweepDetailPanel').style.display='none'" style="border:none;background:#f0f0f0;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">Close ✕</button>
-                    </div>
-                    <div id="sweepPanelBody" style="font-size:13.5px;line-height:1.6;color:#333"></div>
-                </div>
-
-                <div class="sweep-toolbar">
-                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSfE7rTRn8VUIgwYRy7lALBjxQRHN4yByn7AnM0Fc8V592T5xg/viewform" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report</a>
-                    <button class="btn btn-outline btn-sm" onclick="loadSweepData()">🔄 Refresh Live Data</button>
-                    <a href="https://docs.google.com/spreadsheets/d/11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Full Sheet</a>
-                    <a href="location.html" class="btn btn-outline btn-sm">📍 Location Check-in</a>
-                    <span class="sweep-meta" id="sweepMeta">Last updated: —</span>
-                </div>
-
-                <div class="sweep-charts" id="sweepCharts" style="display:none">
-                    <div class="sweep-chart-box">
-                        <div class="sweep-chart-title">Antigen-wise Total Doses</div>
-                        <div class="sweep-chart-wrap"><canvas id="sweepAntigenChart"></canvas></div>
-                    </div>
-                    <div class="sweep-chart-box">
-                        <div class="sweep-chart-title">UC-wise Partial Children</div>
-                        <div class="sweep-chart-wrap"><canvas id="sweepUCChart"></canvas></div>
-                    </div>
-                </div>
-
-                <div id="sweepStatus" class="sweep-loading">Loading live data…</div>
-                <div class="sweep-table-wrap" id="sweepTableWrap" style="display:none">
-                    <table class="sweep-table">
-                        <thead>
-                            <tr>
-                                <th>Tehsil</th>
-                                <th>Union Council</th>
-                                <th>Partial Children</th>
-                                <th>BCG</th>
-                                <th>Penta-1</th>
-                                <th>Penta-2</th>
-                                <th>Penta-3</th>
-                                <th>IPV-1</th>
-                                <th>MR-1</th>
-                                <th>IPV-2</th>
-                                <th>MR-2</th>
-                                <th>DTP</th>
-                                <th>HPV</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sweepBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="section-title">Official Downloads & Reports</div>
+            <div class="mid-row">
+                <div class="mid-left">
+<div class="section-title">Official Downloads & Reports</div>
             <div class="download-grid">
                 <div class="download-card">
                     <h3>Monthly EPI Presentation</h3>
@@ -460,7 +402,7 @@
                     </div>
                 </div>
             
-                <div class="download-card train-card" style="grid-column:1/-1;text-align:left">
+                <div class="download-card train-card" style="text-align:left">
                     <h3 style="color:#5e35b1;margin-bottom:6px">📚 EPI Training Material / Library</h3>
                     <p style="margin-bottom:4px">Manuals, books, guidelines &amp; refresher training resources</p>
 
@@ -578,6 +520,100 @@
                     </div>
                 </div>
 
+            </div>
+
+                            </div>
+                <div class="mid-right">
+<div class="section-title">Payment Status For NID Worker</div>
+            <div class="download-grid" style="grid-template-columns:1fr">
+                <div class="download-card">
+                    <h3>NID Workers Payment Verification</h3>
+                    <p>Check campaign payment details for NID Workers</p>
+                    <button class="btn" onclick="openNidModal()">Check Payment Status 💳</button>
+                </div>
+            </div>
+
+            
+            
+            <div class="section-title" id="section-sweep">Urban Sweep-up Activity</div>
+            <div class="sweep-card">
+                <p style="font-size:14px;color:#444;margin-bottom:16px;line-height:1.55">
+                    <strong>Routine Immunization Sweep-up</strong> — District Chakwal <strong>Urban UCs</strong>.
+                    Teams submit daily field reports; summary, graphs and table update live from Google Sheet.
+                </p>
+                <p style="font-size:13.5px;color:#444;margin-bottom:16px;line-height:1.55;background:#f0f7f4;border-left:4px solid #0d5c3d;padding:12px 14px;border-radius:0 8px 8px 0">
+                    <strong style="color:#0d5c3d">Field Supervision:</strong>
+                    The District Health Officer (Preventive Services) and the District Superintendent Vaccination (DSV), Chakwal, conducted field visits during the sweep-up activity. They reviewed teams in the field, visited households, and inquired from parents about the vaccination status of their children. Vaccinators were directed to ensure that <strong>no child remains unvaccinated</strong>.
+                </p>
+
+                
+                <div class="sweep-hero" id="sweepHero">
+                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#2e7d32" onclick="showSweepPanel('submitted')" title="Click for Tehsil / UC status">
+                        <div class="sweep-stat-num" id="swReports" style="color:#2e7d32">—</div>
+                        <div class="sweep-stat-lbl">Submit Reports</div>
+                    </div>
+                    <div class="sweep-stat" style="cursor:pointer" onclick="showSweepPanel('partial')" title="Click for Tehsil / UC numbers">
+                        <div class="sweep-stat-num" id="swPartial">—</div>
+                        <div class="sweep-stat-lbl">Partial Children</div>
+                    </div>
+                    <div class="sweep-stat" style="cursor:pointer;border-bottom-color:#e65100" onclick="showSweepPanel('remaining')" title="Click for pending Tehsil / UC">
+                        <div class="sweep-stat-num" id="swRemaining" style="color:#e65100">—</div>
+                        <div class="sweep-stat-lbl">Remaining Reports</div>
+                    </div>
+                </div>
+                <div id="sweepDetailPanel" style="display:none;background:#fff;border:1px solid #c8e6c9;border-radius:12px;padding:14px 16px;margin-bottom:16px;max-height:380px;overflow-y:auto">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <strong id="sweepPanelTitle" style="color:#0d5c3d;font-size:14.5px">Details</strong>
+                        <button onclick="document.getElementById('sweepDetailPanel').style.display='none'" style="border:none;background:#f0f0f0;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">Close ✕</button>
+                    </div>
+                    <div id="sweepPanelBody" style="font-size:13.5px;line-height:1.6;color:#333"></div>
+                </div>
+
+                <div class="sweep-toolbar">
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSfE7rTRn8VUIgwYRy7lALBjxQRHN4yByn7AnM0Fc8V592T5xg/viewform" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report</a>
+                    <button class="btn btn-outline btn-sm" onclick="loadSweepData()">🔄 Refresh Live Data</button>
+                    <a href="https://docs.google.com/spreadsheets/d/11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Full Sheet</a>
+                    <a href="location.html" class="btn btn-outline btn-sm">📍 Location Check-in</a>
+                    <span class="sweep-meta" id="sweepMeta">Last updated: —</span>
+                </div>
+
+                <div class="sweep-charts" id="sweepCharts" style="display:none">
+                    <div class="sweep-chart-box">
+                        <div class="sweep-chart-title">Antigen-wise Total Doses</div>
+                        <div class="sweep-chart-wrap"><canvas id="sweepAntigenChart"></canvas></div>
+                    </div>
+                    <div class="sweep-chart-box">
+                        <div class="sweep-chart-title">UC-wise Partial Children</div>
+                        <div class="sweep-chart-wrap"><canvas id="sweepUCChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="sweepStatus" class="sweep-loading">Loading live data…</div>
+                <div class="sweep-table-wrap" id="sweepTableWrap" style="display:none">
+                    <table class="sweep-table">
+                        <thead>
+                            <tr>
+                                <th>Tehsil</th>
+                                <th>Union Council</th>
+                                <th>Partial Children</th>
+                                <th>BCG</th>
+                                <th>Penta-1</th>
+                                <th>Penta-2</th>
+                                <th>Penta-3</th>
+                                <th>IPV-1</th>
+                                <th>MR-1</th>
+                                <th>IPV-2</th>
+                                <th>MR-2</th>
+                                <th>DTP</th>
+                                <th>HPV</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sweepBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+                            </div>
             </div>
 
             <div class="section-title">Key Officers</div>
