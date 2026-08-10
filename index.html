@@ -1338,7 +1338,7 @@
             if(!panel || !body) return;
 
             const submitted = window._sweepSubmitted || {};
-            const tehsilOrder = ['Chakwal','Talagang','Kallar Kahar','Choa Saidan Shah'];
+            const tehsilOrder = ['Chakwal','Talagang','Kallar Kahar','Choa Saidan Shah','Lawa'];
             function norm(s){ return (s||'').toString().trim().toLowerCase(); }
 
             const subSet = {};
@@ -1422,7 +1422,8 @@
             'Chakwal': ['Chakwal Urban-1','Chakwal Urban-2','Chakwal Urban-3','Chakwal Urban-4','Chakwal Urban-5'],
             'Choa Saidan Shah': ['Choa Saidan Shah Urban'],
             'Kallar Kahar': ['Kallar Kahar Urban'],
-            'Talagang': ['Talagang Urban-1','Talagang Urban-2','Talagang Urban-3']
+            'Talagang': ['Talagang Urban-1','Talagang Urban-2','Talagang Urban-3'],
+            'Lawa': ['Lawa Urban']
         };
         const FORM_UC_FLAT = [].concat.apply([], Object.keys(FORM_URBAN_UCS).map(function(t){ return FORM_URBAN_UCS[t]; }));
 
