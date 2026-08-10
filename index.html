@@ -258,7 +258,7 @@
             <div class="sidebar-header">Official Events &amp; Updates</div>
             <div class="news-list">
 
-                <div class="news-item">
+                <div class="news-item" data-date="2026-08-08">
                     <div class="news-date">8th August 2026</div>
                     <div class="news-text">Sweep-up Activity for improving EPI coverage has started in District Chakwal. Phase-1 covers all Urban UCs across every tehsil; Phase-2 will cover the remaining UCs. An emergency meeting of Vaccinators and ASVs was held: Tehsil Chakwal vaccinators at CEO Office, DHA Chakwal, while vaccinators of other tehsils met at their respective DDHO Offices under DDHO/ASV supervision, remaining connected with the District via Zoom.</div>
                     <button class="show-pics-btn" onclick="togglePics(this,'g_sweep')">Show Meeting Pictures</button>
@@ -278,7 +278,7 @@
                     </div>
                 </div>
 
-                <div class="news-item">
+                <div class="news-item" data-date="2026-08-10">
                     <div class="news-date">10th August 2026</div>
                     <div class="news-text">Field Supervision: The District Health Officer (Preventive Services) and the District Superintendent Vaccination (DSV), Chakwal, conducted field visits during the sweep-up activity. They reviewed teams in the field, visited households, and inquired from parents about the vaccination status of their children. Vaccinators were directed to ensure that no child remains unvaccinated.</div>
                     <button class="show-pics-btn" onclick="togglePics(this,'g_field')">Show Meeting Pictures</button>
@@ -299,7 +299,7 @@
                 </div>
 
 
-                <div class="news-item">
+                <div class="news-item" data-date="2026-07-30">
                     <div class="news-date">30th July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Kallar Kahar and Choa Saidan Shah) Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <button class="show-pics-btn" onclick="togglePics(this,'g30')">Show Meeting Pictures</button>
@@ -309,7 +309,7 @@
                         <img src="CSSKK-3.jpeg" loading="lazy" onclick="openImgModal(this.src)">
                     </div>
                 </div>
-                <div class="news-item">
+                <div class="news-item" data-date="2026-07-31">
                     <div class="news-date">31st July 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Talagang) Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <button class="show-pics-btn" onclick="togglePics(this,'g31')">Show Meeting Pictures</button>
@@ -319,7 +319,7 @@
                         <img src="TLG-3.jpeg" loading="lazy" onclick="openImgModal(this.src)">
                     </div>
                 </div>
-                <div class="news-item">
+                <div class="news-item" data-date="2026-08-01">
                     <div class="news-date">1st August 2026</div>
                     <div class="news-text">Monthly Meeting Of EPI Vaccinators (Tehsil Chakwal) Successfully Conducted at CEO Office DHA Chakwal.</div>
                     <button class="show-pics-btn" onclick="togglePics(this,'g1')">Show Meeting Pictures</button>
@@ -1593,7 +1593,18 @@
                 if(meta) meta.textContent = 'Last updated: failed';
             }
         }
-        document.addEventListener('DOMContentLoaded', function(){ loadSweepData(); });
+        function sortNewsList(){
+            const list = document.querySelector('.sidebar .news-list');
+            if(!list) return;
+            const items = Array.prototype.slice.call(list.querySelectorAll('.news-item'));
+            items.sort(function(a,b){
+                const da = a.getAttribute('data-date') || '';
+                const db = b.getAttribute('data-date') || '';
+                return db.localeCompare(da);
+            });
+            items.forEach(function(item){ list.appendChild(item); });
+        }
+        document.addEventListener('DOMContentLoaded', function(){ loadSweepData(); sortNewsList(); });
         setTimeout(loadSweepData, 400);
 
     </script>
