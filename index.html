@@ -377,6 +377,7 @@
                     <div class="sweep-tabs" id="sweepTabs">
                         <button type="button" class="sweep-tab active" id="sweepTabLive" onclick="switchSweepTab('live')">📡 Live / Today</button>
                         <button type="button" class="sweep-tab" id="sweepTabHistory" onclick="switchSweepTab('history')">📅 Day-wise History</button>
+                        <button type="button" class="sweep-tab" id="sweepTabCum" onclick="switchSweepTab('cumulative')">📊 Cumulative (Tehsil)</button>
                     </div>
                     <div class="sweep-date-badge" id="sweepDateBadge">
                         <span class="live-dot" id="sweepLiveDot"></span>
@@ -421,11 +422,11 @@
 
                 <div class="sweep-charts" id="sweepCharts" style="display:none">
                     <div class="sweep-chart-box">
-                        <div class="sweep-chart-title">Antigen-wise Total Doses</div>
+                        <div class="sweep-chart-title" id="sweepChartTitle1">Antigen-wise Total Doses</div>
                         <div class="sweep-chart-wrap"><canvas id="sweepAntigenChart"></canvas></div>
                     </div>
                     <div class="sweep-chart-box">
-                        <div class="sweep-chart-title">UC-wise Partial Children</div>
+                        <div class="sweep-chart-title" id="sweepChartTitle2">UC-wise Partial Children</div>
                         <div class="sweep-chart-wrap"><canvas id="sweepUCChart"></canvas></div>
                     </div>
                 </div>
@@ -1531,17 +1532,18 @@
             window._sweepTab = tab;
             const liveBtn = document.getElementById('sweepTabLive');
             const histBtn = document.getElementById('sweepTabHistory');
+            const cumBtn = document.getElementById('sweepTabCum');
             const histBar = document.getElementById('sweepHistoryBar');
             const liveDot = document.getElementById('sweepLiveDot');
             if(liveBtn) liveBtn.classList.toggle('active', tab === 'live');
             if(histBtn) histBtn.classList.toggle('active', tab === 'history');
+            if(cumBtn) cumBtn.classList.toggle('active', tab === 'cumulative');
             if(histBar) histBar.classList.toggle('active', tab === 'history');
             if(liveDot) liveDot.style.display = (tab === 'live') ? 'inline-block' : 'none';
 
             if(tab === 'live'){
-                // Live = only today's PKT calendar date (empty if no reports yet today)
                 renderSweepForDate(getTodayPKT(), true);
-            } else {
+            } else if(tab === 'history'){
                 const sel = document.getElementById('sweepDateSelect');
                 if(sel && sel.value) renderSweepForDate(sel.value, false);
                 else {
@@ -1551,6 +1553,8 @@
                     if(sel) sel.value = prev;
                     renderSweepForDate(prev, false);
                 }
+            } else if(tab === 'cumulative'){
+                renderSweepCumulative();
             }
         }
 
@@ -1700,6 +1704,11 @@
             if(charts) charts.style.display = 'grid';
             if(meta) meta.textContent = (isLive?'Live':'History')+' · '+formatSweepDate(ymd)+' · '+pack.reportCount+' report(s) · refreshed '+new Date().toLocaleString();
 
+            const title1 = document.getElementById('sweepChartTitle1');
+            const title2 = document.getElementById('sweepChartTitle2');
+            if(title1) title1.textContent = 'Antigen-wise Total Doses';
+            if(title2) title2.textContent = 'UC-wise Partial Children';
+
             // Charts
             setTimeout(function(){
                 if(typeof Chart === 'undefined') return;
@@ -1727,6 +1736,146 @@
                         type:'bar',
                         data:{labels:ucList.map(function(u){return u.uc;}),
                             datasets:[{data:ucList.map(function(u){return u.partial;}), backgroundColor:'#1a8a5c', borderRadius:5, maxBarThickness:30}]},
+                        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+                            scales:{x:{beginAtZero:true,grid:{color:'#eee'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+                    });
+                }
+            }, 80);
+        }
+
+        /** Cumulative view: all days combined, Tehsil-wise only (no UC rows) */
+        function renderSweepCumulative(){
+            window._sweepViewDate = null;
+            const allRows = window._sweepAllRows || [];
+            const today = getTodayPKT();
+
+            // Aggregate by Tehsil
+            const byTehsil = {};
+            let totPartial=0, totBCG=0, totP1=0, totP2=0, totP3=0, totIPV1=0, totMR1=0, totIPV2=0, totMR2=0, totDTP=0, totHPV=0;
+            const submitted = {};
+
+            allRows.forEach(function(vals){
+                const tehsil = (vals[SW_I.tehsil]||'—').trim() || '—';
+                const uc = (vals[SW_I.uc]||'—').trim();
+                const partial = num(vals[SW_I.partial]);
+                const bcg = num(vals[SW_I.bcg]);
+                const p1 = num(vals[SW_I.penta1]);
+                const p2 = num(vals[SW_I.penta2]);
+                const p3 = num(vals[SW_I.penta3]);
+                const ipv1 = num(vals[SW_I.ipv1]);
+                const mr1 = num(vals[SW_I.mr1]);
+                const ipv2 = num(vals[SW_I.ipv2]);
+                const mr2 = num(vals[SW_I.mr2]);
+                const dtp = num(vals[SW_I.dtp]);
+                const hpv = num(vals[SW_I.hpv]);
+
+                if(!byTehsil[tehsil]){
+                    byTehsil[tehsil] = {tehsil:tehsil, n:0, partial:0, bcg:0, p1:0, p2:0, p3:0, ipv1:0, mr1:0, ipv2:0, mr2:0, dtp:0, hpv:0};
+                }
+                const t = byTehsil[tehsil];
+                t.n += 1;
+                t.partial += partial; t.bcg += bcg; t.p1 += p1; t.p2 += p2; t.p3 += p3;
+                t.ipv1 += ipv1; t.mr1 += mr1; t.ipv2 += ipv2; t.mr2 += mr2; t.dtp += dtp; t.hpv += hpv;
+
+                totPartial+=partial; totBCG+=bcg; totP1+=p1; totP2+=p2; totP3+=p3;
+                totIPV1+=ipv1; totMR1+=mr1; totIPV2+=ipv2; totMR2+=mr2; totDTP+=dtp; totHPV+=hpv;
+
+                if(!submitted[tehsil]) submitted[tehsil] = {};
+                if(!submitted[tehsil][uc]) submitted[tehsil][uc] = {n:0, partial:0, bcg:0, p1:0, p2:0, p3:0, mr1:0};
+                const o = submitted[tehsil][uc];
+                o.n += 1; o.partial += partial; o.bcg += bcg; o.p1 += p1; o.p2 += p2; o.p3 += p3; o.mr1 += mr1;
+            });
+            window._sweepSubmitted = submitted;
+
+            // Remaining = UCs that never submitted (all days)
+            const cumUCSet = {};
+            allRows.forEach(function(vals){
+                const uc = (vals[SW_I.uc]||'').trim().toLowerCase();
+                if(uc) cumUCSet[uc] = true;
+            });
+            let pendingCount = 0;
+            FORM_UC_FLAT.forEach(function(uc){
+                if(!cumUCSet[uc.toLowerCase().trim()]) pendingCount++;
+            });
+
+            const setTxt = function(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; };
+            setTxt('swReports', allRows.length);
+            setTxt('swPartial', totPartial.toLocaleString());
+            setTxt('swRemaining', pendingCount);
+
+            const label = document.getElementById('sweepDateLabel');
+            const liveDot = document.getElementById('sweepLiveDot');
+            if(label) label.textContent = 'Cumulative — All days (Tehsil-wise)';
+            if(liveDot) liveDot.style.display = 'none';
+
+            const status = document.getElementById('sweepStatus');
+            const wrap = document.getElementById('sweepTableWrap');
+            const body = document.getElementById('sweepBody');
+            const charts = document.getElementById('sweepCharts');
+            const meta = document.getElementById('sweepMeta');
+            const title1 = document.getElementById('sweepChartTitle1');
+            const title2 = document.getElementById('sweepChartTitle2');
+            if(title1) title1.textContent = 'Antigen-wise Total Doses (Cumulative)';
+            if(title2) title2.textContent = 'Tehsil-wise Partial Children (Cumulative)';
+
+            if(!allRows.length){
+                if(status){ status.style.display='block'; status.className='sweep-empty'; status.textContent = 'Abhi koi cumulative data nahi hai.'; }
+                if(wrap) wrap.style.display='none';
+                if(charts) charts.style.display='none';
+                if(meta) meta.textContent = 'Cumulative · 0 reports';
+                return;
+            }
+
+            // Table: one row per Tehsil (no UC column detail)
+            const tehsilOrder = ['Chakwal','Choa Saidan Shah','Kallar Kahar','Lawa','Talagang'];
+            const ordered = tehsilOrder.filter(function(t){ return byTehsil[t]; })
+                .concat(Object.keys(byTehsil).filter(function(t){ return tehsilOrder.indexOf(t)<0; }).sort());
+
+            if(body){
+                let rowsHtml = ordered.map(function(name){
+                    const t = byTehsil[name];
+                    return '<tr><td colspan="2" style="text-align:left;font-weight:700;color:#0d5c3d">'+name+' <span style="font-weight:500;font-size:11px;color:#888">('+t.n+' reports)</span></td>'
+                        + '<td>'+t.partial.toLocaleString()+'</td><td>'+t.bcg.toLocaleString()+'</td><td>'+t.p1.toLocaleString()+'</td><td>'+t.p2.toLocaleString()+'</td>'
+                        + '<td>'+t.p3.toLocaleString()+'</td><td>'+t.ipv1.toLocaleString()+'</td><td>'+t.mr1.toLocaleString()+'</td>'
+                        + '<td>'+t.ipv2.toLocaleString()+'</td><td>'+t.mr2.toLocaleString()+'</td><td>'+t.dtp.toLocaleString()+'</td><td>'+t.hpv.toLocaleString()+'</td></tr>';
+                }).join('');
+                rowsHtml += '<tr style="font-weight:800;background:#e8f5e9"><td colspan="2">Grand Total (All Days)</td>'
+                    + '<td>'+totPartial.toLocaleString()+'</td><td>'+totBCG.toLocaleString()+'</td><td>'+totP1.toLocaleString()+'</td><td>'+totP2.toLocaleString()+'</td>'
+                    + '<td>'+totP3.toLocaleString()+'</td><td>'+totIPV1.toLocaleString()+'</td><td>'+totMR1.toLocaleString()+'</td>'
+                    + '<td>'+totIPV2.toLocaleString()+'</td><td>'+totMR2.toLocaleString()+'</td><td>'+totDTP.toLocaleString()+'</td><td>'+totHPV.toLocaleString()+'</td></tr>';
+                body.innerHTML = rowsHtml;
+            }
+
+            if(status) status.style.display = 'none';
+            if(wrap) wrap.style.display = 'block';
+            if(charts) charts.style.display = 'grid';
+            if(meta) meta.textContent = 'Cumulative (Tehsil) · '+allRows.length+' report(s) · refreshed '+new Date().toLocaleString();
+
+            setTimeout(function(){
+                if(typeof Chart === 'undefined') return;
+                const antCtx = document.getElementById('sweepAntigenChart');
+                const ucCtx = document.getElementById('sweepUCChart');
+                if(antCtx){
+                    if(sweepAntigenChartObj) sweepAntigenChartObj.destroy();
+                    sweepAntigenChartObj = new Chart(antCtx, {
+                        type:'bar',
+                        data:{
+                            labels:['BCG','Penta-1','Penta-2','Penta-3','IPV-1','MR-1','IPV-2','MR-2','DTP','HPV'],
+                            datasets:[{data:[totBCG,totP1,totP2,totP3,totIPV1,totMR1,totIPV2,totMR2,totDTP,totHPV],
+                                backgroundColor:['#0d5c3d','#1a8a5c','#2e7d32','#43a047','#66bb6a','#26a69a','#00897b','#00838f','#6d4c41','#5e35b1'],
+                                borderRadius:5, maxBarThickness:28}]
+                        },
+                        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+                            scales:{y:{beginAtZero:true,grid:{color:'#eee'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+                    });
+                }
+                if(ucCtx){
+                    const tList = ordered.map(function(name){ return byTehsil[name]; });
+                    if(sweepUCChartObj) sweepUCChartObj.destroy();
+                    sweepUCChartObj = new Chart(ucCtx, {
+                        type:'bar',
+                        data:{labels:tList.map(function(t){return t.tehsil;}),
+                            datasets:[{data:tList.map(function(t){return t.partial;}), backgroundColor:'#1a8a5c', borderRadius:5, maxBarThickness:30}]},
                         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
                             scales:{x:{beginAtZero:true,grid:{color:'#eee'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
                     });
@@ -1798,9 +1947,11 @@
                 window._sweepTab = 'live';
                 const liveBtn = document.getElementById('sweepTabLive');
                 const histBtn = document.getElementById('sweepTabHistory');
+                const cumBtn = document.getElementById('sweepTabCum');
                 const histBar = document.getElementById('sweepHistoryBar');
                 if(liveBtn) liveBtn.classList.add('active');
                 if(histBtn) histBtn.classList.remove('active');
+                if(cumBtn) cumBtn.classList.remove('active');
                 if(histBar) histBar.classList.remove('active');
 
                 renderSweepForDate(getTodayPKT(), true);
