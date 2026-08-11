@@ -247,14 +247,14 @@
         .btn-purple-outline:hover{background:#5e35b1;color:#fff}
 
     
-        .sidebar{transition:width .25s ease,margin .25s ease,opacity .25s ease;position:relative}
-        .sidebar.collapsed{width:0!important;min-width:0;margin:0;padding:0;opacity:0;overflow:hidden;pointer-events:none;border:none;box-shadow:none}
+        .sidebar{transition:none;position:relative;width:340px;flex-shrink:0}
+        .sidebar.collapsed{display:none!important}
         .sidebar-header{display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
         .sidebar-toggle{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
         .sidebar-toggle:hover{background:rgba(255,255,255,.35)}
         .sidebar-toggle span{display:block;width:16px;height:2px;background:#fff;border-radius:1px}
-        .sidebar-open-btn{display:none!important;position:fixed;left:10px;top:120px;z-index:9999;background:#0d5c3d;color:#fff;border:2px solid #fff;width:44px;height:44px;border-radius:10px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
-        .sidebar-open-btn.show{display:flex!important}
+        .sidebar-open-btn{display:none;position:fixed;left:12px;top:140px;z-index:10000;background:#0d5c3d;color:#fff;border:2px solid #fff;width:48px;height:48px;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
+        .sidebar-open-btn.show{display:flex!important;visibility:visible!important;opacity:1!important}
         .sidebar-open-btn span{display:block;width:18px;height:2px;background:#fff;border-radius:1px;pointer-events:none}
         .sidebar-open-btn:hover{background:#09402b}
         .hr-actions{display:flex;flex-wrap:wrap;gap:10px;margin:-8px 0 20px;align-items:center}
@@ -1022,21 +1022,33 @@
 
         
         function toggleEventsSidebar(){
-            const sb = document.getElementById('eventsSidebar');
-            const btn = document.getElementById('sidebarOpenBtn');
+            var sb = document.getElementById('eventsSidebar');
+            var btn = document.getElementById('sidebarOpenBtn');
             if(!sb) return;
-            const willCollapse = !sb.classList.contains('collapsed');
-            if(willCollapse){
-                sb.classList.add('collapsed');
-                if(btn){
-                    btn.classList.add('show');
-                    btn.style.display = 'flex';
-                }
-            } else {
+            var isHidden = sb.classList.contains('collapsed') || sb.style.display === 'none';
+            if(isHidden){
+                // SHOW sidebar
                 sb.classList.remove('collapsed');
+                sb.style.display = '';
+                sb.style.width = '';
+                sb.style.opacity = '';
+                sb.style.pointerEvents = '';
+                sb.style.overflow = '';
+                sb.style.minWidth = '';
+                sb.style.margin = '';
                 if(btn){
                     btn.classList.remove('show');
                     btn.style.display = 'none';
+                }
+            } else {
+                // HIDE sidebar
+                sb.classList.add('collapsed');
+                sb.style.display = 'none';
+                if(btn){
+                    btn.classList.add('show');
+                    btn.style.display = 'flex';
+                    btn.style.visibility = 'visible';
+                    btn.style.opacity = '1';
                 }
             }
         }
