@@ -1610,17 +1610,15 @@
                 o.partial += partial; o.bcg += bcg; o.p1 += p1; o.p2 += p2; o.p3 += p3; o.mr1 += mr1;
             });
 
-            // Remaining = cumulative: any UC that submitted on or before endDate counts as done
-            const cumUCSet = {};
-            (window._sweepAllRows || []).forEach(function(vals){
-                const d = parseSweepDate(vals[SW_I.ts]);
-                if(!d || !endDateYmd || d > endDateYmd) return;
+            // Remaining = daily: only UCs that submitted ON THIS day count as done (resets every day)
+            const dayUCSet = {};
+            rows.forEach(function(vals){
                 const uc = (vals[SW_I.uc]||'').trim().toLowerCase();
-                if(uc) cumUCSet[uc] = true;
+                if(uc) dayUCSet[uc] = true;
             });
             let pendingCount = 0;
             FORM_UC_FLAT.forEach(function(uc){
-                if(!cumUCSet[uc.toLowerCase().trim()]) pendingCount++;
+                if(!dayUCSet[uc.toLowerCase().trim()]) pendingCount++;
             });
 
             return {
