@@ -353,6 +353,7 @@
                 <div class="stat-card" onclick="openStatModal('ucs')"><div class="stat-number">83</div><div class="stat-label">Total UCs</div></div>
                 <div class="stat-card" onclick="openStatModal('vaccinators')"><div class="stat-number">83</div><div class="stat-label">Vaccinators</div></div>
                 <div class="stat-card" onclick="openStatModal('asvs')"><div class="stat-number">7</div><div class="stat-label">ASVs</div></div>
+                <div class="stat-card" onclick="openStatModal('facilities')"><div class="stat-number">92</div><div class="stat-label">Health Facilities</div></div>
             </div>
 
             <div class="section-title">Payment Status For NID Worker</div>
@@ -883,6 +884,112 @@
 
         // COMPLETE HR DATA FROM EXCEL
         const hrData = {"tehsilUCs": {"Chakwal": [{"uc": "Baigal", "population": 18912}, {"uc": "Balkassar", "population": 18860}, {"uc": "Balokassar", "population": 19475}, {"uc": "Bheen", "population": 14667}, {"uc": "Bhikari Kalan", "population": 17426}, {"uc": "Chak Malook", "population": 20602}, {"uc": "Chakumra", "population": 17922}, {"uc": "Chakwal 1", "population": 28971}, {"uc": "Chakwal 2", "population": 29613}, {"uc": "Chakwal 3", "population": 26767}, {"uc": "Chakwal 4", "population": 31107}, {"uc": "Chakwal 5", "population": 57309}, {"uc": "Choa Ganj Ali Shah", "population": 20128}, {"uc": "Dab", "population": 17439}, {"uc": "Dhab Khushal", "population": 20658}, {"uc": "Dhudial", "population": 22764}, {"uc": "Dhumman", "population": 17016}, {"uc": "Dullah", "population": 20084}, {"uc": "Jabairpur", "population": 21017}, {"uc": "Jand", "population": 17731}, {"uc": "Jand Khan Zada", "population": 19811}, {"uc": "Jaswal", "population": 21418}, {"uc": "Kariyalla", "population": 19446}, {"uc": "Karsal", "population": 19117}, {"uc": "Khai", "population": 21721}, {"uc": "Kot Chudhrian", "population": 20140}, {"uc": "Maingon", "population": 16864}, {"uc": "Mangwal", "population": 19112}, {"uc": "Mogla", "population": 15545}, {"uc": "Mulhal Mughlan", "population": 19506}, {"uc": "Mureed", "population": 20810}, {"uc": "Oudherwal", "population": 20819}, {"uc": "Padhshan", "population": 23090}, {"uc": "Saigalabad", "population": 27215}, {"uc": "Saral", "population": 22216}, {"uc": "Thanil Kamal", "population": 17757}, {"uc": "Warwal", "population": 22288}], "Talagang": [{"uc": "Bhillomar", "population": 23421}, {"uc": "Bhudial", "population": 27060}, {"uc": "Bidhar", "population": 23858}, {"uc": "Dhermond", "population": 23551}, {"uc": "Dhoular", "population": 22142}, {"uc": "Dhurnal", "population": 26816}, {"uc": "J.Shah Dilwar", "population": 25706}, {"uc": "Jasial", "population": 17050}, {"uc": "Jhatla", "population": 19585}, {"uc": "Kot Gullah", "population": 23079}, {"uc": "Kot Qazi", "population": 19404}, {"uc": "Kot Sarang", "population": 18603}, {"uc": "Lawa Rural", "population": 20562}, {"uc": "Lawa Urban", "population": 21023}, {"uc": "Leti", "population": 16021}, {"uc": "Malakwal", "population": 22522}, {"uc": "Multan Khurd", "population": 23758}, {"uc": "Nakka Kahoot", "population": 20650}, {"uc": "Niraghi", "population": 17413}, {"uc": "Pichnanad", "population": 22118}, {"uc": "Pira Phatial", "population": 22501}, {"uc": "Sagghar", "population": 22383}, {"uc": "Talagang East U-I", "population": 30263}, {"uc": "Talagang West U-II", "population": 27764}, {"uc": "Talagang U-III", "population": 23735}, {"uc": "Tamman", "population": 23175}, {"uc": "Tehi", "population": 23019}, {"uc": "Thoa Mehram Khan-I", "population": 17982}, {"uc": "Thoa Mehramkhan-II", "population": 18083}], "Kallar Kahar": [{"uc": "Bher Pur", "population": 21070}, {"uc": "Bhoun", "population": 23352}, {"uc": "Buchal Kallan", "population": 18232}, {"uc": "Buchal Khurd", "population": 17612}, {"uc": "Kallar Kahar", "population": 26383}, {"uc": "Khair Pur", "population": 22769}, {"uc": "Miani", "population": 23176}, {"uc": "Munara", "population": 21227}, {"uc": "Noor Pur", "population": 23236}], "Choa Saidan Shah": [{"uc": "Ara", "population": 15359}, {"uc": "Basharat", "population": 22638}, {"uc": "Choa Saiden Shah", "population": 28528}, {"uc": "Dalwal", "population": 25624}, {"uc": "Dandoot", "population": 18854}, {"uc": "Dulmial", "population": 27417}, {"uc": "Lehr Sultan Pur", "population": 20141}, {"uc": "Saloi", "population": 18793}]}, "vaccinators": {"Chakwal": [{"uc": "Baigal", "name": "Riaz Hussain", "mobile": "0333-5412213", "vacant": false}, {"uc": "Balkassar", "name": "Khuram Shahzad", "mobile": "0312-5583110", "vacant": false}, {"uc": "Balokassar", "name": "Saad Ali", "mobile": "0330-1680526", "vacant": false}, {"uc": "Bheen", "name": "Masood Iqbal", "mobile": "0344-5770539", "vacant": false}, {"uc": "Bhikari Kalan", "name": "Tahir Abbas", "mobile": "0330-1680606", "vacant": false}, {"uc": "Chak Malook", "name": "Umar Nawab", "mobile": "0307-9927497", "vacant": false}, {"uc": "Chakumra", "name": "Umer Shehzad", "mobile": "0335-5221400", "vacant": false}, {"uc": "Chakwal 1", "name": "Amjad Hussain", "mobile": "0333-5925931", "vacant": false}, {"uc": "Chakwal 2", "name": "Areeba Israr", "mobile": "0000-0000000", "vacant": false}, {"uc": "Chakwal 3", "name": "Adnan Roshan", "mobile": "0334-8705194", "vacant": false}, {"uc": "Chakwal 4", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Chakwal 5", "name": "Syed Shams Ul Abbas", "mobile": "0333-5774743", "vacant": false}, {"uc": "Choa Ganj Ali Shah", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Dab", "name": "Tajamul Hussain", "mobile": "0333-5621463", "vacant": false}, {"uc": "Dhab Khushal", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Dhudial", "name": "Waleed Shehzad", "mobile": "0337-1420786", "vacant": false}, {"uc": "Dhumman", "name": "Waqas Ali", "mobile": "0344-1509598", "vacant": false}, {"uc": "Dullah", "name": "Tabassum Nazeer", "mobile": "0336-1594161", "vacant": false}, {"uc": "Jabairpur", "name": "Usman Farooq", "mobile": "0345-5966822", "vacant": false}, {"uc": "Jand", "name": "Qaiser Mehmood", "mobile": "0335-6050375", "vacant": false}, {"uc": "Jand Khan Zada", "name": "Syed Shoaib Hussain", "mobile": "0306-5973816", "vacant": false}, {"uc": "Jaswal", "name": "Asad Hanif", "mobile": "0333-1565979", "vacant": false}, {"uc": "Kariyalla", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Karsal", "name": "Sajjad Hussain", "mobile": "0323-5941843", "vacant": false}, {"uc": "Khai", "name": "Islam Sharif", "mobile": "0310-5982108", "vacant": false}, {"uc": "Kot Chudhrian", "name": "Muhammad Rehan", "mobile": "0307-5083435", "vacant": false}, {"uc": "Maingon", "name": "Shahzaib", "mobile": "0334-5124598", "vacant": false}, {"uc": "Mangwal", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Mogla", "name": "Zain Islam", "mobile": "0324-9571388", "vacant": false}, {"uc": "Mulhal Mughlan", "name": "Muhammad Saghir", "mobile": "0313-0564766", "vacant": false}, {"uc": "Mureed", "name": "Yasir Ahmad Khan", "mobile": "0332-5006458", "vacant": false}, {"uc": "Oudherwal", "name": "Arshad Ali Khan", "mobile": "0313-0814554", "vacant": false}, {"uc": "Padhshan", "name": "Anas Farooq", "mobile": "0313-1564521", "vacant": false}, {"uc": "Saigalabad", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Saral", "name": "Abdul Muneeb", "mobile": "0332-5409690", "vacant": false}, {"uc": "Thanil Kamal", "name": "Haroon Ashraf", "mobile": "0335-1527024", "vacant": false}, {"uc": "Warwal", "name": "Nouman Ahmad", "mobile": "0332-8857204", "vacant": false}], "Talagang": [{"uc": "Bhillomar", "name": "Muhammad Abdullah", "mobile": "0315-5944264", "vacant": false}, {"uc": "Bhudial", "name": "Waseem Ud Din", "mobile": "0301-3104021", "vacant": false}, {"uc": "Bidhar", "name": "Muhammad Atif", "mobile": "0302-5114922", "vacant": false}, {"uc": "Dhermond", "name": "Muhammad Saqib", "mobile": "0301-3108960", "vacant": false}, {"uc": "Dhoular", "name": "Akash Rasheed", "mobile": "0311-6847007", "vacant": false}, {"uc": "Dhurnal", "name": "Nafees Ahmad", "mobile": "0313-5943371", "vacant": false}, {"uc": "J.Shah Dilwar", "name": "Asif Iqbal", "mobile": "0306-5588692", "vacant": false}, {"uc": "Jasial", "name": "Faisal Ayub", "mobile": "0301-5230335", "vacant": false}, {"uc": "Jhatla", "name": "Waheed Iqbal", "mobile": "0314-8027705", "vacant": false}, {"uc": "Kot Gullah", "name": "Umiar Khalid", "mobile": "0342-5236302", "vacant": false}, {"uc": "Kot Qazi", "name": "Muhammad Amar Sameem", "mobile": "0302-5469321", "vacant": false}, {"uc": "Kot Sarang", "name": "Muhammad Afzaal", "mobile": "0320-9375321", "vacant": false}, {"uc": "Lawa Rural", "name": "Shahid Iqbal", "mobile": "0305-8978360", "vacant": false}, {"uc": "Lawa Urban", "name": "Muhammad Shabir", "mobile": "0308-5704103", "vacant": false}, {"uc": "Leti", "name": "Muhammad Waqas", "mobile": "0302-5120606", "vacant": false}, {"uc": "Malakwal", "name": "Muhammad Saqlain", "mobile": "0316-5567621", "vacant": false}, {"uc": "Multan Khurd", "name": "Muhammad Sidique", "mobile": "0307-0055841", "vacant": false}, {"uc": "Nakka Kahoot", "name": "Muhammad Ali", "mobile": "0333-0966014", "vacant": false}, {"uc": "Niraghi", "name": "Mohsin Iqbal", "mobile": "0311-5174164", "vacant": false}, {"uc": "Pichnanad", "name": "Saeed Ur Rehman", "mobile": "0331-5972653", "vacant": false}, {"uc": "Pira Phatial", "name": "Amjad Mehmood", "mobile": "0312-3644633", "vacant": false}, {"uc": "Sagghar", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Talagang East U-I", "name": "Ali Zeeshan Akbar", "mobile": "0334-5685093", "vacant": false}, {"uc": "Talagang West U-II", "name": "Nouman Ali", "mobile": "0314-9318684", "vacant": false}, {"uc": "Talagang U-III", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Tamman", "name": "Najeed Ul Zaman", "mobile": "0323-5152294", "vacant": false}, {"uc": "Tehi", "name": "Farhan Shehzad", "mobile": "0345-5881586", "vacant": false}, {"uc": "Thoa Mehram Khan-I", "name": "Khalid Iqbal", "mobile": "0306-5699816", "vacant": false}, {"uc": "Thoa Mehramkhan-II", "name": "Vacant", "mobile": "N/A", "vacant": true}], "Kallar Kahar": [{"uc": "Bher Pur", "name": "Khalil Ur Rehman", "mobile": "0327-5069418", "vacant": false}, {"uc": "Bhoun", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Buchal Kallan", "name": "Prince Kashif Nouman", "mobile": "0313-5418054", "vacant": false}, {"uc": "Buchal Khurd", "name": "Touseef Nouman", "mobile": "0314-9323163", "vacant": false}, {"uc": "Kallar Kahar", "name": "Faheem Razzaq / Faryal Samman", "mobile": "0331-5992128", "vacant": false}, {"uc": "Khair Pur", "name": "Khwair Iftikhar", "mobile": "0306-2260722", "vacant": false}, {"uc": "Miani", "name": "Muhammad Sheraz", "mobile": "0316-8496515", "vacant": false}, {"uc": "Munara", "name": "Azhar Javaid", "mobile": "0336-5848475", "vacant": false}, {"uc": "Noor Pur", "name": "Muhammad Asif", "mobile": "0334-9274110", "vacant": false}], "Choa Saidan Shah": [{"uc": "Ara", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Basharat", "name": "Abdul Basit", "mobile": "0341-5905065", "vacant": false}, {"uc": "Choa Saiden Shah", "name": "Danish Firdous", "mobile": "0346-5868570", "vacant": false}, {"uc": "Dalwal", "name": "Amir Nazir", "mobile": "0332-9874235", "vacant": false}, {"uc": "Dandoot", "name": "Vacant", "mobile": "N/A", "vacant": true}, {"uc": "Dulmial", "name": "Muhammad Ejaz", "mobile": "0343-5541163", "vacant": false}, {"uc": "Lehr Sultan Pur", "name": "Waqar Haider", "mobile": "0343-5541163", "vacant": false}, {"uc": "Saloi", "name": "Vacant", "mobile": "N/A", "vacant": true}]}, "asvs": {"Chakwal": [{"name": "Wajid Maqbool Raja", "mobile": "0342-5354759"}, {"name": "Umer Shahzad", "mobile": "0335-5221400"}], "Talagang": [{"name": "Qazi Muhammad Rashid", "mobile": "0308-7772112"}, {"name": "Abdul Wahid", "mobile": "0333-5781386"}, {"name": "Asif Iqbal", "mobile": "0306-5588692"}], "Kallar Kahar": [{"name": "Zafar Iqbal", "mobile": "0313-6752321"}], "Choa Saidan Shah": [{"name": "Ansar Mehmood", "mobile": "0334-5666948"}]}};
+        
+        // Health Facilities & Coordinates — District Chakwal
+        const healthFacilities = {
+            'Chakwal': [
+                {uc:'Ouderwal', name:'District EPI Store', lat:32.928889, lng:72.807864},
+                {uc:'Ouderwal', name:'EPI Store Tehsil Chakwal', lat:32.928955, lng:72.807905},
+                {uc:'Baigal', name:'RHC Munday', lat:32.994263, lng:72.673607},
+                {uc:'Balkassar', name:'RHC Balkassar', lat:32.941143, lng:72.672726},
+                {uc:'Balkassar', name:'MNHC Dharabi', lat:32.936215, lng:72.536919},
+                {uc:'Balokassar', name:'MNHC Minwal', lat:33.045614, lng:72.845312},
+                {uc:'Balokassar', name:'MNHC Jamalwal', lat:33.069104, lng:72.790981},
+                {uc:'Bheen', name:'MNHC Bheen', lat:32.990109, lng:73.00316},
+                {uc:'Chak Malook', name:'MNHC Chakral', lat:32.921934, lng:72.938527},
+                {uc:'Chak Umra', name:'MNHC Chak Umra', lat:33.004046, lng:72.953736},
+                {uc:'Chakwal Urban-II', name:'Mother & Child Hospital', lat:32.943391, lng:72.858233},
+                {uc:'Chakwal Urban-IV', name:'RFPAP Hospital Chakwal', lat:32.926859, lng:72.856235},
+                {uc:'Chakwal Urban-V', name:'DHQ Hospital Chakwal', lat:32.843142, lng:73.06497},
+                {uc:'Choa Ganj Ali Shah', name:'MNHC Shah Pur', lat:32.843142, lng:73.06497},
+                {uc:'Choa Ganj Ali Shah', name:'MNHC Jandial Faiz Ullah', lat:32.890357, lng:73.093304},
+                {uc:'Dab', name:'MNHC Dab', lat:32.900468, lng:72.88353},
+                {uc:'Dhudial', name:'MNH Dhudial', lat:33.06352, lng:72.968251},
+                {uc:'Dhuman', name:'RHC Dhuman', lat:32.922323, lng:73.072031},
+                {uc:'Dhuman', name:'Saalik Public Clinic', lat:32.913643, lng:73.067738},
+                {uc:'Dullah', name:'RHC Dullah', lat:33.165229, lng:72.679815},
+                {uc:'Jand', name:'MNHC Jand', lat:33.063231, lng:73.133469},
+                {uc:'Mogla', name:'RHC Pir Phulai', lat:33.089634, lng:73.185341},
+                {uc:'Jand Khan Zada', name:'MNHC Nachindi', lat:32.955886, lng:73.138687},
+                {uc:'Jaswal', name:'MNHC Jhatla Jaswal', lat:32.811903, lng:72.976028},
+                {uc:'Jaswal', name:'MNHC Sohawa Dewalian', lat:32.836129, lng:73.000943},
+                {uc:'Karyala', name:'MNHC Karyala', lat:32.851357, lng:72.880289},
+                {uc:'Khai', name:'MNHC Khokhar Zair', lat:32.833668, lng:72.85009},
+                {uc:'Karsal', name:'MNCH Karsal', lat:33.006612, lng:72.597856},
+                {uc:'Kot Chohdrian', name:'MNHC Roopwal', lat:33.041456, lng:72.523476},
+                {uc:'Kot Chohdrian', name:'MNHC Ranjha', lat:33.100723, lng:72.549464},
+                {uc:'Maingan', name:'MNHC Maingan', lat:32.961985, lng:72.74133},
+                {uc:'Mangwal', name:'MNHC Mangwal', lat:33.110717, lng:72.829096},
+                {uc:'Mangwal', name:'RHC 20 Beded Hospital Latifal', lat:33.148776, lng:72.833462},
+                {uc:'Mulhal Mughlan', name:'MNCH Mulhal Mughlan', lat:33.002004, lng:73.151203},
+                {uc:'Mulhal Mughlan', name:'Begum Noor Hospital', lat:33.00844, lng:73.118306},
+                {uc:'Mureed', name:'MNHC Mureed', lat:32.899233, lng:72.75578},
+                {uc:'Ouderwal', name:'GRD Ghazi Abad', lat:32.926312, lng:72.807845},
+                {uc:'Padshan', name:'MNHC Padshan', lat:33.016479, lng:73.030334},
+                {uc:'Saigolabad', name:'MNHC Saigolabad', lat:32.894803, lng:72.989029},
+                {uc:'Saral', name:'MNHC Saral', lat:33.092632, lng:72.918648},
+                {uc:'Warwal', name:'MNHC Neela', lat:33.173434, lng:72.621731},
+                {uc:'Warwal', name:'MNHC Warwal', lat:33.137509, lng:72.52615}
+            ],
+            'Choa Saidan Shah': [
+                {uc:'Choa Saidan Shah', name:'EPI Store Tehsil Choa Saidan Shah', lat:32.717578, lng:72.954},
+                {uc:'Ara', name:'MNHC Ara', lat:32.765856, lng:73.209546},
+                {uc:'Basharat', name:'RHC Basharat', lat:32.783181, lng:73.095157},
+                {uc:'Choa Saidan Shah', name:'THQ Chos Saidan Shah', lat:32.717578, lng:72.954},
+                {uc:'Choa Saidan Shah', name:'Mines Labour Welfare Hospital', lat:32.716632, lng:72.98711},
+                {uc:'Dalwal', name:'MNHC Badshapur', lat:32.711413, lng:72.861919},
+                {uc:'Dulmial', name:'MNHC Dulmial', lat:32.737732, lng:72.919464},
+                {uc:'Lehar Sultan Pur', name:'MNHC Khajula', lat:32.7561, lng:72.9826},
+                {uc:'Lehar Sultan Pur', name:'MNHC Lehar Sultan Pur', lat:32.747452, lng:73.055332},
+                {uc:'Saloi', name:'MNHC Ratucha', lat:32.849759, lng:72.581237}
+            ],
+            'Kallar Kahar': [
+                {uc:'Bherpur', name:'MNHC Bherpur', lat:32.849756, lng:72.581251},
+                {uc:'Kallar Kahar', name:'EPI Store Tehsil Kallar', lat:32.779332, lng:72.713909},
+                {uc:'Bhoun', name:'MNHC Bhoun', lat:32.849844, lng:null},
+                {uc:'Buchal Kallan', name:'RHC Buchal Kalan', lat:32.684064, lng:72.620851},
+                {uc:'Buchal Khurd', name:'MNHC Sardhi', lat:32.686114, lng:72.712756},
+                {uc:'Kallar Kahar', name:'THQ Trauma Center Kallar Kahar', lat:32.779068, lng:72.714276},
+                {uc:'Khairpur', name:'MNCH Khairpur', lat:32.734624, lng:72.789032},
+                {uc:'Miani', name:'MNHC Kahut', lat:32.729747, lng:72.618294},
+                {uc:'Munara', name:'MNHC Munara', lat:32.665061, lng:72.523831},
+                {uc:'Noorpur', name:'MNHC Noorpur', lat:32.662082, lng:72.575909},
+                {uc:'Noorpur', name:'MNHC Sarkalan', lat:32.645864, lng:72.648416}
+            ],
+            'Talagang': [
+                {uc:'Bhillomar', name:'MNHC Chinji', lat:32.71158, lng:72.367819},
+                {uc:'Bhillomar', name:'MNHC Bhilomar', lat:32.725611, lng:72.424708},
+                {uc:'Bhudial', name:'MNHC Bhudial', lat:32.9971, lng:null},
+                {uc:'Bhudial', name:'MNHC Patwali', lat:33.041723, lng:72.17748},
+                {uc:'Bidhar', name:'MNHC Bhidhar', lat:32.880846, lng:72.178261},
+                {uc:'Talagang Urban-I', name:'EPI Store Tehsil Talagang', lat:32.928525, lng:72.416801},
+                {uc:'Dhermond', name:'MNHC Dhermond', lat:32.942369, lng:72.175806},
+                {uc:'Dhoular', name:'MNHC Dhoular', lat:33.044731, lng:72.313299},
+                {uc:'Dhurnal', name:'MNHC Dhurnal', lat:32.808763, lng:72.112297},
+                {uc:'Jasial', name:'MNHC Jasial', lat:32.99459, lng:72.389504},
+                {uc:'Jhatla', name:'RHC Jhatla', lat:32.826165, lng:72.381612},
+                {uc:'Kot Gullah', name:'MNHC Kot Gullah', lat:32.955502, lng:71.910655},
+                {uc:'Kot Qazi', name:'RHC Kot Qazi', lat:32.814611, lng:71.998577},
+                {uc:'Kot Qazi', name:'MNHC Sukka', lat:32.874037, lng:72.026079},
+                {uc:'Kot Sarang', name:'MNHC Kot Sarang', lat:33.043881, lng:72.405193},
+                {uc:'Lawa Rural', name:'MNHC Ghool', lat:32.674931, lng:72.110781},
+                {uc:'Lawa Urban', name:'RHC Lawa', lat:32.696135, lng:71.94569},
+                {uc:'Leti', name:'MNHC Leti', lat:32.913471, lng:72.062136},
+                {uc:'Leti', name:'MNCH Dhok Musaab', lat:32.917758, lng:72.123055},
+                {uc:'Multan Khurd', name:'MNHC Multan Khurd', lat:33.040149, lng:72.007645},
+                {uc:'Nakka Kahoot', name:'MNHC Naka Kahut', lat:32.938367, lng:72.470259},
+                {uc:'Pichnanad', name:'MNHC Pichnand', lat:32.873434, lng:71.999912},
+                {uc:'Pira Phatial', name:'MNHC Pira Phatial', lat:32.86701, lng:72.331024},
+                {uc:'Pira Phatial', name:'MNHC Dhok Hum', lat:32.869203, lng:72.265019},
+                {uc:'Talagang East U-I', name:'City Hospital Talagang', lat:32.928778, lng:72.416792},
+                {uc:'Talagang West U-II', name:'THQ Hospital Talagang', lat:32.914469, lng:null},
+                {uc:'Tamman', name:'RHC Tamman', lat:33.010249, lng:72.116691},
+                {uc:'Tehi', name:'MNHC Tehi', lat:32.96327, lng:72.411639},
+                {uc:'Thoa Mehram Khan-I', name:'MNHC Thoa Mehram Khan', lat:32.763592, lng:72.289602}
+            ]
+        };
+        const HEALTH_FACILITY_COUNT = Object.keys(healthFacilities).reduce(function(s,t){ return s + healthFacilities[t].length; }, 0);
+
         const TEHSILS = ["Chakwal","Choa Saidan Shah","Kallar Kahar","Talagang"];
 
         function toggleTehsil(id){document.getElementById('th-'+id).classList.toggle('open');document.getElementById('tc-'+id).classList.toggle('open')}
@@ -907,7 +1014,23 @@
                 title.textContent='ASVs (7)';
                 TEHSILS.forEach((t,i)=>{const list=hrData.asvs[t]||[];let rows=list.map(a=>`<div class="tehsil-entry-row"><span class="tehsil-entry-name">${a.name}</span><span class="tehsil-entry-value">${a.mobile}</span></div>`).join('');
                     html+=`<div class="tehsil-block"><div class="tehsil-block-header" id="th-a${i}" onclick="toggleTehsil('a${i}')"><span>${t} (${list.length})</span><span class="arrow">&#9656;</span></div><div class="tehsil-block-content" id="tc-a${i}">${rows||'<div style="padding:8px;color:#888">No data</div>'}</div></div>`});
+            }else if(type==='facilities'){
+                title.textContent='Health Facilities ('+HEALTH_FACILITY_COUNT+')';
+                const order = ['Chakwal','Choa Saidan Shah','Kallar Kahar','Talagang'];
+                order.forEach(function(t,i){
+                    const list = healthFacilities[t]||[];
+                    let rows = list.map(function(f){
+                        const sub = '<div class="tehsil-entry-sub">UC: '+f.uc+'</div>';
+                        let mapHtml = '—';
+                        if(f.lat!=null && f.lng!=null && f.lat>30 && f.lat<35 && f.lng>71 && f.lng<74){
+                            mapHtml = '<a href="https://www.google.com/maps?q='+f.lat+','+f.lng+'" target="_blank" rel="noopener" style="color:#0d5c3d;font-weight:600;text-decoration:none">📍 Map</a>';
+                        }
+                        return '<div class="tehsil-entry-row"><span><span class="tehsil-entry-name">'+f.name+'</span>'+sub+'</span><span class="tehsil-entry-value">'+mapHtml+'</span></div>';
+                    }).join('');
+                    html += '<div class="tehsil-block"><div class="tehsil-block-header" id="th-f'+i+'" onclick="toggleTehsil(\'f'+i+'\')"><span>'+t+' ('+list.length+')</span><span class="arrow">&#9656;</span></div><div class="tehsil-block-content" id="tc-f'+i+'">'+rows+'</div></div>';
+                });
             }
+
             body.innerHTML=html;document.getElementById('statModal').classList.add('active');
         }
         function closeStatModal(){document.getElementById('statModal').classList.remove('active')}
@@ -1137,7 +1260,7 @@
 
         function buildSearchIndex(){
             const idx = [
-                {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs', action:'scroll', target:'HR Overview'},
+                {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
                 {type:'section', title:'Urban Sweep-up Activity', desc:'Live reports, graphs, remaining UCs', action:'scroll', target:'Urban Sweep-up'},
                 {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
                 {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
