@@ -246,6 +246,20 @@
         .btn-purple-outline{background:#fff;color:#5e35b1;border:2px solid #5e35b1}
         .btn-purple-outline:hover{background:#5e35b1;color:#fff}
 
+    
+        .sidebar{transition:width .25s ease,margin .25s ease,opacity .25s ease;position:relative}
+        .sidebar.collapsed{width:0!important;min-width:0;margin:0;padding:0;opacity:0;overflow:hidden;pointer-events:none;border:none;box-shadow:none}
+        .sidebar-header{display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
+        .sidebar-toggle{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
+        .sidebar-toggle:hover{background:rgba(255,255,255,.35)}
+        .sidebar-toggle span{display:block;width:16px;height:2px;background:#fff;border-radius:1px}
+        .sidebar-open-btn{display:none;position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:90;background:#0d5c3d;color:#fff;border:none;width:40px;height:40px;border-radius:10px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.2);flex-direction:column;align-items:center;justify-content:center;gap:4px}
+        .sidebar-open-btn.show{display:flex}
+        .sidebar-open-btn span{display:block;width:16px;height:2px;background:#fff;border-radius:1px}
+        .hr-actions{display:flex;flex-wrap:wrap;gap:10px;margin:-8px 0 20px;align-items:center}
+        .btn-download-hr{background:#0d5c3d;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(13,92,61,.2)}
+        .btn-download-hr:hover{background:#09402b}
+
     </style>
 </head>
 <body>
@@ -267,9 +281,17 @@
         <div class="search-results" id="searchResults"></div>
     </div>
 
+    <button type="button" class="sidebar-open-btn" id="sidebarOpenBtn" onclick="toggleEventsSidebar()" title="Show Official Events" aria-label="Show Official Events">
+        <span></span><span></span><span></span>
+    </button>
     <div class="container">
-        <div class="sidebar">
-            <div class="sidebar-header">Official Events &amp; Updates</div>
+        <div class="sidebar" id="eventsSidebar">
+            <div class="sidebar-header">
+                <button type="button" class="sidebar-toggle" onclick="toggleEventsSidebar()" title="Hide panel" aria-label="Hide Official Events">
+                    <span></span><span></span><span></span>
+                </button>
+                Official Events &amp; Updates
+            </div>
             <div class="news-list">
 
                 <div class="news-item" data-date="2026-08-08">
@@ -354,6 +376,9 @@
                 <div class="stat-card" onclick="openStatModal('vaccinators')"><div class="stat-number">83</div><div class="stat-label">Vaccinators</div></div>
                 <div class="stat-card" onclick="openStatModal('asvs')"><div class="stat-number">7</div><div class="stat-label">ASVs</div></div>
                 <div class="stat-card" onclick="openStatModal('facilities')"><div class="stat-number">92</div><div class="stat-label">Health Facilities</div></div>
+            </div>
+            <div class="hr-actions">
+                <button type="button" class="btn-download-hr" onclick="downloadHrExcel()">⬇ Download HR Data (Excel)</button>
             </div>
 
             <div class="section-title">Payment Status For NID Worker</div>
@@ -993,6 +1018,72 @@
         const TEHSILS = ["Chakwal","Choa Saidan Shah","Kallar Kahar","Talagang"];
 
         function toggleTehsil(id){document.getElementById('th-'+id).classList.toggle('open');document.getElementById('tc-'+id).classList.toggle('open')}
+
+        
+        function toggleEventsSidebar(){
+            const sb = document.getElementById('eventsSidebar');
+            const btn = document.getElementById('sidebarOpenBtn');
+            if(!sb) return;
+            sb.classList.toggle('collapsed');
+            if(btn) btn.classList.toggle('show', sb.classList.contains('collapsed'));
+        }
+
+        function downloadHrExcel(){
+            if(typeof XLSX === 'undefined'){
+                alert('Excel library load nahi hui. Page refresh karke dobara try karein.');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+
+            // Tehsils summary
+            const tehsilRows = [['Tehsil','Total UCs','Total Population']];
+            (typeof TEHSILS !== 'undefined' ? TEHSILS : Object.keys((hrData&&hrData.tehsilUCs)||{})).forEach(function(t){
+                const ucs = (hrData.tehsilUCs&&hrData.tehsilUCs[t])||[];
+                const pop = ucs.reduce(function(s,u){ return s+(u.population||0); },0);
+                tehsilRows.push([t, ucs.length, pop]);
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tehsilRows), 'Tehsils');
+
+            // UCs
+            const ucRows = [['Tehsil','Union Council','Population']];
+            Object.keys((hrData&&hrData.tehsilUCs)||{}).forEach(function(t){
+                (hrData.tehsilUCs[t]||[]).forEach(function(u){
+                    ucRows.push([t, u.uc||'', u.population||'']);
+                });
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ucRows), 'UCs');
+
+            // Vaccinators
+            const vacRows = [['Tehsil','Name','UC','Mobile','Status']];
+            Object.keys((hrData&&hrData.vaccinators)||{}).forEach(function(t){
+                (hrData.vaccinators[t]||[]).forEach(function(v){
+                    vacRows.push([t, v.vacant?'Vacant':(v.name||''), v.uc||'', v.mobile||'', v.vacant?'Vacant':'Filled']);
+                });
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vacRows), 'Vaccinators');
+
+            // ASVs
+            const asvRows = [['Tehsil','Name','Mobile']];
+            Object.keys((hrData&&hrData.asvs)||{}).forEach(function(t){
+                (hrData.asvs[t]||[]).forEach(function(a){
+                    asvRows.push([t, a.name||'', a.mobile||'']);
+                });
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(asvRows), 'ASVs');
+
+            // Health Facilities
+            const facRows = [['Tehsil','UC','Health Facility','Latitude','Longitude']];
+            if(typeof healthFacilities !== 'undefined'){
+                Object.keys(healthFacilities).forEach(function(t){
+                    (healthFacilities[t]||[]).forEach(function(f){
+                        facRows.push([t, f.uc||'', f.name||'', f.lat!=null?f.lat:'', f.lng!=null?f.lng:'']);
+                    });
+                });
+            }
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(facRows), 'Health Facilities');
+
+            XLSX.writeFile(wb, 'EPI_Chakwal_HR_Data.xlsx');
+        }
 
         function openStatModal(type){
             const title=document.getElementById('stat-modal-title');
