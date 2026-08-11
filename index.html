@@ -1611,6 +1611,75 @@
             if(btn) btn.classList.add('active');
         }
 
+        
+        function expectedStorageKey(ymd){
+            return 'sweep_expected_ucs_' + (ymd || (typeof getTodayPKT==='function'?getTodayPKT():'default'));
+        }
+        function getExpectedUCs(ymd){
+            try{
+                const raw = localStorage.getItem(expectedStorageKey(ymd));
+                if(!raw) return [];
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            }catch(e){ return []; }
+        }
+        function setExpectedUCs(ymd, list){
+            try{
+                localStorage.setItem(expectedStorageKey(ymd), JSON.stringify(list||[]));
+            }catch(e){}
+        }
+        function normUc(s){ return (s||'').toString().trim().toLowerCase(); }
+        function countRemainingExpected(ymd, submitted){
+            const expected = getExpectedUCs(ymd);
+            if(!expected.length) return 0;
+            const subSet = {};
+            Object.keys(submitted||{}).forEach(function(t){
+                Object.keys(submitted[t]||{}).forEach(function(u){ subSet[normUc(u)] = true; });
+            });
+            let pending = 0;
+            expected.forEach(function(uc){
+                if(!subSet[normUc(uc)]) pending++;
+            });
+            return pending;
+        }
+        function updateSwRemaining(){
+            const ymd = window._sweepViewDate || (typeof getTodayPKT==='function'?getTodayPKT():'');
+            const n = countRemainingExpected(ymd, window._sweepSubmitted || {});
+            const el = document.getElementById('swRemaining');
+            if(el) el.textContent = n;
+            const lab = document.getElementById('expectedCountLabel');
+            if(lab){
+                const exp = getExpectedUCs(ymd);
+                lab.textContent = 'Expected: '+exp.length+' · Remaining: '+n;
+            }
+        }
+        function onExpectedUcChange(){
+            const ymd = window._sweepViewDate || (typeof getTodayPKT==='function'?getTodayPKT():'');
+            const boxes = document.querySelectorAll('.exp-uc-cb');
+            const list = [];
+            boxes.forEach(function(cb){ if(cb.checked) list.push(cb.getAttribute('data-uc')); });
+            setExpectedUCs(ymd, list);
+            updateSwRemaining();
+            // refresh status labels without full re-render if possible
+            if(document.getElementById('sweepDetailPanel') && document.getElementById('sweepDetailPanel').style.display!=='none'){
+                showSweepPanel('remaining');
+            }
+        }
+        function expectedSelectAll(){
+            const ymd = window._sweepViewDate || (typeof getTodayPKT==='function'?getTodayPKT():'');
+            const all = (typeof FORM_UC_FLAT!=='undefined') ? FORM_UC_FLAT.slice() : [];
+            setExpectedUCs(ymd, all);
+            showSweepPanel('remaining');
+            updateSwRemaining();
+        }
+        function expectedClearAll(){
+            const ymd = window._sweepViewDate || (typeof getTodayPKT==='function'?getTodayPKT():'');
+            setExpectedUCs(ymd, []);
+            showSweepPanel('remaining');
+            updateSwRemaining();
+        }
+
+
         function showSweepPanel(mode){
             const panel = document.getElementById('sweepDetailPanel');
             const title = document.getElementById('sweepPanelTitle');
@@ -1672,29 +1741,46 @@
                 }
             }
             else if(mode === 'remaining'){
-                title.innerHTML = 'Remaining Reports — Form Urban UCs' + dateNote;
+                title.innerHTML = 'Remaining Reports — Select expected UCs' + dateNote;
                 title.style.color = '#e65100';
-                let any = false;
-                tehsilOrder.forEach(function(t){
-                    const list = (typeof FORM_URBAN_UCS !== 'undefined' && FORM_URBAN_UCS[t]) ? FORM_URBAN_UCS[t] : [];
-                    const pending = list.filter(function(name){ return name && !subSet[norm(name)]; });
-                    if(pending.length){
-                        any = true;
-                        let rows = pending.map(function(name){
-                            return '<div style="padding:5px 0;border-bottom:1px solid #ffe0b2">⏳ '+name+'</div>';
-                        }).join('');
-                        htmlOut += '<div style="margin-bottom:14px"><div style="background:#fff3e0;padding:8px 12px;border-radius:8px;font-weight:700;color:#e65100;margin-bottom:6px">'+t+' <span style="font-weight:500;font-size:12px">('+pending.length+' pending)</span></div>'+rows+'</div>';
-                    } else if(list.length){
-                        htmlOut += '<div style="margin-bottom:10px"><div style="background:#e8f5e9;padding:8px 12px;border-radius:8px;font-weight:600;color:#2e7d32">'+t+' — All submitted ✓</div></div>';
-                    }
+                const ymd = window._sweepViewDate || (typeof getTodayPKT === 'function' ? getTodayPKT() : '');
+                const expected = getExpectedUCs(ymd);
+                const expSet = {};
+                expected.forEach(function(u){ expSet[norm(u)] = true; });
+
+                htmlOut += '<p style="font-size:12.5px;color:#666;margin-bottom:10px;line-height:1.45">Aaj jin UCs se report expect hai un pe <strong>tick</strong> karein. Remaining sirf selected UCs me se count hoga. Default empty — roz select karein.</p>';
+                htmlOut += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
+                htmlOut += '<button type="button" class="btn btn-sm" style="background:#0d5c3d" onclick="expectedSelectAll()">Select all</button>';
+                htmlOut += '<button type="button" class="btn btn-outline btn-sm" onclick="expectedClearAll()">Clear all</button>';
+                htmlOut += '<span style="font-size:12.5px;color:#e65100;font-weight:700;margin-left:auto" id="expectedCountLabel"></span>';
+                htmlOut += '</div>';
+
+                const order = tehsilOrder.concat(Object.keys(FORM_URBAN_UCS||{}).filter(function(t){ return tehsilOrder.indexOf(t)<0; }));
+                order.forEach(function(t){
+                    const list = (FORM_URBAN_UCS && FORM_URBAN_UCS[t]) ? FORM_URBAN_UCS[t] : [];
+                    if(!list.length) return;
+                    let rows = list.map(function(name){
+                        const n = norm(name);
+                        const checked = expSet[n] ? ' checked' : '';
+                        const done = !!subSet[n];
+                        let status = '';
+                        if(expSet[n] && done) status = '<span style="color:#2e7d32;font-weight:700;font-size:12px">✓ Submitted</span>';
+                        else if(expSet[n] && !done) status = '<span style="color:#e65100;font-weight:700;font-size:12px">⏳ Pending</span>';
+                        else if(done) status = '<span style="color:#888;font-size:12px">Submitted (not expected)</span>';
+                        else status = '<span style="color:#bbb;font-size:12px">—</span>';
+                        return '<label style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">'
+                            + '<input type="checkbox" class="exp-uc-cb" data-uc="'+name.replace(/"/g,'&quot;')+'"'+checked+' onchange="onExpectedUcChange()" style="width:18px;height:18px;accent-color:#0d5c3d">'
+                            + '<span style="flex:1;font-weight:600;color:#333">'+name+'</span>'
+                            + status
+                            + '</label>';
+                    }).join('');
+                    htmlOut += '<div style="margin-bottom:14px"><div style="background:#fff3e0;padding:8px 12px;border-radius:8px;font-weight:700;color:#e65100;margin-bottom:6px">'+t+'</div>'+rows+'</div>';
                 });
-                if(!any){
-                    htmlOut = '<p style="color:#2e7d32;font-weight:600">All Form Urban UCs have submitted reports ✓</p>' + htmlOut;
-                }
             }
 
             body.innerHTML = htmlOut;
             panel.style.display = 'block';
+            if(mode === 'remaining' && typeof updateSwRemaining === 'function') updateSwRemaining();
             panel.scrollIntoView({behavior:'smooth', block:'nearest'});
         }
 
@@ -1862,16 +1948,25 @@
                 o.partial += partial; o.bcg += bcg; o.p1 += p1; o.p2 += p2; o.p3 += p3; o.mr1 += mr1;
             });
 
-            // Remaining = daily: only UCs that submitted ON THIS day count as done (resets every day)
-            const dayUCSet = {};
-            rows.forEach(function(vals){
-                const uc = (vals[SW_I.uc]||'').trim().toLowerCase();
-                if(uc) dayUCSet[uc] = true;
-            });
+            // Remaining = selected expected UCs not yet submitted (checkbox-based)
             let pendingCount = 0;
-            FORM_UC_FLAT.forEach(function(uc){
-                if(!dayUCSet[uc.toLowerCase().trim()]) pendingCount++;
-            });
+            try {
+                const ymdKey = (typeof window !== 'undefined' && window._sweepViewDate) ? window._sweepViewDate : null;
+                // pending counted later via updateSwRemaining; keep compatible field
+                const dayUCSet = {};
+                rows.forEach(function(vals){
+                    const uc = (vals[SW_I.uc]||'').trim().toLowerCase();
+                    if(uc) dayUCSet[uc] = true;
+                });
+                const expected = (typeof getExpectedUCs === 'function') ? getExpectedUCs(ymdKey || (typeof getTodayPKT==='function'?getTodayPKT():'')) : [];
+                if(expected.length){
+                    expected.forEach(function(uc){
+                        if(!dayUCSet[String(uc).toLowerCase().trim()]) pendingCount++;
+                    });
+                } else {
+                    pendingCount = 0;
+                }
+            } catch(e){ pendingCount = 0; }
 
             return {
                 submitted: submitted,
@@ -1892,6 +1987,7 @@
             setTxt('swReports', pack.reportCount);
             setTxt('swPartial', pack.totals.partial.toLocaleString());
             setTxt('swRemaining', pack.pendingCount);
+            if(typeof updateSwRemaining==='function') updateSwRemaining();
 
             // Date badge
             const label = document.getElementById('sweepDateLabel');
@@ -2037,16 +2133,19 @@
             });
             window._sweepSubmitted = submitted;
 
-            // Remaining = UCs that never submitted (all days)
+            // Remaining = expected UCs (today/view) not in cumulative submitted set
             const cumUCSet = {};
             allRows.forEach(function(vals){
                 const uc = (vals[SW_I.uc]||'').trim().toLowerCase();
                 if(uc) cumUCSet[uc] = true;
             });
             let pendingCount = 0;
-            FORM_UC_FLAT.forEach(function(uc){
-                if(!cumUCSet[uc.toLowerCase().trim()]) pendingCount++;
-            });
+            const expectedCum = (typeof getExpectedUCs === 'function') ? getExpectedUCs(typeof getTodayPKT==='function'?getTodayPKT():'') : [];
+            if(expectedCum.length){
+                expectedCum.forEach(function(uc){
+                    if(!cumUCSet[String(uc).toLowerCase().trim()]) pendingCount++;
+                });
+            }
 
             const setTxt = function(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; };
             setTxt('swReports', allRows.length);
