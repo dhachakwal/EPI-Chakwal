@@ -253,9 +253,10 @@
         .sidebar-toggle{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
         .sidebar-toggle:hover{background:rgba(255,255,255,.35)}
         .sidebar-toggle span{display:block;width:16px;height:2px;background:#fff;border-radius:1px}
-        .sidebar-open-btn{display:none;position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:90;background:#0d5c3d;color:#fff;border:none;width:40px;height:40px;border-radius:10px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.2);flex-direction:column;align-items:center;justify-content:center;gap:4px}
-        .sidebar-open-btn.show{display:flex}
-        .sidebar-open-btn span{display:block;width:16px;height:2px;background:#fff;border-radius:1px}
+        .sidebar-open-btn{display:none!important;position:fixed;left:10px;top:120px;z-index:9999;background:#0d5c3d;color:#fff;border:2px solid #fff;width:44px;height:44px;border-radius:10px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
+        .sidebar-open-btn.show{display:flex!important}
+        .sidebar-open-btn span{display:block;width:18px;height:2px;background:#fff;border-radius:1px;pointer-events:none}
+        .sidebar-open-btn:hover{background:#09402b}
         .hr-actions{display:flex;flex-wrap:wrap;gap:10px;margin:-8px 0 20px;align-items:center}
         .btn-download-hr{background:#0d5c3d;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(13,92,61,.2)}
         .btn-download-hr:hover{background:#09402b}
@@ -1024,8 +1025,20 @@
             const sb = document.getElementById('eventsSidebar');
             const btn = document.getElementById('sidebarOpenBtn');
             if(!sb) return;
-            sb.classList.toggle('collapsed');
-            if(btn) btn.classList.toggle('show', sb.classList.contains('collapsed'));
+            const willCollapse = !sb.classList.contains('collapsed');
+            if(willCollapse){
+                sb.classList.add('collapsed');
+                if(btn){
+                    btn.classList.add('show');
+                    btn.style.display = 'flex';
+                }
+            } else {
+                sb.classList.remove('collapsed');
+                if(btn){
+                    btn.classList.remove('show');
+                    btn.style.display = 'none';
+                }
+            }
         }
 
         function downloadHrExcel(){
