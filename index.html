@@ -396,9 +396,12 @@
             
             
             <div id="sweepExportArea">
-            <div class="section-title" id="section-sweep" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div class="section-title" id="section-sweep" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;overflow:visible">
                 <span>Urban Sweep-up Activity</span>
-                <button type="button" class="btn btn-sm" id="btnSweepPdf" onclick="exportSweepPdf()" style="background:#1565c0;flex-shrink:0">📄 Download PDF (HD)</button>
+                <span style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button type="button" id="btnSweepPdf" onclick="exportSweepPdf()" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(21,101,192,.35)">📄 PDF (1 Page)</button>
+                    <button type="button" id="btnSweepPng" onclick="exportSweepPng()" style="background:#2e7d32;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(46,125,50,.35)">🖼 PNG (HD)</button>
+                </span>
             </div>
             <div class="sweep-card">
                 <p style="font-size:14px;color:#444;margin-bottom:12px;line-height:1.55">
@@ -450,6 +453,8 @@
                     <a href="https://docs.google.com/forms/d/e/1FAIpQLSfE7rTRn8VUIgwYRy7lALBjxQRHN4yByn7AnM0Fc8V592T5xg/viewform?usp=header" class="btn btn-sm" target="_blank" rel="noopener">📝 Submit Report</a>
                     <button class="btn btn-outline btn-sm" onclick="loadSweepData()">🔄 Refresh Live Data</button>
                     <a href="https://docs.google.com/spreadsheets/d/11489nODZKMYkxVOlruAAbtUo2dS_H1qaaQol17u88Ks/edit?usp=sharing" class="btn btn-outline btn-sm" target="_blank" rel="noopener">📊 Open Full Sheet</a>
+                    <button type="button" id="btnSweepPdf2" onclick="exportSweepPdf()" style="background:#1565c0;color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer">📄 PDF (1 Page)</button>
+                    <button type="button" id="btnSweepPng2" onclick="exportSweepPng()" style="background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer">🖼 PNG (HD)</button>
                     <span class="sweep-meta" id="sweepMeta">Last updated: —</span>
                 </div>
 
@@ -2130,59 +2135,48 @@
         
         async function exportSweepPdf(){
             const area = document.getElementById('sweepExportArea') || document.querySelector('.sweep-card');
-            const btn = document.getElementById('btnSweepPdf');
+            const btn = document.getElementById('btnSweepPdf') || document.getElementById('btnSweepPdf2');
             if(!area){ alert('Sweep section not found'); return; }
             if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined'){
                 alert('PDF library load nahi hui. Internet check karke page refresh karein.');
                 return;
             }
             const oldText = btn ? btn.textContent : '';
-            if(btn){ btn.disabled = true; btn.textContent = '⏳ Preparing PDF…'; }
+            if(btn){ btn.disabled = true; btn.textContent = '⏳ PDF…'; }
 
-            // Hide PDF buttons during capture
-            const hideEls = area.querySelectorAll('#btnSweepPdf, .sweep-toolbar a, .sweep-toolbar button');
+            const hideEls = area.querySelectorAll('#btnSweepPdf, #btnSweepPdf2, #btnSweepPng, #btnSweepPng2, .sweep-toolbar a, .sweep-toolbar button');
             const prev = [];
-            hideEls.forEach(function(el){
-                prev.push(el.style.visibility);
-                el.style.visibility = 'hidden';
-            });
+            hideEls.forEach(function(el){ prev.push(el.style.visibility); el.style.visibility = 'hidden'; });
 
             try{
-                await new Promise(function(r){ setTimeout(r, 200); });
+                await new Promise(function(r){ setTimeout(r, 250); });
                 const canvas = await html2canvas(area, {
                     scale: 2,
                     useCORS: true,
                     allowTaint: true,
-                    backgroundColor: '#f0f7f4',
+                    backgroundColor: '#ffffff',
                     logging: false,
                     windowWidth: Math.max(area.scrollWidth, 1100)
                 });
 
                 const imgData = canvas.toDataURL('image/png', 1.0);
                 const { jsPDF } = window.jspdf;
+                // Landscape A4 — full section on ONE page
                 const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
                 const pageW = pdf.internal.pageSize.getWidth();
                 const pageH = pdf.internal.pageSize.getHeight();
-                const margin = 8;
+                const margin = 6;
                 const usableW = pageW - margin * 2;
                 const usableH = pageH - margin * 2;
 
-                const imgW = usableW;
-                const imgH = canvas.height * (usableW / canvas.width);
+                // Fit entire image on single page (contain)
+                const ratio = Math.min(usableW / canvas.width, usableH / canvas.height);
+                const imgW = canvas.width * ratio;
+                const imgH = canvas.height * ratio;
+                const x = margin + (usableW - imgW) / 2;
+                const y = margin + (usableH - imgH) / 2;
 
-                let heightLeft = imgH;
-                let position = margin;
-
-                pdf.addImage(imgData, 'PNG', margin, position, imgW, imgH);
-                heightLeft -= usableH;
-
-                while(heightLeft > 5){
-                    position = margin - (imgH - heightLeft);
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', margin, position, imgW, imgH);
-                    heightLeft -= usableH;
-                }
-
+                pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
                 const stamp = new Date().toISOString().slice(0,10);
                 pdf.save('EPI_Chakwal_Urban_Sweepup_'+stamp+'.pdf');
             } catch(err){
@@ -2190,10 +2184,50 @@
                 alert('PDF banane me masla: ' + (err.message || err));
             } finally {
                 hideEls.forEach(function(el,i){ el.style.visibility = prev[i] || ''; });
-                if(btn){ btn.disabled = false; btn.textContent = oldText || '📄 Download PDF (HD)'; }
+                if(btn){ btn.disabled = false; btn.textContent = oldText || '📄 PDF (1 Page)'; }
             }
         }
 
+        async function exportSweepPng(){
+            const area = document.getElementById('sweepExportArea') || document.querySelector('.sweep-card');
+            const btn = document.getElementById('btnSweepPng') || document.getElementById('btnSweepPng2');
+            if(!area){ alert('Sweep section not found'); return; }
+            if(typeof html2canvas === 'undefined'){
+                alert('PNG library load nahi hui. Page refresh karein.');
+                return;
+            }
+            const oldText = btn ? btn.textContent : '';
+            if(btn){ btn.disabled = true; btn.textContent = '⏳ PNG…'; }
+
+            const hideEls = area.querySelectorAll('#btnSweepPdf, #btnSweepPdf2, #btnSweepPng, #btnSweepPng2, .sweep-toolbar a, .sweep-toolbar button');
+            const prev = [];
+            hideEls.forEach(function(el){ prev.push(el.style.visibility); el.style.visibility = 'hidden'; });
+
+            try{
+                await new Promise(function(r){ setTimeout(r, 250); });
+                const canvas = await html2canvas(area, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    windowWidth: Math.max(area.scrollWidth, 1100)
+                });
+                const link = document.createElement('a');
+                const stamp = new Date().toISOString().slice(0,10);
+                link.download = 'EPI_Chakwal_Urban_Sweepup_'+stamp+'.png';
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+            } catch(err){
+                console.error(err);
+                alert('PNG banane me masla: ' + (err.message || err));
+            } finally {
+                hideEls.forEach(function(el,i){ el.style.visibility = prev[i] || ''; });
+                if(btn){ btn.disabled = false; btn.textContent = oldText || '🖼 PNG (HD)'; }
+            }
+        }
+
+        
         async function loadSweepData(){
             const status = document.getElementById('sweepStatus');
             const wrap = document.getElementById('sweepTableWrap');
