@@ -2346,6 +2346,42 @@
             return !v || v==='-' || v==='n/a' || v==='na' || v==='null' || v==='0';
         }
 
+        
+        function emrParseUpdated(c){
+            if(!c) return {raw:'', date:null, hour:null};
+            // Prefer Google Date() serial in v
+            if(typeof c.v === 'string' && c.v.indexOf('Date(')===0){
+                try{
+                    const m = c.v.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+                    if(m){
+                        const dt = new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+                        return {raw: c.f || dt.toLocaleString(), date: dt, hour: dt.getHours(), minute: dt.getMinutes()};
+                    }
+                }catch(e){}
+            }
+            const s = String((c.f != null && c.f !== '') ? c.f : (c.v != null ? c.v : '')).trim();
+            if(!s || s.indexOf('#')>=0) return {raw:s, date:null, hour:null};
+            // formats: M/d/yyyy H:mm:ss or yyyy-mm-dd ...
+            let dt = null;
+            const m1 = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+            if(m1){
+                dt = new Date(+m1[3], +m1[1]-1, +m1[2], +m1[4], +m1[5], +(m1[6]||0));
+            } else {
+                const t = Date.parse(s);
+                if(!isNaN(t)) dt = new Date(t);
+            }
+            if(dt && !isNaN(dt.getTime())){
+                return {raw:s, date:dt, hour:dt.getHours(), minute:dt.getMinutes()};
+            }
+            return {raw:s, date:null, hour:null};
+        }
+        function emrUpdatedObj(row){
+            const v = row[EMR_COLS.updated];
+            if(v && typeof v === 'object' && ('hour' in v || 'date' in v)) return v;
+            return {raw: String(v||''), date:null, hour:null};
+        }
+
+
         async function loadEmrData(){
             const status = document.getElementById('emrStatus');
             const meta = document.getElementById('emrMeta');
@@ -2363,6 +2399,10 @@
                     for(let i=0;i<35;i++){
                         const c = cells[i];
                         if(!c){ out.push(''); continue; }
+                        if(i === EMR_COLS.updated){
+                            out.push(emrParseUpdated(c));
+                            continue;
+                        }
                         let v = (c.f != null && c.f !== '') ? c.f : c.v;
                         if(v == null) v = '';
                         out.push(v);
@@ -2373,8 +2413,8 @@
                 // date warn
                 let badDates = 0;
                 emrRows.forEach(function(r){
-                    const u = emrCell(r, EMR_COLS.updated);
-                    if(!u || u.indexOf('#')>=0) badDates++;
+                    const u = emrUpdatedObj(r);
+                    if(u.hour == null) badDates++;
                 });
                 const warn = document.getElementById('emrDateWarn');
                 if(warn) warn.style.display = (badDates > emrRows.length * 0.5) ? 'block' : 'none';
@@ -2582,9 +2622,35 @@
                 );
             }
             else if(emrMode === 'late'){
-                emrSetStats([{n:'—', l:'Needs valid LastUpdatedDate'}]);
-                emrRenderTable(['Info'],
-                    '<tr><td style="padding:16px;line-height:1.55">Sheet me <strong>LastUpdatedDate</strong> abhi <code>########</code> dikh raha hai (Excel column narrow / format). Column widen karke sahi date-time paste karein, phir Refresh dabayen.<br><br>Us ke baad yahan <strong>after 2:00 PM</strong> aur <strong>after 4:00 PM</strong> entries highlight hongi.</td></tr>'
+                const after2 = [];
+                const after4 = [];
+                let parsed = 0;
+                data.forEach(function(r){
+                    const u = emrUpdatedObj(r);
+                    if(u.hour == null) return;
+                    parsed++;
+                    const mins = (u.hour||0)*60 + (u.minute||0);
+                    if(mins >= 14*60) after2.push(r);
+                    if(mins >= 16*60) after4.push(r);
+                });
+                emrSetStats([
+                    {n:after2.length.toLocaleString(), l:'After 2:00 PM'},
+                    {n:after4.length.toLocaleString(), l:'After 4:00 PM'},
+                    {n:parsed.toLocaleString(), l:'With valid time'},
+                    {n:data.length.toLocaleString(), l:'In filter'}
+                ]);
+                // default show after 2 PM list
+                let i=0;
+                const list = after2;
+                emrRenderTable(['Sr','Time','Tehsil','UC','Child Name','Flag'],
+                    list.slice(0,500).map(function(r){
+                        i++;
+                        const u = emrUpdatedObj(r);
+                        const mins = (u.hour||0)*60 + (u.minute||0);
+                        const flag = mins >= 16*60 ? '<span style="color:#c62828;font-weight:700">After 4 PM</span>' : '<span style="color:#ef6c00;font-weight:700">After 2 PM</span>';
+                        return '<tr><td>'+i+'</td><td>'+(u.raw||'')+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td>'+flag+'</td></tr>';
+                    }).join('') + (list.length>500?'<tr><td colspan="6" style="text-align:center;color:#888">Showing first 500 of '+list.length+'</td></tr>':'')
+                    + (!list.length?'<tr><td colspan="6" style="text-align:center;color:#2e7d32">No entries after 2:00 PM in current filter</td></tr>':'')
                 );
             }
             else if(emrMode === 'dropout'){
