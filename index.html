@@ -264,6 +264,27 @@
         .btn-download-hr{background:#0d5c3d;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(13,92,61,.2)}
         .btn-download-hr:hover{background:#09402b}
 
+    
+        /* EMR Child Immunization */
+        .emr-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 6px 24px rgba(13,92,61,.1);border:1px solid #c8e6c9;margin-bottom:25px}
+        .emr-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:14px;margin-bottom:16px}
+        .emr-filter label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:#555}
+        .emr-filter select,.emr-filter input{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;min-width:130px}
+        .emr-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+        .emr-tab{padding:8px 14px;border-radius:20px;border:2px solid #0d5c3d;background:#fff;color:#0d5c3d;font-size:12.5px;font-weight:600;cursor:pointer}
+        .emr-tab.active{background:#0d5c3d;color:#fff}
+        .emr-stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+        .emr-stat{flex:1;min-width:110px;background:#f0f7f4;border-radius:10px;padding:12px;text-align:center;border-bottom:3px solid #1a8a5c}
+        .emr-stat-n{font-size:22px;font-weight:800;color:#0d5c3d}
+        .emr-stat-l{font-size:11px;color:#666;font-weight:600;margin-top:2px}
+        .emr-table-wrap{overflow-x:auto;border:1px solid #e0e0e0;border-radius:10px;max-height:480px;overflow-y:auto}
+        .emr-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+        .emr-table th{background:#0d5c3d;color:#fff;padding:10px 8px;position:sticky;top:0;z-index:1;text-align:left;white-space:nowrap}
+        .emr-table td{padding:8px;border-bottom:1px solid #eee}
+        .emr-table tr:nth-child(even){background:#f7faf8}
+        .emr-note{font-size:12.5px;color:#666;margin-bottom:10px;line-height:1.45}
+        .emr-warn{background:#fff3e0;border-left:4px solid #ef6c00;padding:10px 12px;border-radius:8px;font-size:13px;color:#e65100;margin-bottom:12px}
+
     </style>
 </head>
 <body>
@@ -495,6 +516,49 @@
                 </div>
             </div>
             </div><!-- /sweepExportArea -->
+
+            
+            <div class="section-title" id="section-emr">Child Immunization (EMR)</div>
+            <div class="emr-card" id="emrCard">
+                <p class="emr-note"><strong>Source:</strong> Google Sheet (EMR OutReach export). Filters + reports PHMIS-style. Data append daily in one sheet.</p>
+                <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
+
+                <div class="emr-filter">
+                    <label>Tehsil
+                        <select id="emrTehsil" onchange="emrOnFilterChange()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Union Council
+                        <select id="emrUC" onchange="emrApply()"><option value="">All UCs</option></select>
+                    </label>
+                    <label>Search (Name / MR / Phone)
+                        <input type="text" id="emrSearch" placeholder="Type to filter…" oninput="emrApply()" style="min-width:160px">
+                    </label>
+                    <button type="button" class="btn btn-sm" onclick="loadEmrData()" style="background:#0d5c3d">🔄 Refresh Data</button>
+                    <a class="btn btn-outline btn-sm" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo/edit?usp=sharing">📊 Open Sheet</a>
+                    <span class="sweep-meta" id="emrMeta">Not loaded</span>
+                </div>
+
+                <div class="emr-tabs" id="emrTabs">
+                    <button type="button" class="emr-tab active" data-emr="uc" onclick="emrSwitch('uc')">1. UC-wise Entries</button>
+                    <button type="button" class="emr-tab" data-emr="tehsil" onclick="emrSwitch('tehsil')">2. Tehsil Summary</button>
+                    <button type="button" class="emr-tab" data-emr="antigen" onclick="emrSwitch('antigen')">3. Antigen Summary</button>
+                    <button type="button" class="emr-tab" data-emr="phone" onclick="emrSwitch('phone')">5. Missing Phone</button>
+                    <button type="button" class="emr-tab" data-emr="father" onclick="emrSwitch('father')">9. Missing Father</button>
+                    <button type="button" class="emr-tab" data-emr="map" onclick="emrSwitch('map')">8. Geo Map Links</button>
+                    <button type="button" class="emr-tab" data-emr="late" onclick="emrSwitch('late')">7. Late Entry</button>
+                    <button type="button" class="emr-tab" data-emr="dropout" onclick="emrSwitch('dropout')">10. Drop-out</button>
+                </div>
+
+                <div class="emr-stats" id="emrStats"></div>
+                <div id="emrStatus" class="sweep-loading">Click Refresh Data to load EMR sheet…</div>
+                <div class="emr-table-wrap" id="emrTableWrap" style="display:none">
+                    <table class="emr-table">
+                        <thead id="emrHead"></thead>
+                        <tbody id="emrBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
 
             <div class="section-title">Official Downloads & Reports</div>
             <div class="download-grid">
@@ -1391,6 +1455,7 @@
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
                 {type:'section', title:'Urban Sweep-up Activity', desc:'Live reports, graphs, remaining UCs', action:'scroll', target:'Urban Sweep-up'},
+                {type:'section', title:'Child Immunization (EMR)', desc:'UC/Tehsil entries, missing phone, antigen, map', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
                 {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
                 {type:'section', title:'Dropout Analysis', desc:'Drop-out rates by tehsil', action:'fn', target:'openDropoutModal'},
@@ -2238,6 +2303,322 @@
             Chart.defaults.devicePixelRatio = Math.max(3, (window.devicePixelRatio || 1) * 2);
             Chart.defaults.font.family = "'Segoe UI', Tahoma, sans-serif";
         }
+
+        
+        // ===== Child Immunization EMR =====
+        const EMR_SHEET_ID = '13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo';
+        const EMR_COLS = {
+            division:0, district:1, tehsil:2, uc:3, mr:4, name:5, father:6, age:7, gender:8,
+            address:9, phone:10, bcg:11, opv0:12, opvI:13, opvII:14, opvIII:15,
+            pentaI:16, pentaII:17, pentaIII:18, pneumoI:19, pneumoII:20, pneumoIII:21,
+            ipv:22, measlesI:23, measlesII:24, hepB:25, rota1:26, rota2:27, ipv2:28,
+            dpt:29, tcv:30, polioId:31, lat:32, lng:33, updated:34
+        };
+        const EMR_ANTIGENS = [
+            ['bcg','BCG'],['opv0','OPV0'],['opvI','OPV-I'],['opvII','OPV-II'],['opvIII','OPV-III'],
+            ['pentaI','Penta-I'],['pentaII','Penta-II'],['pentaIII','Penta-III'],
+            ['pneumoI','Pneumo-I'],['pneumoII','Pneumo-II'],['pneumoIII','Pneumo-III'],
+            ['ipv','IPV'],['measlesI','Measles-I'],['measlesII','Measles-II'],
+            ['hepB','HepB'],['rota1','Rota-1'],['rota2','Rota-2'],['ipv2','IPV-2'],
+            ['dpt','DPT Booster'],['tcv','TCV']
+        ];
+        let emrRows = [];
+        let emrMode = 'uc';
+
+        function emrCell(row, idx){
+            if(!row || idx==null) return '';
+            const c = row[idx];
+            if(c == null) return '';
+            return String(c).trim();
+        }
+        function emrHasDose(val){
+            if(!val) return false;
+            const v = String(val).trim().toLowerCase();
+            if(!v || v==='no' || v==='n/a' || v==='na' || v==='-' || v==='null' || v.indexOf('#')>=0) return false;
+            return true;
+        }
+        function emrPhoneMissing(p){
+            const v = (p||'').replace(/\s/g,'');
+            return !v || v==='0' || v==='null' || v==='undefined' || v.length < 7;
+        }
+        function emrFatherMissing(f){
+            const v = (f||'').trim().toLowerCase();
+            return !v || v==='-' || v==='n/a' || v==='na' || v==='null' || v==='0';
+        }
+
+        async function loadEmrData(){
+            const status = document.getElementById('emrStatus');
+            const meta = document.getElementById('emrMeta');
+            if(status){ status.style.display='block'; status.textContent='Loading EMR data from Google Sheet…'; }
+            try{
+                const url = 'https://docs.google.com/spreadsheets/d/'+EMR_SHEET_ID+'/gviz/tq?tqx=out:json&gid=0';
+                const res = await fetch(url);
+                const text = await res.text();
+                const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
+                if(data.status !== 'ok') throw new Error('Sheet status not ok');
+                const rows = (data.table && data.table.rows) || [];
+                emrRows = rows.map(function(r){
+                    const cells = r.c || [];
+                    const out = [];
+                    for(let i=0;i<35;i++){
+                        const c = cells[i];
+                        if(!c){ out.push(''); continue; }
+                        let v = (c.f != null && c.f !== '') ? c.f : c.v;
+                        if(v == null) v = '';
+                        out.push(v);
+                    }
+                    return out;
+                }).filter(function(r){ return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.uc) || emrCell(r, EMR_COLS.name); });
+
+                // date warn
+                let badDates = 0;
+                emrRows.forEach(function(r){
+                    const u = emrCell(r, EMR_COLS.updated);
+                    if(!u || u.indexOf('#')>=0) badDates++;
+                });
+                const warn = document.getElementById('emrDateWarn');
+                if(warn) warn.style.display = (badDates > emrRows.length * 0.5) ? 'block' : 'none';
+
+                emrFillTehsilUC();
+                emrApply();
+                if(meta) meta.textContent = emrRows.length.toLocaleString() + ' records · refreshed ' + new Date().toLocaleString();
+                if(status) status.style.display='none';
+            }catch(err){
+                console.error(err);
+                if(status){ status.style.display='block'; status.textContent='EMR load failed: '+(err.message||err)+'. Sheet sharing = Anyone with link (Viewer).'; }
+            }
+        }
+
+        function emrFillTehsilUC(){
+            const ts = {};
+            emrRows.forEach(function(r){
+                const t = emrCell(r, EMR_COLS.tehsil);
+                if(t) ts[t]=true;
+            });
+            const sel = document.getElementById('emrTehsil');
+            if(!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">All Tehsils</option>';
+            Object.keys(ts).sort().forEach(function(t){
+                sel.innerHTML += '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+            });
+            if(cur) sel.value = cur;
+            emrOnFilterChange();
+        }
+        function emrOnFilterChange(){
+            const t = (document.getElementById('emrTehsil')||{}).value || '';
+            const ucs = {};
+            emrRows.forEach(function(r){
+                if(t && emrCell(r, EMR_COLS.tehsil) !== t) return;
+                const u = emrCell(r, EMR_COLS.uc);
+                if(u) ucs[u]=true;
+            });
+            const sel = document.getElementById('emrUC');
+            if(!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">All UCs</option>';
+            Object.keys(ucs).sort().forEach(function(u){
+                sel.innerHTML += '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';
+            });
+            if(cur && ucs[cur]) sel.value = cur;
+            emrApply();
+        }
+
+        function emrFiltered(){
+            const t = (document.getElementById('emrTehsil')||{}).value || '';
+            const u = (document.getElementById('emrUC')||{}).value || '';
+            const q = ((document.getElementById('emrSearch')||{}).value || '').toLowerCase().trim();
+            return emrRows.filter(function(r){
+                if(t && emrCell(r, EMR_COLS.tehsil) !== t) return false;
+                if(u && emrCell(r, EMR_COLS.uc) !== u) return false;
+                if(q){
+                    const blob = [emrCell(r,EMR_COLS.name),emrCell(r,EMR_COLS.mr),emrCell(r,EMR_COLS.phone),emrCell(r,EMR_COLS.father)].join(' ').toLowerCase();
+                    if(blob.indexOf(q)<0) return false;
+                }
+                return true;
+            });
+        }
+
+        function emrSwitch(mode){
+            emrMode = mode;
+            document.querySelectorAll('.emr-tab').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-emr')===mode);
+            });
+            emrApply();
+        }
+
+        function emrSetStats(items){
+            const box = document.getElementById('emrStats');
+            if(!box) return;
+            box.innerHTML = items.map(function(it){
+                return '<div class="emr-stat"><div class="emr-stat-n">'+(it.n)+'</div><div class="emr-stat-l">'+(it.l)+'</div></div>';
+            }).join('');
+        }
+
+        function emrRenderTable(headers, rowsHtml){
+            const wrap = document.getElementById('emrTableWrap');
+            const head = document.getElementById('emrHead');
+            const body = document.getElementById('emrBody');
+            if(!wrap||!head||!body) return;
+            head.innerHTML = '<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
+            body.innerHTML = rowsHtml || '<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>';
+            wrap.style.display = 'block';
+        }
+
+        function emrApply(){
+            if(!emrRows.length){
+                const status = document.getElementById('emrStatus');
+                if(status){ status.style.display='block'; status.textContent='No data loaded. Click Refresh Data.'; }
+                return;
+            }
+            const data = emrFiltered();
+            const status = document.getElementById('emrStatus');
+            if(status) status.style.display='none';
+
+            if(emrMode === 'uc'){
+                const map = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil) || '—';
+                    const u = emrCell(r, EMR_COLS.uc) || '—';
+                    const k = t+'||'+u;
+                    if(!map[k]) map[k]={tehsil:t,uc:u,n:0};
+                    map[k].n++;
+                });
+                const list = Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.n-a.n; });
+                emrSetStats([
+                    {n:data.length.toLocaleString(), l:'Total Entries'},
+                    {n:list.length, l:'UC groups'},
+                    {n: new Set(list.map(function(x){return x.tehsil;})).size, l:'Tehsils'}
+                ]);
+                let i=0;
+                emrRenderTable(['Sr','Tehsil','Union Council (UC)','No. of Entries'],
+                    list.map(function(x){ i++; return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.uc+'</td><td><strong>'+x.n+'</strong></td></tr>'; }).join('')
+                );
+            }
+            else if(emrMode === 'tehsil'){
+                const map = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil) || '—';
+                    if(!map[t]) map[t]={n:0,ucs:{}};
+                    map[t].n++;
+                    map[t].ucs[emrCell(r,EMR_COLS.uc)||'—']=1;
+                });
+                const list = Object.keys(map).sort().map(function(t){ return {tehsil:t, n:map[t].n, ucs:Object.keys(map[t].ucs).length}; });
+                emrSetStats([
+                    {n:data.length.toLocaleString(), l:'Total Entries'},
+                    {n:list.length, l:'Tehsils'}
+                ]);
+                let i=0;
+                emrRenderTable(['Sr','Tehsil','UCs with entries','Total Entries'],
+                    list.map(function(x){ i++; return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.ucs+'</td><td><strong>'+x.n+'</strong></td></tr>'; }).join('')
+                );
+            }
+            else if(emrMode === 'antigen'){
+                const counts = {};
+                EMR_ANTIGENS.forEach(function(a){ counts[a[0]]=0; });
+                data.forEach(function(r){
+                    EMR_ANTIGENS.forEach(function(a){
+                        if(emrHasDose(emrCell(r, EMR_COLS[a[0]]))) counts[a[0]]++;
+                    });
+                });
+                emrSetStats([
+                    {n:data.length.toLocaleString(), l:'Children (rows)'},
+                    {n: EMR_ANTIGENS.reduce(function(s,a){return s+counts[a[0]];},0).toLocaleString(), l:'Total doses marked'}
+                ]);
+                emrRenderTable(['Antigen / Vaccine','Records with date (not No)'],
+                    EMR_ANTIGENS.map(function(a){
+                        return '<tr><td><strong>'+a[1]+'</strong></td><td>'+counts[a[0]].toLocaleString()+'</td></tr>';
+                    }).join('')
+                );
+            }
+            else if(emrMode === 'phone'){
+                const miss = data.filter(function(r){ return emrPhoneMissing(emrCell(r, EMR_COLS.phone)); });
+                emrSetStats([
+                    {n:miss.length.toLocaleString(), l:'Missing Phone'},
+                    {n:data.length.toLocaleString(), l:'In filter'},
+                    {n: data.length? Math.round(miss.length*1000/data.length)/10+'%':'—', l:'Share'}
+                ]);
+                let i=0;
+                emrRenderTable(['Sr','Tehsil','UC','Child Name','Father','MR Number'],
+                    miss.slice(0,500).map(function(r){
+                        i++;
+                        return '<tr><td>'+i+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td>'+emrCell(r,EMR_COLS.father)+'</td><td>'+emrCell(r,EMR_COLS.mr)+'</td></tr>';
+                    }).join('') + (miss.length>500?'<tr><td colspan="6" style="text-align:center;color:#888">Showing first 500 of '+miss.length+'</td></tr>':'')
+                );
+            }
+            else if(emrMode === 'father'){
+                const miss = data.filter(function(r){ return emrFatherMissing(emrCell(r, EMR_COLS.father)); });
+                emrSetStats([
+                    {n:miss.length.toLocaleString(), l:'Missing Father Name'},
+                    {n:data.length.toLocaleString(), l:'In filter'}
+                ]);
+                let i=0;
+                emrRenderTable(['Sr','Tehsil','UC','Child Name','Phone','MR Number'],
+                    miss.slice(0,500).map(function(r){
+                        i++;
+                        return '<tr><td>'+i+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td>'+emrCell(r,EMR_COLS.phone)+'</td><td>'+emrCell(r,EMR_COLS.mr)+'</td></tr>';
+                    }).join('')
+                );
+            }
+            else if(emrMode === 'map'){
+                const withCoord = data.filter(function(r){
+                    const lat = parseFloat(emrCell(r, EMR_COLS.lat));
+                    const lng = parseFloat(emrCell(r, EMR_COLS.lng));
+                    return !isNaN(lat) && !isNaN(lng) && lat && lng;
+                });
+                emrSetStats([
+                    {n:withCoord.length.toLocaleString(), l:'With Lat/Long'},
+                    {n:data.length.toLocaleString(), l:'In filter'}
+                ]);
+                let i=0;
+                emrRenderTable(['Sr','Tehsil','UC','Name','Map'],
+                    withCoord.slice(0,300).map(function(r){
+                        i++;
+                        const lat = emrCell(r, EMR_COLS.lat);
+                        const lng = emrCell(r, EMR_COLS.lng);
+                        const link = 'https://www.google.com/maps?q='+encodeURIComponent(lat+','+lng);
+                        return '<tr><td>'+i+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td><a href="'+link+'" target="_blank" rel="noopener">Open Map</a></td></tr>';
+                    }).join('') + (withCoord.length>300?'<tr><td colspan="5" style="text-align:center;color:#888">Showing first 300</td></tr>':'')
+                );
+            }
+            else if(emrMode === 'late'){
+                emrSetStats([{n:'—', l:'Needs valid LastUpdatedDate'}]);
+                emrRenderTable(['Info'],
+                    '<tr><td style="padding:16px;line-height:1.55">Sheet me <strong>LastUpdatedDate</strong> abhi <code>########</code> dikh raha hai (Excel column narrow / format). Column widen karke sahi date-time paste karein, phir Refresh dabayen.<br><br>Us ke baad yahan <strong>after 2:00 PM</strong> aur <strong>after 4:00 PM</strong> entries highlight hongi.</td></tr>'
+                );
+            }
+            else if(emrMode === 'dropout'){
+                // Simple cascade dropouts among filtered rows
+                let p1=0,p3=0,bcg=0,mr1=0;
+                data.forEach(function(r){
+                    if(emrHasDose(emrCell(r,EMR_COLS.pentaI))) p1++;
+                    if(emrHasDose(emrCell(r,EMR_COLS.pentaIII))) p3++;
+                    if(emrHasDose(emrCell(r,EMR_COLS.bcg))) bcg++;
+                    if(emrHasDose(emrCell(r,EMR_COLS.measlesI))) mr1++;
+                });
+                const dP = p1 ? Math.round((p1-p3)*1000/p1)/10 : 0;
+                const dM = bcg ? Math.round((bcg-mr1)*1000/bcg)/10 : 0;
+                emrSetStats([
+                    {n:p1.toLocaleString(), l:'Penta-I'},
+                    {n:p3.toLocaleString(), l:'Penta-III'},
+                    {n:dP+'%', l:'Penta1→3 dropout'},
+                    {n:dM+'%', l:'BCG→MR1 dropout'}
+                ]);
+                emrRenderTable(['Indicator','Value','Note'],
+                    '<tr><td>Penta-I records</td><td><strong>'+p1+'</strong></td><td>Has Penta-I date</td></tr>'+
+                    '<tr><td>Penta-III records</td><td><strong>'+p3+'</strong></td><td>Has Penta-III date</td></tr>'+
+                    '<tr><td>Penta1 → Penta3 dropout</td><td><strong>'+dP+'%</strong></td><td>Simple share among rows in filter (not cohort)</td></tr>'+
+                    '<tr><td>BCG records</td><td><strong>'+bcg+'</strong></td><td></td></tr>'+
+                    '<tr><td>Measles-I records</td><td><strong>'+mr1+'</strong></td><td></td></tr>'+
+                    '<tr><td>BCG → MR1 dropout</td><td><strong>'+dM+'%</strong></td><td>Simple share among rows in filter</td></tr>'
+                );
+            }
+        }
+
+        // auto-load EMR when page ready
+        document.addEventListener('DOMContentLoaded', function(){
+            setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); }, 1200);
+        });
 
         async function captureSweepCanvas(){
             const area = document.getElementById('sweepExportArea') || document.querySelector('.sweep-card');
