@@ -2944,7 +2944,8 @@
                 const nb = tSel ? emrTargetFor(tSel,'newborn') : emrDistrictTarget('newborn');
                 const sv = tSel ? emrTargetFor(tSel,'surviving') : emrDistrictTarget('surviving');
                 const scope = tSel ? ('Tehsil '+tSel) : 'District';
-                let htmlC = '<div style="font-weight:800;color:#0d5c3d;margin:4px 0 8px;font-size:13.5px">Target vs Coverage ('+scope+' · '+emrMonthLabel(ym)+')</div>';
+                const uptoLabel = emrLatestUpdated(emrRows);
+                let htmlC = '<div style="font-weight:800;color:#0d5c3d;margin:4px 0 8px;font-size:13.5px">Target vs Coverage ('+scope+' · '+emrMonthLabel(ym)+' Till '+uptoLabel+')</div>';
                 htmlC += '<div style="font-size:12px;color:#666;margin-bottom:8px">Newborn target (BCG, Hep-B): <strong>'+nb.toLocaleString()+'</strong> · Surviving target (other antigens): <strong>'+sv.toLocaleString()+'</strong></div>';
                 htmlC += '<div class="emr-summary-grid">';
                 EMR_COVERAGE_ANTIGENS.forEach(function(a){
@@ -3387,7 +3388,7 @@
                     if(stats && stats.parentNode) stats.parentNode.insertBefore(cardHost, stats.nextSibling);
                 }
                 // coverage cards district
-                let cards = '<div style="font-weight:700;color:#0d5c3d;margin-bottom:8px">District coverage % ('+emrMonthLabel(ym)+')</div><div class="emr-summary-grid" style="margin-bottom:14px">';
+                let cards = '<div style="font-weight:700;color:#0d5c3d;margin-bottom:8px">District coverage % ('+emrMonthLabel(ym)+' Till '+emrLatestUpdated(emrRows)+')</div><div class="emr-summary-grid" style="margin-bottom:14px">';
                 EMR_COVERAGE_ANTIGENS.forEach(function(a){
                     const ach = dCounts[a.key];
                     const tgt = a.target==='newborn' ? dNb : dSv;
