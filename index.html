@@ -592,7 +592,10 @@
                         <select id="emrUC" onchange="emrApply()"><option value="">All UCs</option></select>
                     </label>
                     <label>Search (Name / MR / Phone)
-                        <input type="text" id="emrSearch" placeholder="Type to filter…" oninput="emrApply()" style="min-width:160px">
+                        <span style="display:flex;gap:6px;align-items:center">
+                            <input type="text" id="emrSearch" placeholder="Name / MR / Phone…" style="min-width:150px" onkeydown="if(event.key==='Enter'){event.preventDefault();emrOpenSearchPopup();}">
+                            <button type="button" class="btn btn-sm" onclick="emrOpenSearchPopup()" style="background:#0d5c3d;padding:8px 12px;white-space:nowrap">🔍 Search</button>
+                        </span>
                     </label>
                     <button type="button" class="btn btn-sm" onclick="loadEmrData()" style="background:#0d5c3d">🔄 Refresh Data</button>
                     <a class="btn btn-outline btn-sm" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo/edit?usp=sharing">📊 Open Sheet</a>
@@ -896,6 +899,20 @@
         </div>
     </div>
 
+    
+    <div class="modal-overlay" id="emrChildModal" onclick="if(event.target===this)closeEmrChildModal()">
+        <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto;text-align:left;padding:20px">
+            <button class="modal-close" onclick="closeEmrChildModal()">&times;</button>
+            <h2 style="color:#0d5c3d;margin:0 0 8px;text-align:center">Child Search Result</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px">
+                <button type="button" class="btn btn-sm" style="background:#1565c0" onclick="emrDownloadSearchPng()">🖼 Download PNG (HD)</button>
+                <button type="button" class="btn btn-sm" style="background:#2e7d32" onclick="emrCopySearchPng()">📋 Copy Image (HD)</button>
+            </div>
+            <div id="emrChildModalStatus" style="text-align:center;font-size:12px;color:#666;margin-bottom:8px"></div>
+            <div id="emrChildModalBody" style="background:#f0f7f4;border-radius:12px;padding:12px"></div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="nidModal" onclick="if(event.target===this)closeNidModal()">
         <div class="modal-box" style="max-width:520px">
             <button class="modal-close" onclick="closeNidModal()">&times;</button>
@@ -904,7 +921,7 @@
                 <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
                 <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
             </select>
-            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="CNIC or Account Number">
+            <input type="text" id="nidSearchQuery" class="nid-search-input" placeholder="CNIC or Account Number" onkeydown="if(event.key==='Enter'){event.preventDefault();performNidSearch();}">
             <button class="btn" style="width:100%" onclick="performNidSearch()">Search Payment Status 🔍</button>
             <div id="nidSearchResult"></div>
         </div>
@@ -1052,7 +1069,14 @@
         </div>
     </div>
 
-    <div class="footer">© 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>Official Dashboard for Internal Use Only</div>
+    <div class="footer">© 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>Official Dashboard for Internal Use Only
+        <div style="margin-top:12px;opacity:.95">
+            <div style="font-size:11px;margin-bottom:6px;opacity:.85">Total Visitors</div>
+            <a href="https://free-hit-counters.net/" target="_blank" rel="noopener">Free-Hit-Counters</a>
+            <script type="text/javascript" src="https://www.freevisitorcounters.com/auth.php?id=ee9857c6c141519e330c45aa1b7dcd5e10470a3d"></script>
+            <script type="text/javascript" src="https://www.freevisitorcounters.com/en/home/counter/1618078/t/10"></script>
+        </div>
+    </div>
 
     <script>
         function togglePics(btn,id){const g=document.getElementById(id);if(g.classList.contains('show')){g.classList.remove('show');btn.textContent='Show Meeting Pictures'}else{g.classList.add('show');btn.textContent='Hide Meeting Pictures'}}
@@ -2744,7 +2768,6 @@
         function emrFiltered(monthOnly){
             const t = (document.getElementById('emrTehsil')||{}).value || '';
             const u = (document.getElementById('emrUC')||{}).value || '';
-            const q = ((document.getElementById('emrSearch')||{}).value || '').toLowerCase().trim();
             const ym = emrGetReportMonth();
             const dayMode = emrPeriodMode() === 'day';
             return emrRows.filter(function(r){
@@ -2757,10 +2780,6 @@
                 }
                 if(t && emrCell(r, EMR_COLS.tehsil) !== t) return false;
                 if(u && emrCell(r, EMR_COLS.uc) !== u) return false;
-                if(q){
-                    const blob = [emrCell(r,EMR_COLS.name),emrCell(r,EMR_COLS.mr),emrCell(r,EMR_COLS.phone),emrCell(r,EMR_COLS.father)].join(' ').toLowerCase();
-                    if(blob.indexOf(q)<0) return false;
-                }
                 return true;
             });
         }
@@ -3108,6 +3127,122 @@
             XLSX.writeFile(wb, 'EPI_Chakwal_EMR_'+emrMode+'_'+stamp+'.xlsx');
         }
 
+        
+        function closeEmrChildModal(){
+            const m = document.getElementById('emrChildModal');
+            if(m) m.classList.remove('active');
+        }
+        function emrBuildChildCardHtml(r){
+            let vax = '';
+            EMR_VAX_ORDER.forEach(function(pair){
+                const key = pair[0], label = pair[1];
+                const raw = emrCell(r, EMR_COLS[key]);
+                const has = emrHasDose(raw);
+                vax += '<div class="emr-vax-item'+(has?'':' no-dose')+'"><div class="emr-vax-name">'+label+'</div><div class="emr-vax-date">'+(has?raw:'No')+'</div></div>';
+            });
+            return '<div class="emr-child-card" style="margin:0">'
+                + '<h4 style="margin-top:0">'+emrCell(r,EMR_COLS.name)+'</h4>'
+                + '<div class="emr-child-meta">'
+                + '<div><span>Father Name:</span> <strong>'+emrCell(r,EMR_COLS.father)+'</strong></div>'
+                + '<div><span>Tehsil:</span> <strong>'+emrCell(r,EMR_COLS.tehsil)+'</strong></div>'
+                + '<div><span>Union Council:</span> <strong>'+emrCell(r,EMR_COLS.uc)+'</strong></div>'
+                + '<div><span>MR Number:</span> <strong>'+emrCell(r,EMR_COLS.mr)+'</strong></div>'
+                + '<div><span>Age:</span> <strong>'+emrCell(r,EMR_COLS.age)+'</strong></div>'
+                + '<div><span>Gender:</span> <strong>'+emrCell(r,EMR_COLS.gender)+'</strong></div>'
+                + '<div><span>Phone Number:</span> <strong>'+emrCell(r,EMR_COLS.phone)+'</strong></div>'
+                + '</div>'
+                + '<div style="font-weight:700;color:#0d5c3d;margin:8px 0 6px;font-size:13px">Vaccination Dates</div>'
+                + '<div class="emr-vax-grid">'+vax+'</div>'
+                + '</div>';
+        }
+        function emrOpenSearchPopup(){
+            if(!emrRows.length){
+                alert('Pehle Refresh Data dabayein.');
+                return;
+            }
+            const q = ((document.getElementById('emrSearch')||{}).value || '').trim();
+            if(q.length < 2){
+                alert('Kam az kam 2 characters likhein (Name / MR / Phone).');
+                return;
+            }
+            const qn = q.toLowerCase();
+            // Search in current period + tehsil/UC filters
+            const base = emrFiltered();
+            const matched = base.filter(function(r){
+                const blob = [emrCell(r,EMR_COLS.name),emrCell(r,EMR_COLS.mr),emrCell(r,EMR_COLS.phone),emrCell(r,EMR_COLS.father)].join(' ').toLowerCase();
+                return blob.indexOf(qn) >= 0;
+            });
+            const body = document.getElementById('emrChildModalBody');
+            const status = document.getElementById('emrChildModalStatus');
+            const modal = document.getElementById('emrChildModal');
+            if(!body || !modal) return;
+            if(!matched.length){
+                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No child matched <strong>'+q.replace(/</g,'')+'</strong> in current period/filters.</div>';
+                if(status) status.textContent = '0 results';
+            } else {
+                const max = Math.min(matched.length, 20);
+                let htmlOut = '';
+                for(let i=0;i<max;i++){
+                    htmlOut += '<div id="emrSearchCard'+i+'" style="margin-bottom:12px">'+emrBuildChildCardHtml(matched[i])+'</div>';
+                }
+                if(matched.length > max){
+                    htmlOut += '<div style="text-align:center;color:#888;font-size:12px">Showing '+max+' of '+matched.length+' — refine search</div>';
+                }
+                body.innerHTML = htmlOut;
+                if(status) status.textContent = matched.length + ' result(s) · Period: ' + emrPeriodLabel();
+            }
+            modal.classList.add('active');
+        }
+        async function emrCaptureSearchCanvas(){
+            if(typeof html2canvas === 'undefined') throw new Error('html2canvas missing');
+            const body = document.getElementById('emrChildModalBody');
+            if(!body) throw new Error('No result body');
+            // Prefer first card only if one result, else whole body
+            const target = body.querySelector('.emr-child-card') ? body : body;
+            return await html2canvas(target, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#f0f7f4',
+                logging: false
+            });
+        }
+        async function emrDownloadSearchPng(){
+            const st = document.getElementById('emrChildModalStatus');
+            try{
+                if(st) st.textContent = 'Preparing HD PNG…';
+                const canvas = await emrCaptureSearchCanvas();
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = 'EPI_Child_Search_'+Date.now()+'.png';
+                a.click();
+                if(st) st.textContent = 'PNG downloaded (HD)';
+            }catch(e){
+                alert('PNG failed: '+(e.message||e));
+            }
+        }
+        async function emrCopySearchPng(){
+            const st = document.getElementById('emrChildModalStatus');
+            try{
+                if(st) st.textContent = 'Copying HD image…';
+                const canvas = await emrCaptureSearchCanvas();
+                const blob = await new Promise(function(res){ canvas.toBlob(res, 'image/png'); });
+                if(navigator.clipboard && window.ClipboardItem){
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    if(st) st.textContent = 'Image copied — paste (Ctrl+V) anywhere';
+                } else {
+                    // fallback download
+                    const a = document.createElement('a');
+                    a.href = canvas.toDataURL('image/png');
+                    a.download = 'EPI_Child_Search_'+Date.now()+'.png';
+                    a.click();
+                    if(st) st.textContent = 'Clipboard not available — PNG downloaded instead';
+                }
+            }catch(e){
+                alert('Copy failed: '+(e.message||e)+'\nTry Download PNG instead.');
+            }
+        }
+
+
         function emrRenderSearchCards(data){
             const box = document.getElementById('emrSearchDetail');
             const q = ((document.getElementById('emrSearch')||{}).value || '').trim();
@@ -3370,7 +3505,8 @@
             }
 
             // Search detail cards
-            emrRenderSearchCards(data);
+            // search results now in popup: emrOpenSearchPopup()
+            // emrRenderSearchCards(data);
 
             if(emrMode === 'uc'){
                 const map = {};
