@@ -20,7 +20,7 @@
         .header .logo-right{width:70px;height:70px;border-radius:8px;object-fit:contain;position:absolute;right:90px;top:50%;transform:translateY(-50%)}
         .header h1{font-size:24px;margin-bottom:4px}
         .header p{font-size:13px;opacity:.9}
-        .container{display:flex;max-width:1200px;margin:25px auto;gap:20px;padding:0 15px}
+        .container{display:flex;max-width:1480px;margin:18px auto;gap:16px;padding:0 12px 0 8px}
         .sidebar{width:340px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.08);overflow:hidden}
         .sidebar-header{background:#0d5c3d;color:#fff;padding:14px;font-size:16px;font-weight:600;text-align:center}
         .news-list{padding:15px}
@@ -256,7 +256,7 @@
         .sidebar-toggle{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
         .sidebar-toggle:hover{background:rgba(255,255,255,.35)}
         .sidebar-toggle span{display:block;width:16px;height:2px;background:#fff;border-radius:1px}
-        .sidebar-open-btn{display:none;position:fixed;left:12px;top:140px;z-index:10000;background:#0d5c3d;color:#fff;border:2px solid #fff;width:48px;height:48px;border-radius:12px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
+        .sidebar-open-btn{display:none;position:fixed;left:6px;top:120px;z-index:10000;background:#0d5c3d;color:#fff;border:2px solid #fff;width:42px;height:42px;border-radius:10px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
         .sidebar-open-btn.show{display:flex!important;visibility:visible!important;opacity:1!important}
         .sidebar-open-btn span{display:block;width:18px;height:2px;background:#fff;border-radius:1px;pointer-events:none}
         .sidebar-open-btn:hover{background:#09402b}
@@ -315,9 +315,31 @@
         .emr-sum-item .l{font-size:11px;font-weight:700;color:#555;margin-top:2px}
         .emr-table tfoot td{background:#e8f5e9;font-weight:800;color:#0d5c3d;border-top:2px solid #0d5c3d;position:sticky;bottom:0}
     
+    
+        .site-lock{position:fixed;inset:0;z-index:200000;background:linear-gradient(135deg,#0d5c3d 0%,#09402b 50%,#0a2e1f 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+        .site-lock-box{background:#fff;border-radius:16px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:center}
+        .site-lock-box h2{color:#0d5c3d;margin:0 0 6px;font-size:20px}
+        .site-lock-box p{color:#666;font-size:13px;margin:0 0 16px}
+        .site-lock-box input{width:100%;padding:12px 14px;border:2px solid #c8e6c9;border-radius:10px;font-size:15px;margin-bottom:12px;box-sizing:border-box}
+        .site-lock-box input:focus{outline:none;border-color:#0d5c3d}
+        .site-lock-box button{width:100%;padding:12px;border:none;border-radius:10px;background:#0d5c3d;color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+        .site-lock-box button:hover{background:#09402b}
+        .site-lock-err{color:#c62828;font-size:13px;min-height:18px;margin-bottom:8px;font-weight:600}
+        body.site-locked{overflow:hidden}
+    
     </style>
 </head>
 <body>
+<div class="site-lock" id="siteLock">
+    <div class="site-lock-box">
+        <h2>EPI District Chakwal</h2>
+        <p>Official dashboard — password required</p>
+        <div class="site-lock-err" id="siteLockErr"></div>
+        <input type="password" id="siteLockInput" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')unlockSite()">
+        <button type="button" onclick="unlockSite()">Unlock Dashboard</button>
+    </div>
+</div>
+
     <div class="admin-bar" id="adminBar">🔓 Admin Mode ON — aap data edit kar sakte hain &nbsp; <button onclick="exitAdmin()" style="margin-left:8px;padding:3px 10px;border:1px solid #e65100;background:#fff;border-radius:4px;cursor:pointer;color:#e65100;font-weight:600">Exit Admin</button></div>
 
     <div class="news-ticker"><div class="ticker-content">★ DQS (Data Quality Self-Assessment) for the 2nd Quarter has been successfully completed &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ TPVIC Round-3 results have been released — details are available in the Downloads section below &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ Tehsil-level Vaccinators' meeting on TPVIC Survey held on Saturday, 8th August at 4:00 PM in every DDHO Office under the supervision of DDHO/ASV &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ New EMR update released — QR Code scanning is now mandatory; all vaccinators have completed the update</div></div>
@@ -336,11 +358,11 @@
         <div class="search-results" id="searchResults"></div>
     </div>
 
-    <button type="button" class="sidebar-open-btn" id="sidebarOpenBtn" onclick="toggleEventsSidebar()" title="Show Official Events" aria-label="Show Official Events">
+    <button type="button" class="sidebar-open-btn show" id="sidebarOpenBtn" style="display:flex" onclick="toggleEventsSidebar()" title="Show Official Events" aria-label="Show Official Events">
         <span></span><span></span><span></span>
     </button>
     <div class="container">
-        <div class="sidebar" id="eventsSidebar">
+        <div class="sidebar collapsed" id="eventsSidebar" style="display:none">
             <div class="sidebar-header">
                 <button type="button" class="sidebar-toggle" onclick="toggleEventsSidebar()" title="Hide panel" aria-label="Hide Official Events">
                     <span></span><span></span><span></span>
@@ -1151,6 +1173,50 @@
         function toggleTehsil(id){document.getElementById('th-'+id).classList.toggle('open');document.getElementById('tc-'+id).classList.toggle('open')}
 
         
+        
+        const SITE_PASSWORD = 'EPI@Chakwal';
+        function unlockSite(){
+            const inp = document.getElementById('siteLockInput');
+            const err = document.getElementById('siteLockErr');
+            const val = (inp && inp.value) ? inp.value.trim() : '';
+            if(val === SITE_PASSWORD){
+                try{ sessionStorage.setItem('epi_chakwal_unlocked','1'); }catch(e){}
+                const lock = document.getElementById('siteLock');
+                if(lock) lock.style.display = 'none';
+                document.body.classList.remove('site-locked');
+                if(err) err.textContent = '';
+            } else {
+                if(err) err.textContent = 'Wrong password. Try again.';
+                if(inp){ inp.value=''; inp.focus(); }
+            }
+        }
+        function checkSiteLock(){
+            let ok = false;
+            try{ ok = sessionStorage.getItem('epi_chakwal_unlocked') === '1'; }catch(e){}
+            const lock = document.getElementById('siteLock');
+            if(ok){
+                if(lock) lock.style.display = 'none';
+                document.body.classList.remove('site-locked');
+            } else {
+                if(lock) lock.style.display = 'flex';
+                document.body.classList.add('site-locked');
+                setTimeout(function(){ const i=document.getElementById('siteLockInput'); if(i) i.focus(); }, 200);
+            }
+        }
+        function collapseEventsSidebarDefault(){
+            var sb = document.getElementById('eventsSidebar');
+            var btn = document.getElementById('sidebarOpenBtn');
+            if(!sb) return;
+            sb.classList.add('collapsed');
+            sb.style.display = 'none';
+            if(btn){
+                btn.classList.add('show');
+                btn.style.display = 'flex';
+                btn.style.visibility = 'visible';
+                btn.style.opacity = '1';
+            }
+        }
+
         function toggleEventsSidebar(){
             var sb = document.getElementById('eventsSidebar');
             var btn = document.getElementById('sidebarOpenBtn');
@@ -3370,6 +3436,7 @@
 
         // auto-load EMR when page ready
         document.addEventListener('DOMContentLoaded', function(){
+            checkSiteLock(); collapseEventsSidebarDefault();
             setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); }, 1200);
         });
 
@@ -3587,7 +3654,7 @@
             });
             items.forEach(function(item){ list.appendChild(item); });
         }
-        document.addEventListener('DOMContentLoaded', function(){ loadSweepData(); sortNewsList(); });
+        document.addEventListener('DOMContentLoaded', function(){ checkSiteLock(); collapseEventsSidebarDefault(); loadSweepData(); sortNewsList(); });
         setTimeout(loadSweepData, 400);
 
         // Auto-clear Live after midnight (PKT): if page left open, re-render when calendar day changes
