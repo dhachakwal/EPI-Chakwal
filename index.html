@@ -302,6 +302,19 @@
         .emr-stat.active-stat{outline:2px solid #0d5c3d;background:#e8f5e9}
         .emr-late-red{color:#c62828;font-weight:800}
     
+    
+        .emr-summary-panel{background:linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 100%);border:1px solid #a5d6a7;border-radius:14px;padding:16px 18px;margin-bottom:16px}
+        .emr-summary-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+        .emr-summary-head h3{margin:0;color:#0d5c3d;font-size:16px}
+        .emr-summary-meta{font-size:12.5px;color:#555}
+        .emr-summary-meta strong{color:#0d5c3d}
+        .emr-summary-scope{font-size:13px;font-weight:700;color:#1565c0;margin-bottom:10px}
+        .emr-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+        .emr-sum-item{background:#fff;border-radius:10px;padding:10px 8px;text-align:center;border-bottom:3px solid #1a8a5c;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .emr-sum-item .n{font-size:18px;font-weight:800;color:#0d5c3d}
+        .emr-sum-item .l{font-size:11px;font-weight:700;color:#555;margin-top:2px}
+        .emr-table tfoot td{background:#e8f5e9;font-weight:800;color:#0d5c3d;border-top:2px solid #0d5c3d;position:sticky;bottom:0}
+    
     </style>
 </head>
 <body>
@@ -553,6 +566,17 @@
                     <button type="button" class="btn btn-sm" onclick="loadEmrData()" style="background:#0d5c3d">🔄 Refresh Data</button>
                     <a class="btn btn-outline btn-sm" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo/edit?usp=sharing">📊 Open Sheet</a>
                     <span class="sweep-meta" id="emrMeta">Not loaded</span>
+                </div>
+
+                <div class="emr-summary-panel" id="emrSummaryPanel">
+                    <div class="emr-summary-head">
+                        <h3>Immunization Summary Panel</h3>
+                        <div class="emr-summary-meta">Data up to: <strong id="emrDataUpto">—</strong></div>
+                    </div>
+                    <div class="emr-summary-scope" id="emrSummaryScope">Scope: District Chakwal (All)</div>
+                    <div class="emr-summary-grid" id="emrSummaryGrid">
+                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                    </div>
                 </div>
 
                 <div class="emr-tabs" id="emrTabs">
@@ -2598,15 +2622,23 @@
             }
         }
 
-        function emrRenderTable(headers, rowsHtml, exportHeaders, exportRows){
+        function emrRenderTable(headers, rowsHtml, exportHeaders, exportRows, totalCells){
             const wrap = document.getElementById('emrTableWrap');
             const head = document.getElementById('emrHead');
             const body = document.getElementById('emrBody');
             if(!wrap||!head||!body) return;
             head.innerHTML = '<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
-            body.innerHTML = rowsHtml || '<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>';
+            let htmlBody = rowsHtml || '<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>';
+            if(totalCells && totalCells.length){
+                htmlBody += '<tr style="background:#e8f5e9">'+totalCells.map(function(c,i){
+                    return '<td style="font-weight:800;color:#0d5c3d;border-top:2px solid #0d5c3d">'+(i===0?'<strong>'+c+'</strong>':c)+'</td>';
+                }).join('')+'</tr>';
+            }
+            body.innerHTML = htmlBody;
             wrap.style.display = 'block';
-            emrLastExport = {headers: exportHeaders || headers, rows: exportRows || []};
+            const expRows = (exportRows || []).slice();
+            if(totalCells && totalCells.length) expRows.push(totalCells);
+            emrLastExport = {headers: exportHeaders || headers, rows: expRows};
         }
 
         function emrDownloadExcel(){
@@ -2677,6 +2709,71 @@
             return Math.round((fromN - toN) * 1000 / fromN) / 10;
         }
 
+        
+        function emrLatestUpdated(rows){
+            let best = null;
+            (rows||[]).forEach(function(r){
+                const u = emrUpdatedObj(r);
+                if(u.date && (!best || u.date > best)) best = u.date;
+            });
+            if(!best) return '—';
+            // 12h format
+            let h = best.getHours(), m = best.getMinutes();
+            const ampm = h>=12?'PM':'AM';
+            h = h%12; if(h===0) h=12;
+            const mm = (m<10?'0':'')+m;
+            return (best.getMonth()+1)+'/'+best.getDate()+'/'+best.getFullYear()+' '+h+':'+mm+' '+ampm;
+        }
+
+        function emrUpdateSummaryPanel(data){
+            const scopeEl = document.getElementById('emrSummaryScope');
+            const grid = document.getElementById('emrSummaryGrid');
+            const upto = document.getElementById('emrDataUpto');
+            if(upto) upto.textContent = emrLatestUpdated(emrRows);
+            const t = (document.getElementById('emrTehsil')||{}).value || '';
+            const u = (document.getElementById('emrUC')||{}).value || '';
+            let scope = 'Scope: District Chakwal (All)';
+            if(t && u) scope = 'Scope: Tehsil '+t+' · UC '+u;
+            else if(t) scope = 'Scope: Tehsil '+t+' (All UCs)';
+            else if(u) scope = 'Scope: UC '+u;
+            if(scopeEl) scopeEl.textContent = scope;
+
+            const rows = data || emrFiltered();
+            if(!grid) return;
+            // total children + antigen counts in VAX order
+            let items = [{n: rows.length.toLocaleString(), l:'Total Entries'}];
+            EMR_VAX_ORDER.forEach(function(pair){
+                const key = pair[0], label = pair[1];
+                let c = 0;
+                rows.forEach(function(r){ if(emrHasDose(emrCell(r, EMR_COLS[key]))) c++; });
+                items.push({n: c.toLocaleString(), l: label});
+            });
+            grid.innerHTML = items.map(function(it){
+                return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+            }).join('');
+        }
+
+        function emrDropoutBlock(rows, title){
+            let bcg=0,p1=0,p3=0,mr1=0,mr2=0;
+            rows.forEach(function(r){
+                if(emrHasDose(emrCell(r,EMR_COLS.bcg))) bcg++;
+                if(emrHasDose(emrCell(r,EMR_COLS.pentaI))) p1++;
+                if(emrHasDose(emrCell(r,EMR_COLS.pentaIII))) p3++;
+                if(emrHasDose(emrCell(r,EMR_COLS.measlesI))) mr1++;
+                if(emrHasDose(emrCell(r,EMR_COLS.measlesII))) mr2++;
+            });
+            return {
+                title: title,
+                bcg:bcg,p1:p1,p3:p3,mr1:mr1,mr2:mr2,
+                d1: emrDropoutPct(bcg,p1),
+                d2: emrDropoutPct(p1,p3),
+                d3: emrDropoutPct(bcg,mr1),
+                d4: emrDropoutPct(p1,mr1),
+                d5: emrDropoutPct(mr1,mr2)
+            };
+        }
+
+
         function emrApply(){
             const chartWrap = document.getElementById('emrChartWrap');
             if(chartWrap) chartWrap.style.display = (emrMode === 'targets') ? 'block' : 'none';
@@ -2689,6 +2786,9 @@
             const data = emrFiltered();
             const status = document.getElementById('emrStatus');
             if(status) status.style.display='none';
+
+            // Summary panel (district / tehsil / UC)
+            emrUpdateSummaryPanel(data);
 
             // Search detail cards
             emrRenderSearchCards(data);
@@ -2710,11 +2810,12 @@
                 ]);
                 const exp = [];
                 let i=0;
+                let sumN = 0;
                 const rowsHtml = list.map(function(x){
-                    i++; exp.push([i,x.tehsil,x.uc,x.n]);
+                    i++; sumN += x.n; exp.push([i,x.tehsil,x.uc,x.n]);
                     return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.uc+'</td><td><strong>'+x.n+'</strong></td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Tehsil','Union Council (UC)','No. of Entries'], rowsHtml, ['Sr','Tehsil','UC','Entries'], exp);
+                emrRenderTable(['Sr','Tehsil','Union Council (UC)','No. of Entries'], rowsHtml, ['Sr','Tehsil','UC','Entries'], exp, ['Total','','',sumN]);
             }
             else if(emrMode === 'tehsil'){
                 const map = {};
@@ -2729,12 +2830,12 @@
                     {n:data.length.toLocaleString(), l:'Total Entries'},
                     {n:list.length, l:'Tehsils'}
                 ]);
-                const exp=[]; let i=0;
+                const exp=[]; let i=0; let sumN=0; let sumUc=0;
                 const rowsHtml = list.map(function(x){
-                    i++; exp.push([i,x.tehsil,x.ucs,x.n]);
+                    i++; sumN+=x.n; sumUc+=x.ucs; exp.push([i,x.tehsil,x.ucs,x.n]);
                     return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.ucs+'</td><td><strong>'+x.n+'</strong></td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Tehsil','UCs with entries','Total Entries'], rowsHtml, ['Sr','Tehsil','UCs','Entries'], exp);
+                emrRenderTable(['Sr','Tehsil','UCs with entries','Total Entries'], rowsHtml, ['Sr','Tehsil','UCs','Entries'], exp, ['Total','',sumUc,sumN]);
             }
             else if(emrMode === 'antigen'){
                 const counts = {};
@@ -2748,12 +2849,13 @@
                     {n:data.length.toLocaleString(), l:'Children (rows)'},
                     {n: EMR_ANTIGENS.reduce(function(s,a){return s+counts[a[0]];},0).toLocaleString(), l:'Total doses marked'}
                 ]);
-                const exp=[];
+                const exp=[]; let sumA=0;
                 const rowsHtml = EMR_ANTIGENS.map(function(a){
+                    sumA += counts[a[0]];
                     exp.push([a[1], counts[a[0]]]);
                     return '<tr><td><strong>'+a[1]+'</strong></td><td>'+counts[a[0]].toLocaleString()+'</td></tr>';
                 }).join('');
-                emrRenderTable(['Antigen / Vaccine','Records with date (not No)'], rowsHtml, ['Antigen','Count'], exp);
+                emrRenderTable(['Antigen / Vaccine','Records with date (not No)'], rowsHtml, ['Antigen','Count'], exp, ['Total doses', sumA]);
             }
             else if(emrMode === 'tehsilAg'){
                 const tehsils = {};
@@ -2776,12 +2878,14 @@
                 const keys = ['bcg','pentaI','pentaIII','measlesI','measlesII','ipv','ipv2','tcv'];
                 const labels = ['Tehsil','BCG','Penta-1','Penta-3','MR-1','MR-2','IPV-1','IPV-2','TCV'];
                 const exp=[];
+                const totals = keys.map(function(){ return 0; });
                 let rowsHtml = tlist.map(function(t){
                     const row = [t].concat(keys.map(function(k){ return tehsils[t][k]; }));
+                    keys.forEach(function(k,i){ totals[i] += tehsils[t][k]; });
                     exp.push(row);
                     return '<tr>'+row.map(function(c,i){ return '<td>'+(i===0?'<strong>'+c+'</strong>':c.toLocaleString())+'</td>'; }).join('')+'</tr>';
                 }).join('');
-                emrRenderTable(labels, rowsHtml, labels, exp);
+                emrRenderTable(labels, rowsHtml, labels, exp, ['Total'].concat(totals));
             }
             else if(emrMode === 'phone'){
                 const miss = data.filter(function(r){ return emrPhoneMissing(emrCell(r, EMR_COLS.phone)); });
@@ -2797,7 +2901,7 @@
                     exp.push(row);
                     return '<tr><td>'+row[0]+'</td><td>'+row[1]+'</td><td>'+row[2]+'</td><td>'+row[3]+'</td><td>'+row[4]+'</td><td>'+row[5]+'</td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Tehsil','UC','Child Name','Father','MR Number'], rowsHtml, ['Sr','Tehsil','UC','Name','Father','MR'], exp);
+                emrRenderTable(['Sr','Tehsil','UC','Child Name','Father','MR Number'], rowsHtml, ['Sr','Tehsil','UC','Name','Father','MR'], exp, ['Total', miss.length+' records','','','','']);
             }
             else if(emrMode === 'father'){
                 const miss = data.filter(function(r){ return emrFatherMissing(emrCell(r, EMR_COLS.father)); });
@@ -2812,7 +2916,7 @@
                     exp.push(row);
                     return '<tr><td>'+row[0]+'</td><td>'+row[1]+'</td><td>'+row[2]+'</td><td>'+row[3]+'</td><td>'+row[4]+'</td><td>'+row[5]+'</td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Tehsil','UC','Child Name','Phone','MR Number'], rowsHtml, ['Sr','Tehsil','UC','Name','Phone','MR'], exp);
+                emrRenderTable(['Sr','Tehsil','UC','Child Name','Phone','MR Number'], rowsHtml, ['Sr','Tehsil','UC','Name','Phone','MR'], exp, ['Total', miss.length+' records','','','','']);
             }
             else if(emrMode === 'map'){
                 const withCoord = data.filter(function(r){
@@ -2833,7 +2937,7 @@
                     exp.push([i, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), lat, lng, link]);
                     return '<tr><td>'+i+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td><a href="'+link+'" target="_blank" rel="noopener">Open Map</a></td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Tehsil','UC','Name','Map'], rowsHtml, ['Sr','Tehsil','UC','Name','Lat','Lng','MapLink'], exp);
+                emrRenderTable(['Sr','Tehsil','UC','Name','Map'], rowsHtml, ['Sr','Tehsil','UC','Name','Lat','Lng','MapLink'], exp, ['Total', withCoord.length+' with GPS','','','']);
             }
             else if(emrMode === 'late'){
                 const after2 = [];
@@ -2874,40 +2978,60 @@
                         : '<span>'+t12+'</span>';
                     return '<tr><td>'+i+'</td><td class="emr-late-red">'+t12+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td class="emr-late-red">'+flag+'</td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Time (12h)','Tehsil','UC','Child Name','Flag'], rowsHtml, ['Sr','Time','Tehsil','UC','Name','Flag'], exp);
+                emrRenderTable(['Sr','Time (12h)','Tehsil','UC','Child Name','Flag'], rowsHtml, ['Sr','Time','Tehsil','UC','Name','Flag'], exp, ['Total', list.length+' late entries','','','','']);
             }
             else if(emrMode === 'dropout'){
-                let bcg=0,p1=0,p3=0,mr1=0,mr2=0;
-                data.forEach(function(r){
-                    if(emrHasDose(emrCell(r,EMR_COLS.bcg))) bcg++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.pentaI))) p1++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.pentaIII))) p3++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.measlesI))) mr1++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.measlesII))) mr2++;
-                });
-                const d1 = emrDropoutPct(bcg, p1);      // BCG to Penta-1
-                const d2 = emrDropoutPct(p1, p3);       // Penta-1 to Penta-3
-                const d3 = emrDropoutPct(bcg, mr1);     // BCG to MR-1
-                const d4 = emrDropoutPct(p1, mr1);      // Penta-1 to MR-1
-                const d5 = emrDropoutPct(mr1, mr2);     // MR-1 to MR-2
+                const tSel = (document.getElementById('emrTehsil')||{}).value || '';
+                const uSel = (document.getElementById('emrUC')||{}).value || '';
+                const headers = ['Level','BCG','Penta-1','Penta-3','MR-1','MR-2','BCG→Penta-1 %','Penta-1→Penta-3 %','BCG→MR-1 %','Penta-1→MR-1 %','MR-1→MR-2 %'];
+                const expRows = [];
+                let blocks = [];
+
+                // District / overall for current filter
+                blocks.push(emrDropoutBlock(data, tSel && uSel ? ('UC: '+uSel) : (tSel ? ('Tehsil: '+tSel) : 'District Chakwal')));
+
+                if(!tSel && !uSel){
+                    // Tehsil-wise breakdown
+                    const byT = {};
+                    data.forEach(function(r){
+                        const t = emrCell(r, EMR_COLS.tehsil) || '—';
+                        if(!byT[t]) byT[t] = [];
+                        byT[t].push(r);
+                    });
+                    Object.keys(byT).sort().forEach(function(t){
+                        blocks.push(emrDropoutBlock(byT[t], 'Tehsil: '+t));
+                    });
+                } else if(tSel && !uSel){
+                    // UC-wise within tehsil
+                    const byU = {};
+                    data.forEach(function(r){
+                        const u = emrCell(r, EMR_COLS.uc) || '—';
+                        if(!byU[u]) byU[u] = [];
+                        byU[u].push(r);
+                    });
+                    Object.keys(byU).sort().forEach(function(u){
+                        blocks.push(emrDropoutBlock(byU[u], 'UC: '+u));
+                    });
+                }
+
                 emrSetStats([
-                    {n:d1+'%', l:'BCG → Penta-1'},
-                    {n:d2+'%', l:'Penta-1 → Penta-3'},
-                    {n:d3+'%', l:'BCG → MR-1'},
-                    {n:d5+'%', l:'MR-1 → MR-2'}
+                    {n: blocks[0].d1+'%', l:'BCG → Penta-1'},
+                    {n: blocks[0].d2+'%', l:'Penta-1 → Penta-3'},
+                    {n: blocks[0].d3+'%', l:'BCG → MR-1'},
+                    {n: blocks[0].d5+'%', l:'MR-1 → MR-2'}
                 ]);
-                const headers = ['Indicator','From (n)','To (n)','Drop-out %','Formula'];
-                const expRows = [
-                    ['BCG to Penta-1', bcg, p1, d1, '(BCG − Penta-1) / BCG × 100'],
-                    ['Penta-1 to Penta-3', p1, p3, d2, '(Penta-1 − Penta-3) / Penta-1 × 100'],
-                    ['BCG to MR-1', bcg, mr1, d3, '(BCG − MR-1) / BCG × 100'],
-                    ['Penta-1 to MR-1', p1, mr1, d4, '(Penta-1 − MR-1) / Penta-1 × 100'],
-                    ['MR-1 to MR-2', mr1, mr2, d5, '(MR-1 − MR-2) / MR-1 × 100']
-                ];
-                const rowsHtml = expRows.map(function(x){
-                    return '<tr><td><strong>'+x[0]+'</strong></td><td>'+x[1]+'</td><td>'+x[2]+'</td><td><strong>'+x[3]+'%</strong></td><td style="font-size:11.5px;color:#666">'+x[4]+'</td></tr>';
+
+                const rowsHtml = blocks.map(function(b){
+                    const row = [b.title, b.bcg, b.p1, b.p3, b.mr1, b.mr2, b.d1, b.d2, b.d3, b.d4, b.d5];
+                    expRows.push(row);
+                    return '<tr>'+row.map(function(c,i){
+                        if(i===0) return '<td><strong>'+c+'</strong></td>';
+                        if(i>=6) return '<td><strong>'+c+'%</strong></td>';
+                        return '<td>'+c+'</td>';
+                    }).join('')+'</tr>';
                 }).join('');
-                emrRenderTable(headers, rowsHtml, headers, expRows);
+                // total = first block (overall for filter) already first row; add formula note row in total
+                emrRenderTable(headers, rowsHtml, headers, expRows, null);
             }
             else if(emrMode === 'targets'){
                 // Achievement proxy: antigen counts per tehsil vs monthly surviving / newborn
