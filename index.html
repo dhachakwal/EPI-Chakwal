@@ -2376,6 +2376,19 @@
             ['dpt','DTP'],['tcv','TCV']
         ];
         // Display order for child card (sheet key + label)
+        
+        const EMR_COVERAGE_ANTIGENS = [
+            {key:'bcg', label:'BCG', target:'newborn'},
+            {key:'hepB', label:'Hep Birth Dose', target:'newborn'},
+            {key:'pentaI', label:'Penta-1', target:'surviving'},
+            {key:'pentaII', label:'Penta-2', target:'surviving'},
+            {key:'pentaIII', label:'Penta-3', target:'surviving'},
+            {key:'ipv', label:'IPV-1', target:'surviving'},
+            {key:'measlesI', label:'MR-1', target:'surviving'},
+            {key:'measlesII', label:'MR-2', target:'surviving'},
+            {key:'dpt', label:'DTP', target:'surviving'}
+        ];
+
         const EMR_VAX_ORDER = [
             ['hepB','Hep Birth Dose'],['bcg','BCG'],['opv0','OPV-0'],['opvI','OPV-1'],
             ['pentaI','Penta-1'],['pneumoI','PCV13-1'],['rota1','Rota-1'],
@@ -2789,6 +2802,31 @@
         }
 
 
+        
+        function emrTargetFor(tehsilName, kind){
+            // kind: newborn | surviving
+            const list = emrTargets || [];
+            const t = list.find(function(x){ return String(x.tehsil||'').trim().toLowerCase() === String(tehsilName||'').trim().toLowerCase(); });
+            if(!t) return 0;
+            return kind === 'newborn' ? (t.monthlyNewborn||0) : (t.monthlySurviving||0);
+        }
+        function emrDistrictTarget(kind){
+            const list = (emrTargets||[]).filter(function(x){ return x.tehsil && String(x.tehsil).trim(); });
+            // prefer explicit total row if empty name was skipped — sum tehsils
+            let s = 0;
+            list.forEach(function(t){ s += kind==='newborn' ? (t.monthlyNewborn||0) : (t.monthlySurviving||0); });
+            return s;
+        }
+        function emrCountAntigenMonth(rows, key, ym){
+            let c = 0;
+            (rows||[]).forEach(function(r){ if(emrHasDoseThisMonth(r, key, ym)) c++; });
+            return c;
+        }
+        function emrCoveragePct(ach, tgt){
+            if(!tgt) return 0;
+            return Math.round(ach * 1000 / tgt) / 10;
+        }
+
         function emrUpdateSummaryPanel(data){
             const scopeEl = document.getElementById('emrSummaryScope');
             const grid = document.getElementById('emrSummaryGrid');
@@ -2826,6 +2864,36 @@
             grid.innerHTML = items.map(function(it){
                 return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
+
+            // Coverage vs target strip (district / selected tehsil)
+            let covHost = document.getElementById('emrCoverageStrip');
+            if(!covHost && grid.parentNode){
+                covHost = document.createElement('div');
+                covHost.id = 'emrCoverageStrip';
+                covHost.style.marginTop = '14px';
+                grid.parentNode.appendChild(covHost);
+            }
+            if(covHost){
+                const tSel = (document.getElementById('emrTehsil')||{}).value || '';
+                const nb = tSel ? emrTargetFor(tSel,'newborn') : emrDistrictTarget('newborn');
+                const sv = tSel ? emrTargetFor(tSel,'surviving') : emrDistrictTarget('surviving');
+                const scope = tSel ? ('Tehsil '+tSel) : 'District';
+                let htmlC = '<div style="font-weight:800;color:#0d5c3d;margin:4px 0 8px;font-size:13.5px">Target vs Coverage ('+scope+' · '+emrMonthLabel(ym)+')</div>';
+                htmlC += '<div style="font-size:12px;color:#666;margin-bottom:8px">Newborn target (BCG, Hep-B): <strong>'+nb.toLocaleString()+'</strong> · Surviving target (other antigens): <strong>'+sv.toLocaleString()+'</strong></div>';
+                htmlC += '<div class="emr-summary-grid">';
+                EMR_COVERAGE_ANTIGENS.forEach(function(a){
+                    const ach = emrCountAntigenMonth(rows, a.key, ym);
+                    const tgt = a.target==='newborn' ? nb : sv;
+                    const pct = emrCoveragePct(ach, tgt);
+                    htmlC += '<div class="emr-sum-item" style="border-bottom-color:'+(pct>=80?'#2e7d32':(pct>=50?'#f9a825':'#e65100'))+'">'
+                        + '<div class="n">'+pct+'%</div>'
+                        + '<div class="l">'+a.label+'</div>'
+                        + '<div style="font-size:10px;color:#888;margin-top:2px">'+ach+' / '+tgt+'</div>'
+                        + '</div>';
+                });
+                htmlC += '</div>';
+                covHost.innerHTML = htmlC;
+            }
         }
 
         function emrDropoutBlock(rows, title){
@@ -2867,7 +2935,7 @@
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
             const extra = document.getElementById('emrExtraVisual');
-            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg'){
+            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets'){
                 extra.style.display = 'none';
                 extra.innerHTML = '';
             }
@@ -3172,67 +3240,132 @@
                 emrRenderTable(headers, rowsHtml, headers, expRows, null);
             }
             else if(emrMode === 'targets'){
-                // Achievement proxy: antigen counts per tehsil vs monthly surviving / newborn
-                const byT = {};
+                const ym = emrGetReportMonth();
+                // Full data for month (already month-filtered in emrFiltered)
+                const headers = ['Tehsil','Target Type','Monthly Target','BCG','Hep-B','Penta-1','Penta-2','Penta-3','IPV-1','MR-1','MR-2','DTP','BCG %','Hep-B %','Penta-1 %','Penta-3 %','MR-1 %'];
+                // Build tehsil list from targets sheet
+                const tlist = (emrTargets||[]).map(function(x){ return x.tehsil; }).filter(Boolean);
+                // also include tehsils present in data
                 data.forEach(function(r){
-                    const t = emrCell(r, EMR_COLS.tehsil) || '';
-                    if(!t) return;
-                    if(!byT[t]) byT[t] = {rows:0, bcg:0, pentaI:0, pentaIII:0, measlesI:0, dpt:0};
-                    byT[t].rows++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.bcg))) byT[t].bcg++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.pentaI))) byT[t].pentaI++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.pentaIII))) byT[t].pentaIII++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.measlesI))) byT[t].measlesI++;
-                    if(emrHasDose(emrCell(r,EMR_COLS.dpt))) byT[t].dpt++;
+                    const t = emrCell(r, EMR_COLS.tehsil);
+                    if(t && tlist.indexOf(t)<0) tlist.push(t);
                 });
-                const headers = ['Tehsil','Monthly Newborn Target','Monthly Surviving Target','BCG (data)','Penta-1','Penta-3','MR-1','BCG % of Surv. Monthly','Yearly Surviving Target'];
-                const exp=[];
-                const labels=[], targetArr=[], bcgArr=[];
-                const rowsHtml = (emrTargets.length ? emrTargets : Object.keys(byT).map(function(t){ return {tehsil:t}; })).map(function(tg){
-                    const t = tg.tehsil;
-                    const a = byT[t] || {rows:0,bcg:0,pentaI:0,pentaIII:0,measlesI:0,dpt:0};
-                    const mSur = tg.monthlySurviving || 0;
-                    const mNb = tg.monthlyNewborn || 0;
-                    const ySur = tg.yearlySurviving || 0;
-                    const pct = mSur ? Math.round(a.bcg * 1000 / mSur) / 10 : 0;
-                    const row = [t, mNb, mSur, a.bcg, a.pentaI, a.pentaIII, a.measlesI, pct, ySur];
-                    exp.push(row);
-                    if(t && mSur){
-                        labels.push(t);
-                        targetArr.push(mSur);
-                        bcgArr.push(a.bcg);
-                    }
-                    return '<tr><td><strong>'+t+'</strong></td><td>'+mNb.toLocaleString()+'</td><td>'+mSur.toLocaleString()+'</td><td>'+a.bcg+'</td><td>'+a.pentaI+'</td><td>'+a.pentaIII+'</td><td>'+a.measlesI+'</td><td><strong>'+pct+'%</strong></td><td>'+ySur.toLocaleString()+'</td></tr>';
-                }).join('');
-                emrSetStats([
-                    {n:emrTargets.length, l:'Tehsils (targets)'},
-                    {n:data.length.toLocaleString(), l:'EMR rows in filter'}
-                ]);
-                emrRenderTable(headers, rowsHtml, headers, exp);
+                tlist.sort();
 
-                // Chart
+                const exp = [];
+                let rowsHtml = '';
+                // District total first
+                const dNb = emrDistrictTarget('newborn');
+                const dSv = emrDistrictTarget('surviving');
+                function countsFor(rows){
+                    const o = {};
+                    EMR_COVERAGE_ANTIGENS.forEach(function(a){ o[a.key] = emrCountAntigenMonth(rows, a.key, ym); });
+                    return o;
+                }
+                const dCounts = countsFor(data);
+                function pctRow(counts, nb, sv){
+                    return EMR_COVERAGE_ANTIGENS.map(function(a){
+                        const tgt = a.target==='newborn' ? nb : sv;
+                        return emrCoveragePct(counts[a.key], tgt);
+                    });
+                }
+                function rowHtml(label, nb, sv, counts){
+                    const ach = EMR_COVERAGE_ANTIGENS.map(function(a){ return counts[a.key]; });
+                    const pcts = pctRow(counts, nb, sv);
+                    // compact table columns
+                    const cells = [label, 'NB '+nb.toLocaleString()+' / SV '+sv.toLocaleString(), nb, 
+                        counts.bcg, counts.hepB, counts.pentaI, counts.pentaII, counts.pentaIII, counts.ipv, counts.measlesI, counts.measlesII, counts.dpt,
+                        pcts[0]+'%', pcts[1]+'%', pcts[2]+'%', pcts[4]+'%', pcts[6]+'%'];
+                    exp.push(cells);
+                    return '<tr>'+cells.map(function(c,i){ return '<td>'+(i===0?'<strong>'+c+'</strong>':c)+'</td>'; }).join('')+'</tr>';
+                }
+                // Simpler dedicated table
+                const h2 = ['Tehsil','Monthly Newborn','Monthly Surviving','BCG','Hep-B','Penta-1','Penta-2','Penta-3','IPV-1','MR-1','MR-2','DTP','BCG %','Hep-B %','Penta-1 %','Penta-2 %','Penta-3 %','IPV-1 %','MR-1 %','MR-2 %','DTP %'];
+                const exp2 = [];
+                function buildRow(name, nb, sv, rows){
+                    const c = countsFor(rows);
+                    const line = [name, nb, sv];
+                    EMR_COVERAGE_ANTIGENS.forEach(function(a){ line.push(c[a.key]); });
+                    EMR_COVERAGE_ANTIGENS.forEach(function(a){
+                        const tgt = a.target==='newborn' ? nb : sv;
+                        line.push(emrCoveragePct(c[a.key], tgt));
+                    });
+                    exp2.push(line);
+                    return '<tr>'+line.map(function(v,i){
+                        if(i===0) return '<td><strong>'+v+'</strong></td>';
+                        if(i>=12) return '<td><strong>'+v+'%</strong></td>';
+                        return '<td>'+(typeof v==='number'?v.toLocaleString():v)+'</td>';
+                    }).join('')+'</tr>';
+                }
+                let body = buildRow('District Total', dNb, dSv, data);
+                tlist.forEach(function(t){
+                    const nb = emrTargetFor(t,'newborn');
+                    const sv = emrTargetFor(t,'surviving');
+                    const trows = data.filter(function(r){ return emrCell(r, EMR_COLS.tehsil)===t; });
+                    body += buildRow(t, nb, sv, trows);
+                });
+
+                emrSetStats([
+                    {n: emrMonthLabel(ym), l:'Report month'},
+                    {n: dNb.toLocaleString(), l:'District Monthly Newborn'},
+                    {n: dSv.toLocaleString(), l:'District Monthly Surviving'},
+                    {n: tlist.length, l:'Tehsils'}
+                ]);
+
+                // Chart: BCG % and Penta-1 % by tehsil
+                let cardHost = document.getElementById('emrExtraVisual');
+                if(!cardHost){
+                    cardHost = document.createElement('div');
+                    cardHost.id = 'emrExtraVisual';
+                    const stats = document.getElementById('emrStats');
+                    if(stats && stats.parentNode) stats.parentNode.insertBefore(cardHost, stats.nextSibling);
+                }
+                // coverage cards district
+                let cards = '<div style="font-weight:700;color:#0d5c3d;margin-bottom:8px">District coverage % ('+emrMonthLabel(ym)+')</div><div class="emr-summary-grid" style="margin-bottom:14px">';
+                EMR_COVERAGE_ANTIGENS.forEach(function(a){
+                    const ach = dCounts[a.key];
+                    const tgt = a.target==='newborn' ? dNb : dSv;
+                    const pct = emrCoveragePct(ach, tgt);
+                    cards += '<div class="emr-sum-item"><div class="n">'+pct+'%</div><div class="l">'+a.label+'</div><div style="font-size:10px;color:#888">'+ach+' / '+tgt+'</div></div>';
+                });
+                cards += '</div>';
+                cardHost.innerHTML = cards;
+                cardHost.style.display = 'block';
+
+                const labels = [], bcgPct=[], p1Pct=[];
+                tlist.forEach(function(t){
+                    const nb = emrTargetFor(t,'newborn');
+                    const sv = emrTargetFor(t,'surviving');
+                    const trows = data.filter(function(r){ return emrCell(r, EMR_COLS.tehsil)===t; });
+                    const c = countsFor(trows);
+                    labels.push(t);
+                    bcgPct.push(emrCoveragePct(c.bcg, nb));
+                    p1Pct.push(emrCoveragePct(c.pentaI, sv));
+                });
                 const canvas = document.getElementById('emrTargetChart');
                 if(canvas && typeof Chart !== 'undefined'){
                     if(emrTargetChartObj){ try{ emrTargetChartObj.destroy(); }catch(e){} }
                     emrTargetChartObj = new Chart(canvas, {
-                        type: 'bar',
-                        data: {
+                        type:'bar',
+                        data:{
                             labels: labels,
-                            datasets: [
-                                {label:'Monthly Surviving Target', data: targetArr, backgroundColor:'#90caf9'},
-                                {label:'BCG doses in data', data: bcgArr, backgroundColor:'#2e7d32'}
+                            datasets:[
+                                {label:'BCG % (vs Newborn)', data:bcgPct, backgroundColor:'#2e7d32'},
+                                {label:'Penta-1 % (vs Surviving)', data:p1Pct, backgroundColor:'#1565c0'}
                             ]
                         },
-                        options: {
-                            responsive:true,
-                            maintainAspectRatio:false,
+                        options:{
+                            responsive:true, maintainAspectRatio:false,
                             devicePixelRatio: Math.max(2, window.devicePixelRatio||2),
-                            plugins:{ legend:{ position:'bottom' } },
-                            scales:{ y:{ beginAtZero:true } }
+                            plugins:{legend:{position:'bottom'}},
+                            scales:{y:{beginAtZero:true, max:100, title:{display:true, text:'% Coverage'}}}
                         }
                     });
                 }
+
+                emrRenderTable(h2, body, h2, exp2, null);
             }
+
         }
 
         // auto-load EMR when page ready
