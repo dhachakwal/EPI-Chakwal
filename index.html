@@ -2725,6 +2725,55 @@
             return (best.getMonth()+1)+'/'+best.getDate()+'/'+best.getFullYear()+' '+h+':'+mm+' '+ampm;
         }
 
+        
+        /** Parse antigen cell date: DD-MM-YYYY, D-M-YYYY, MM/DD/YYYY, etc. */
+        function emrParseDoseDate(val){
+            if(val == null) return null;
+            if(typeof val === 'object' && val.date) return val.date;
+            const s = String(val).trim();
+            if(!s || !emrHasDose(s)) return null;
+            // DD-MM-YYYY or D-M-YYYY
+            let m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+            if(m){
+                const a = +m[1], b = +m[2], y = +m[3];
+                // if a>12 => must be D-M-Y; if b>12 => M-D-Y wrong so D-M-Y; prefer D-M-Y (Pakistan EMR)
+                if(a > 12) return new Date(y, b-1, a);
+                if(b > 12) return new Date(y, a-1, b);
+                // ambiguous: treat as D-M-Y (EMR style 01-08-2026)
+                return new Date(y, b-1, a);
+            }
+            // Google Date already handled elsewhere
+            const t = Date.parse(s);
+            if(!isNaN(t)) return new Date(t);
+            return null;
+        }
+        function emrGetReportMonth(){
+            // Prefer latest LastUpdatedDate month; else today
+            let best = null;
+            (emrRows||[]).forEach(function(r){
+                const u = emrUpdatedObj(r);
+                if(u.date && (!best || u.date > best)) best = u.date;
+            });
+            if(best) return {year: best.getFullYear(), month: best.getMonth()}; // 0-based month
+            const now = new Date();
+            return {year: now.getFullYear(), month: now.getMonth()};
+        }
+        function emrSameMonth(dt, ym){
+            if(!dt || !ym) return false;
+            return dt.getFullYear() === ym.year && dt.getMonth() === ym.month;
+        }
+        /** Count dose only if antigen column date falls in report month */
+        function emrHasDoseThisMonth(row, colKey, ym){
+            const raw = emrCell(row, EMR_COLS[colKey]);
+            const dt = emrParseDoseDate(raw);
+            return emrSameMonth(dt, ym);
+        }
+        function emrMonthLabel(ym){
+            const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return names[ym.month] + ' ' + ym.year;
+        }
+
+
         function emrUpdateSummaryPanel(data){
             const scopeEl = document.getElementById('emrSummaryScope');
             const grid = document.getElementById('emrSummaryGrid');
@@ -2740,14 +2789,25 @@
 
             const rows = data || emrFiltered();
             if(!grid) return;
-            // total children + antigen counts in VAX order
+            const ym = emrGetReportMonth();
+            // Total entries still = rows in filter; antigens = doses dated in report month
             let items = [{n: rows.length.toLocaleString(), l:'Total Entries'}];
             EMR_VAX_ORDER.forEach(function(pair){
                 const key = pair[0], label = pair[1];
                 let c = 0;
-                rows.forEach(function(r){ if(emrHasDose(emrCell(r, EMR_COLS[key]))) c++; });
+                rows.forEach(function(r){ if(emrHasDoseThisMonth(r, key, ym)) c++; });
                 items.push({n: c.toLocaleString(), l: label});
             });
+            // show month on scope line suffix via data-upto area note
+            const scopeEl2 = document.getElementById('emrSummaryScope');
+            if(scopeEl2 && scopeEl2.textContent.indexOf('Antigen month')<0){
+                /* month shown in meta */
+            }
+            const upto2 = document.getElementById('emrDataUpto');
+            if(upto2){
+                const base = emrLatestUpdated(emrRows);
+                upto2.innerHTML = base + ' · <span style="color:#1565c0">Antigen counts: '+emrMonthLabel(ym)+'</span>';
+            }
             grid.innerHTML = items.map(function(it){
                 return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
@@ -2845,17 +2905,19 @@
                 emrRenderTable(['Sr','Tehsil','UCs with entries','Total Entries'], rowsHtml, ['Sr','Tehsil','UCs','Entries'], exp, ['Total','',sumUc,sumN]);
             }
             else if(emrMode === 'antigen'){
+                const ym = emrGetReportMonth();
                 const counts = {};
                 EMR_VAX_ORDER.forEach(function(a){ counts[a[0]]=0; });
                 data.forEach(function(r){
                     EMR_VAX_ORDER.forEach(function(a){
-                        if(emrHasDose(emrCell(r, EMR_COLS[a[0]]))) counts[a[0]]++;
+                        if(emrHasDoseThisMonth(r, a[0], ym)) counts[a[0]]++;
                     });
                 });
                 const sumA = EMR_VAX_ORDER.reduce(function(s,a){ return s+counts[a[0]]; },0);
                 emrSetStats([
                     {n:data.length.toLocaleString(), l:'Total Entries'},
-                    {n: sumA.toLocaleString(), l:'Total doses marked'}
+                    {n: sumA.toLocaleString(), l:'Doses in '+emrMonthLabel(ym)},
+                    {n: emrMonthLabel(ym), l:'Antigen month'}
                 ]);
                 // Card grid (screenshot style)
                 const grid = document.getElementById('emrAntigenCards');
@@ -2884,6 +2946,7 @@
                 if(wrap) wrap.style.display = 'none';
             }
             else if(emrMode === 'tehsilAg'){
+                const ym = emrGetReportMonth();
                 const tehsils = {};
                 data.forEach(function(r){
                     const t = emrCell(r, EMR_COLS.tehsil) || '—';
@@ -2893,7 +2956,7 @@
                     }
                     tehsils[t].rows++;
                     EMR_VAX_ORDER.forEach(function(a){
-                        if(emrHasDose(emrCell(r, EMR_COLS[a[0]]))) tehsils[t][a[0]]++;
+                        if(emrHasDoseThisMonth(r, a[0], ym)) tehsils[t][a[0]]++;
                     });
                 });
                 const tlist = Object.keys(tehsils).sort();
