@@ -901,7 +901,7 @@
 
     
     <div class="modal-overlay" id="emrChildModal" onclick="if(event.target===this)closeEmrChildModal()">
-        <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto;text-align:left;padding:20px">
+        <div class="modal-box" style="max-width:960px;max-height:92vh;overflow-y:auto;text-align:left;padding:20px">
             <button class="modal-close" onclick="closeEmrChildModal()">&times;</button>
             <h2 style="color:#0d5c3d;margin:0 0 8px;text-align:center">Child Search Result</h2>
             <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px">
@@ -3161,44 +3161,83 @@
                 return;
             }
             const q = ((document.getElementById('emrSearch')||{}).value || '').trim();
-            if(q.length < 2){
-                alert('Kam az kam 2 characters likhein (Name / MR / Phone).');
-                return;
-            }
             const qn = q.toLowerCase();
-            // Search in current period + tehsil/UC filters
-            const base = emrFiltered();
-            const matched = base.filter(function(r){
-                const blob = [emrCell(r,EMR_COLS.name),emrCell(r,EMR_COLS.mr),emrCell(r,EMR_COLS.phone),emrCell(r,EMR_COLS.father)].join(' ').toLowerCase();
-                return blob.indexOf(qn) >= 0;
-            });
+            // Current period + tehsil + UC
+            let matched = emrFiltered();
+            if(qn.length >= 1){
+                matched = matched.filter(function(r){
+                    const blob = [emrCell(r,EMR_COLS.name),emrCell(r,EMR_COLS.mr),emrCell(r,EMR_COLS.phone),emrCell(r,EMR_COLS.father),emrCell(r,EMR_COLS.address)].join(' ').toLowerCase();
+                    return blob.indexOf(qn) >= 0;
+                });
+            }
+            // Store for detail click
+            window._emrSearchMatches = matched;
+
             const body = document.getElementById('emrChildModalBody');
             const status = document.getElementById('emrChildModalStatus');
             const modal = document.getElementById('emrChildModal');
             if(!body || !modal) return;
+
             if(!matched.length){
-                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No child matched <strong>'+q.replace(/</g,'')+'</strong> in current period/filters.</div>';
-                if(status) status.textContent = '0 results';
-            } else {
-                const max = Math.min(matched.length, 20);
-                let htmlOut = '';
-                for(let i=0;i<max;i++){
-                    htmlOut += '<div id="emrSearchCard'+i+'" style="margin-bottom:12px">'+emrBuildChildCardHtml(matched[i])+'</div>';
-                }
-                if(matched.length > max){
-                    htmlOut += '<div style="text-align:center;color:#888;font-size:12px">Showing '+max+' of '+matched.length+' — refine search</div>';
-                }
-                body.innerHTML = htmlOut;
-                if(status) status.textContent = matched.length + ' result(s) · Period: ' + emrPeriodLabel();
+                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">Is filter / search pe koi child nahi mila.</div>';
+                if(status) status.textContent = '0 results · ' + emrPeriodLabel();
+                modal.classList.add('active');
+                return;
             }
+
+            // List table — click Name for full card
+            const max = Math.min(matched.length, 500);
+            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px">Name par <strong>click</strong> karein — detail popup (vaccination dates) khulega. Showing <strong>'+max+'</strong> of <strong>'+matched.length+'</strong></div>';
+            table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
+            table += '<table class="emr-table" style="min-width:900px"><thead><tr>';
+            const headers = ['Sr','Division','District','Tehsil','UC','MR Number','Name','Father Name','Age','Gender','Address','Phone'];
+            headers.forEach(function(h){ table += '<th>'+h+'</th>'; });
+            table += '</tr></thead><tbody>';
+            for(let i=0;i<max;i++){
+                const r = matched[i];
+                const name = emrCell(r, EMR_COLS.name) || '—';
+                table += '<tr>';
+                table += '<td>'+(i+1)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.division)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.district)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.tehsil)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.uc)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.mr)+'</td>';
+                table += '<td><a href="javascript:void(0)" onclick="emrShowChildDetail('+i+')" style="color:#0d5c3d;font-weight:700;text-decoration:underline">'+name+'</a></td>';
+                table += '<td>'+emrCell(r,EMR_COLS.father)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.age)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.gender)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.address)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.phone)+'</td>';
+                table += '</tr>';
+            }
+            table += '</tbody></table></div>';
+            body.innerHTML = table;
+            if(status) status.textContent = matched.length + ' child(ren) · ' + emrPeriodLabel() + ' · filters applied';
             modal.classList.add('active');
         }
+        function emrShowChildDetail(idx){
+            const list = window._emrSearchMatches || [];
+            const r = list[idx];
+            if(!r) return;
+            const body = document.getElementById('emrChildModalBody');
+            const status = document.getElementById('emrChildModalStatus');
+            if(!body) return;
+            const back = '<div style="margin-bottom:10px"><button type="button" class="btn btn-sm btn-outline" onclick="emrOpenSearchPopup()" style="border-color:#0d5c3d;color:#0d5c3d">← Back to list</button></div>';
+            body.innerHTML = back + '<div id="emrSearchCard0">'+emrBuildChildCardHtml(r)+'</div>';
+            if(status) status.textContent = 'Detail · ' + (emrCell(r,EMR_COLS.name)||'') + ' · PNG/Copy available above';
+            // scroll top of modal
+            const modalBox = body.parentNode;
+            if(modalBox) modalBox.scrollTop = 0;
+        }
+        
         async function emrCaptureSearchCanvas(){
             if(typeof html2canvas === 'undefined') throw new Error('html2canvas missing');
             const body = document.getElementById('emrChildModalBody');
             if(!body) throw new Error('No result body');
-            // Prefer first card only if one result, else whole body
-            const target = body.querySelector('.emr-child-card') ? body : body;
+            // Prefer vaccination detail card when open, else full list
+            const card = body.querySelector('.emr-child-card');
+            const target = card || body;
             return await html2canvas(target, {
                 scale: 3,
                 useCORS: true,
