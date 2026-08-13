@@ -595,6 +595,7 @@
                         <span style="display:flex;gap:6px;align-items:center">
                             <input type="text" id="emrSearch" placeholder="Name / MR / Phone…" style="min-width:150px" onkeydown="if(event.key==='Enter'){event.preventDefault();emrOpenSearchPopup();}">
                             <button type="button" class="btn btn-sm" onclick="emrOpenSearchPopup()" style="background:#0d5c3d;padding:8px 12px;white-space:nowrap">🔍 Search</button>
+                            <button type="button" class="btn btn-sm" onclick="emrResetFilters()" style="background:#78909c;padding:8px 12px;white-space:nowrap" title="Reset all filters">↺ Reset</button>
                         </span>
                     </label>
                     <button type="button" class="btn btn-sm" onclick="loadEmrData()" style="background:#0d5c3d">🔄 Refresh Data</button>
@@ -3155,6 +3156,39 @@
                 + '<div class="emr-vax-grid">'+vax+'</div>'
                 + '</div>';
         }
+        
+        function emrResetFilters(){
+            const period = document.getElementById('emrPeriod');
+            if(period) period.value = 'month';
+            const dayLab = document.getElementById('emrDayLabel');
+            if(dayLab) dayLab.style.display = 'none';
+            const daySel = document.getElementById('emrDaySelect');
+            if(daySel) daySel.value = '';
+            const tehsil = document.getElementById('emrTehsil');
+            if(tehsil) tehsil.value = '';
+            const uc = document.getElementById('emrUC');
+            if(uc){
+                uc.innerHTML = '<option value="">All UCs</option>';
+                uc.value = '';
+            }
+            const search = document.getElementById('emrSearch');
+            if(search) search.value = '';
+            // rebuild UC list for all tehsils
+            if(typeof emrOnFilterChange === 'function'){
+                // set tehsil empty then refill UCs without forcing apply twice
+                const tsel = document.getElementById('emrTehsil');
+                if(tsel) tsel.value = '';
+            }
+            emrFillTehsilUC();
+            if(document.getElementById('emrTehsil')) document.getElementById('emrTehsil').value = '';
+            if(document.getElementById('emrUC')){
+                const u = document.getElementById('emrUC');
+                u.value = '';
+            }
+            closeEmrChildModal();
+            emrApply();
+        }
+
         function emrOpenSearchPopup(){
             if(!emrRows.length){
                 alert('Pehle Refresh Data dabayein.');
