@@ -572,7 +572,7 @@
             
             <div class="section-title" id="section-emr">Child Immunization (EMR)</div>
             <div class="emr-card" id="emrCard">
-                <p class="emr-note"><strong>Source:</strong> Google Sheet (EMR OutReach export). Filters + reports PHMIS-style. Data append daily in one sheet.</p>
+                <p class="emr-note"><strong>Source:</strong> EMR OutReach Immunization Report. Filters + reports PHMIS-style. Data append daily in one sheet.</p>
                 <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
 
                 <div class="emr-filter">
@@ -605,18 +605,19 @@
                     <button type="button" class="emr-tab active" data-emr="uc" onclick="emrSwitch('uc')">1. UC-wise Entries</button>
                     <button type="button" class="emr-tab" data-emr="tehsil" onclick="emrSwitch('tehsil')">2. Tehsil Summary</button>
                     <button type="button" class="emr-tab" data-emr="antigen" onclick="emrSwitch('antigen')">3. Antigen Summary</button>
-                    <button type="button" class="emr-tab" data-emr="tehsilAg" onclick="emrSwitch('tehsilAg')">3b. Tehsil-wise Antigen</button>
+                    <button type="button" class="emr-tab" data-emr="tehsilAg" onclick="emrSwitch('tehsilAg')">4. Tehsil-wise Antigen</button>
                     <button type="button" class="emr-tab" data-emr="phone" onclick="emrSwitch('phone')">5. Missing Phone</button>
-                    <button type="button" class="emr-tab" data-emr="father" onclick="emrSwitch('father')">9. Missing Father</button>
-                    <button type="button" class="emr-tab" data-emr="map" onclick="emrSwitch('map')">8. Geo Map Links</button>
-                    <button type="button" class="emr-tab" data-emr="late" onclick="emrSwitch('late')">7. Late Entry</button>
-                    <button type="button" class="emr-tab" data-emr="dropout" onclick="emrSwitch('dropout')">10. Drop-out</button>
-                    <button type="button" class="emr-tab" data-emr="targets" onclick="emrSwitch('targets')">4. Targets vs Coverage</button>
+                    <button type="button" class="emr-tab" data-emr="father" onclick="emrSwitch('father')">6. Missing Father</button>
+                    <button type="button" class="emr-tab" data-emr="map" onclick="emrSwitch('map')">7. Geo Map Links</button>
+                    <button type="button" class="emr-tab" data-emr="late" onclick="emrSwitch('late')">8. Late Entry</button>
+                    <button type="button" class="emr-tab" data-emr="dropout" onclick="emrSwitch('dropout')">9. Drop-out</button>
+                    <button type="button" class="emr-tab" data-emr="targets" onclick="emrSwitch('targets')">10. Targets vs Coverage</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
-                    <button type="button" class="btn btn-sm" id="emrDownloadBtn" onclick="emrDownloadExcel()" style="background:#1565c0">⬇ Download Excel</button>
-                    <span style="font-size:12px;color:#666" id="emrDownloadHint">Current tab data</span>
+                    <button type="button" class="btn btn-sm" id="emrDownloadBtn" onclick="emrDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" id="emrPdfBtn" onclick="emrExportFullPdf()" style="background:#c62828">📄 Full EMR PDF (All Tabs)</button>
+                    <span style="font-size:12px;color:#666" id="emrDownloadHint">Excel = current tab · PDF = all sections</span>
                 </div>
 
                 <div class="emr-stats" id="emrStats"></div>
@@ -2734,6 +2735,285 @@
             if(totalCells && totalCells.length) expRows.push(totalCells);
             emrLastExport = {headers: exportHeaders || headers, rows: expRows};
         }
+
+        
+        async function emrExportFullPdf(){
+            if(typeof window.jspdf === 'undefined'){
+                alert('jsPDF library missing. Page refresh karein.');
+                return;
+            }
+            if(!emrRows.length){
+                alert('Pehle Refresh Data dabayein.');
+                return;
+            }
+            const btn = document.getElementById('emrPdfBtn');
+            if(btn){ btn.disabled = true; btn.textContent = 'Generating PDF…'; }
+            try{
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 10;
+                const ym = emrGetReportMonth();
+                const data = emrFiltered();
+                const upto = emrLatestUpdated(emrRows);
+                let y = margin;
+
+                function newPage(){
+                    pdf.addPage();
+                    y = margin;
+                }
+                function ensure(h){
+                    if(y + h > pageH - margin) newPage();
+                }
+                function title(txt, size){
+                    ensure(12);
+                    pdf.setFont('helvetica','bold');
+                    pdf.setFontSize(size||14);
+                    pdf.setTextColor(13,92,61);
+                    pdf.text(txt, margin, y);
+                    y += (size||14)*0.5 + 3;
+                }
+                function sub(txt){
+                    ensure(8);
+                    pdf.setFont('helvetica','normal');
+                    pdf.setFontSize(9);
+                    pdf.setTextColor(80,80,80);
+                    pdf.text(txt, margin, y);
+                    y += 5;
+                }
+                function drawTable(headers, rows, colW){
+                    const fs = 7;
+                    pdf.setFontSize(fs);
+                    const rowH = 5;
+                    const usable = pageW - margin*2;
+                    if(!colW){
+                        colW = headers.map(function(){ return usable/headers.length; });
+                    }
+                    function headerRow(){
+                        ensure(rowH+2);
+                        pdf.setFillColor(13,92,61);
+                        pdf.setTextColor(255,255,255);
+                        pdf.setFont('helvetica','bold');
+                        let x = margin;
+                        headers.forEach(function(h,i){
+                            pdf.rect(x, y-3.5, colW[i], rowH, 'F');
+                            pdf.text(String(h).substring(0,28), x+1, y);
+                            x += colW[i];
+                        });
+                        y += rowH;
+                    }
+                    headerRow();
+                    pdf.setFont('helvetica','normal');
+                    pdf.setTextColor(30,30,30);
+                    rows.forEach(function(row, ri){
+                        if(y + rowH > pageH - margin){
+                            newPage();
+                            headerRow();
+                            pdf.setFont('helvetica','normal');
+                            pdf.setTextColor(30,30,30);
+                        }
+                        if(ri % 2 === 0){
+                            pdf.setFillColor(240,247,244);
+                            pdf.rect(margin, y-3.5, usable, rowH, 'F');
+                        }
+                        let x = margin;
+                        row.forEach(function(cell,i){
+                            const t = String(cell==null?'':cell);
+                            pdf.text(t.substring(0, Math.floor(colW[i]/1.6)), x+1, y);
+                            x += colW[i];
+                        });
+                        y += rowH;
+                    });
+                    y += 4;
+                }
+
+                // Cover / Summary
+                title('EPI District Chakwal — Child Immunization (EMR)', 16);
+                sub('Source: EMR OutReach Immunization Report');
+                sub('Report month: '+emrMonthLabel(ym)+' · Data up to: '+upto+' · Rows in filter: '+data.length);
+                sub('Generated: '+ new Date().toLocaleString());
+                y += 3;
+
+                // Antigen summary counts
+                title('3. Antigen Summary ('+emrMonthLabel(ym)+')', 12);
+                const counts = {};
+                EMR_VAX_ORDER.forEach(function(a){ counts[a[0]]=0; });
+                data.forEach(function(r){
+                    EMR_VAX_ORDER.forEach(function(a){
+                        if(emrHasDoseThisMonth(r, a[0], ym)) counts[a[0]]++;
+                    });
+                });
+                const agRows = [['Total Entries', data.length]].concat(EMR_VAX_ORDER.map(function(a){ return [a[1], counts[a[0]]]; }));
+                drawTable(['Antigen','Count'], agRows, [80, 40]);
+
+                // UC-wise
+                newPage();
+                title('1. UC-wise Entries ('+emrMonthLabel(ym)+')', 12);
+                const ucMap = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil)||'—';
+                    const u = emrCell(r, EMR_COLS.uc)||'—';
+                    const k = t+'||'+u;
+                    if(!ucMap[k]) ucMap[k]={t:t,u:u,n:0};
+                    ucMap[k].n++;
+                });
+                const ucList = Object.keys(ucMap).map(function(k){ return ucMap[k]; }).sort(function(a,b){ return b.n-a.n; });
+                drawTable(['Sr','Tehsil','UC','Entries'], ucList.map(function(x,i){ return [i+1, x.t, x.u, x.n]; }), [12, 50, 80, 25]);
+
+                // Tehsil summary
+                newPage();
+                title('2. Tehsil Summary ('+emrMonthLabel(ym)+')', 12);
+                const tMap = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil)||'—';
+                    if(!tMap[t]) tMap[t]={n:0,ucs:{}};
+                    tMap[t].n++;
+                    tMap[t].ucs[emrCell(r,EMR_COLS.uc)||'—']=1;
+                });
+                const tList = Object.keys(tMap).sort().map(function(t){ return [t, Object.keys(tMap[t].ucs).length, tMap[t].n]; });
+                drawTable(['Tehsil','UCs','Entries'], tList, [70, 30, 30]);
+
+                // Tehsil-wise antigen
+                newPage();
+                title('4. Tehsil-wise Antigen ('+emrMonthLabel(ym)+')', 12);
+                const keys = EMR_VAX_ORDER.map(function(a){ return a[0]; });
+                const tehsils = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil)||'—';
+                    if(!tehsils[t]){ tehsils[t]={rows:0}; keys.forEach(function(k){ tehsils[t][k]=0; }); }
+                    tehsils[t].rows++;
+                    keys.forEach(function(k){ if(emrHasDoseThisMonth(r,k,ym)) tehsils[t][k]++; });
+                });
+                // Split: first cols then rest for page width
+                const shortLabels = ['Tehsil','Ent'].concat(EMR_VAX_ORDER.slice(0,10).map(function(a){ return a[1].substring(0,8); }));
+                const shortKeys = keys.slice(0,10);
+                const body1 = Object.keys(tehsils).sort().map(function(t){
+                    return [t, tehsils[t].rows].concat(shortKeys.map(function(k){ return tehsils[t][k]; }));
+                });
+                drawTable(shortLabels, body1);
+                sub('Continued antigens…');
+                const shortLabels2 = ['Tehsil'].concat(EMR_VAX_ORDER.slice(10).map(function(a){ return a[1].substring(0,8); }));
+                const shortKeys2 = keys.slice(10);
+                const body2 = Object.keys(tehsils).sort().map(function(t){
+                    return [t].concat(shortKeys2.map(function(k){ return tehsils[t][k]; }));
+                });
+                drawTable(shortLabels2, body2);
+
+                // Missing phone - ALL
+                newPage();
+                title('5. Missing Phone (full list)', 12);
+                const missP = data.filter(function(r){ return emrPhoneMissing(emrCell(r, EMR_COLS.phone)); });
+                sub('Total: '+missP.length);
+                drawTable(['Sr','Tehsil','UC','Name','Father','MR'], missP.map(function(r,i){
+                    return [i+1, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.father), emrCell(r,EMR_COLS.mr)];
+                }), [12, 35, 45, 50, 40, 50]);
+
+                // Missing father - ALL
+                newPage();
+                title('6. Missing Father Name (full list)', 12);
+                const missF = data.filter(function(r){ return emrFatherMissing(emrCell(r, EMR_COLS.father)); });
+                sub('Total: '+missF.length);
+                drawTable(['Sr','Tehsil','UC','Name','Phone','MR'], missF.map(function(r,i){
+                    return [i+1, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.phone), emrCell(r,EMR_COLS.mr)];
+                }), [12, 35, 45, 50, 35, 50]);
+
+                // Geo map summary
+                newPage();
+                title('7. Geo Map Links (coordinates present)', 12);
+                const withCoord = data.filter(function(r){
+                    const lat = parseFloat(emrCell(r, EMR_COLS.lat));
+                    const lng = parseFloat(emrCell(r, EMR_COLS.lng));
+                    return !isNaN(lat) && !isNaN(lng) && lat && lng;
+                });
+                sub('Total with Lat/Long: '+withCoord.length+' (showing all in table)');
+                drawTable(['Sr','Tehsil','UC','Name','Lat','Lng'], withCoord.map(function(r,i){
+                    return [i+1, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.lat), emrCell(r,EMR_COLS.lng)];
+                }), [12, 35, 45, 50, 35, 35]);
+
+                // Late entry
+                newPage();
+                title('8. Late Entry (after 2:00 PM, latest first)', 12);
+                const late = data.filter(function(r){
+                    const u = emrUpdatedObj(r);
+                    if(u.hour == null) return false;
+                    return (u.hour*60+(u.minute||0)) >= 14*60;
+                }).sort(function(a,b){
+                    const ua = emrUpdatedObj(a), ub = emrUpdatedObj(b);
+                    return ((ub.hour||0)*60+(ub.minute||0)) - ((ua.hour||0)*60+(ua.minute||0));
+                });
+                sub('Total after 2 PM: '+late.length);
+                drawTable(['Sr','Time','Tehsil','UC','Name','Flag'], late.map(function(r,i){
+                    const u = emrUpdatedObj(r);
+                    const mins = (u.hour||0)*60+(u.minute||0);
+                    return [i+1, emrFormat12h(u), emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), mins>=16*60?'After 4 PM':'After 2 PM'];
+                }), [12, 40, 35, 45, 50, 30]);
+
+                // Drop-out tehsil wise
+                newPage();
+                title('9. Drop-out (District + Tehsil-wise)', 12);
+                function dropBlock(rows, label){
+                    let bcg=0,p1=0,p3=0,mr1=0,mr2=0;
+                    rows.forEach(function(r){
+                        if(emrHasDose(emrCell(r,EMR_COLS.bcg))) bcg++;
+                        if(emrHasDose(emrCell(r,EMR_COLS.pentaI))) p1++;
+                        if(emrHasDose(emrCell(r,EMR_COLS.pentaIII))) p3++;
+                        if(emrHasDose(emrCell(r,EMR_COLS.measlesI))) mr1++;
+                        if(emrHasDose(emrCell(r,EMR_COLS.measlesII))) mr2++;
+                    });
+                    return [label, bcg, p1, p3, mr1, mr2, emrDropoutPct(bcg,p1), emrDropoutPct(p1,p3), emrDropoutPct(bcg,mr1), emrDropoutPct(p1,mr1), emrDropoutPct(mr1,mr2)];
+                }
+                const dRows = [dropBlock(data, 'District')];
+                Object.keys(tMap).sort().forEach(function(t){
+                    const rows = data.filter(function(r){ return emrCell(r,EMR_COLS.tehsil)===t; });
+                    dRows.push(dropBlock(rows, t));
+                });
+                drawTable(['Level','BCG','P1','P3','MR1','MR2','B→P1%','P1→P3%','B→MR1%','P1→MR1%','MR1→MR2%'], dRows);
+
+                // Targets vs coverage
+                newPage();
+                title('10. Targets vs Coverage ('+emrMonthLabel(ym)+' Till '+upto+')', 12);
+                sub('BCG & Hep-B vs Monthly Newborn · Other antigens vs Monthly Surviving');
+                const dNb = emrDistrictTarget('newborn');
+                const dSv = emrDistrictTarget('surviving');
+                function covLine(name, nb, sv, rows){
+                    const line = [name, nb, sv];
+                    EMR_COVERAGE_ANTIGENS.forEach(function(a){
+                        line.push(emrCountAntigenMonth(rows, a.key, ym));
+                    });
+                    EMR_COVERAGE_ANTIGENS.forEach(function(a){
+                        const tgt = a.target==='newborn'?nb:sv;
+                        line.push(emrCoveragePct(emrCountAntigenMonth(rows, a.key, ym), tgt));
+                    });
+                    return line;
+                }
+                const covHeaders = ['Tehsil','NB Tgt','SV Tgt'].concat(EMR_COVERAGE_ANTIGENS.map(function(a){ return a.label.substring(0,6); })).concat(EMR_COVERAGE_ANTIGENS.map(function(a){ return a.label.substring(0,5)+'%'; }));
+                const covBody = [covLine('District', dNb, dSv, data)];
+                (emrTargets||[]).forEach(function(tg){
+                    if(!tg.tehsil) return;
+                    const trows = data.filter(function(r){ return emrCell(r,EMR_COLS.tehsil)===tg.tehsil; });
+                    covBody.push(covLine(tg.tehsil, tg.monthlyNewborn||0, tg.monthlySurviving||0, trows));
+                });
+                drawTable(covHeaders, covBody);
+
+                // Footer page numbers
+                const total = pdf.internal.getNumberOfPages();
+                for(let i=1;i<=total;i++){
+                    pdf.setPage(i);
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(120,120,120);
+                    pdf.text('EPI Chakwal EMR Report · Page '+i+' / '+total+' · Sidebar not included', margin, pageH-4);
+                }
+
+                pdf.save('EPI_Chakwal_EMR_Full_'+emrMonthLabel(ym).replace(/\s+/g,'_')+'.pdf');
+            }catch(err){
+                console.error(err);
+                alert('PDF error: '+(err.message||err));
+            }finally{
+                if(btn){ btn.disabled = false; btn.textContent = '📄 Full EMR PDF (All Tabs)'; }
+            }
+        }
+
 
         function emrDownloadExcel(){
             if(typeof XLSX === 'undefined'){
