@@ -2582,11 +2582,25 @@
             emrApply();
         }
 
-        function emrFiltered(){
+        
+        function emrRowInReportMonth(row, ym){
+            ym = ym || emrGetReportMonth();
+            const u = emrUpdatedObj(row);
+            if(u.date) return emrSameMonth(u.date, ym);
+            // fallback: any antigen dose in month => treat as activity (weak)
+            return false;
+        }
+        /** Tehsil/UC/search filter + optional month on LastUpdatedDate */
+        function emrFiltered(monthOnly){
             const t = (document.getElementById('emrTehsil')||{}).value || '';
             const u = (document.getElementById('emrUC')||{}).value || '';
             const q = ((document.getElementById('emrSearch')||{}).value || '').toLowerCase().trim();
+            const ym = emrGetReportMonth();
             return emrRows.filter(function(r){
+                if(monthOnly !== false){
+                    // default: only rows whose LastUpdatedDate is in report month
+                    if(!emrRowInReportMonth(r, ym)) return false;
+                }
                 if(t && emrCell(r, EMR_COLS.tehsil) !== t) return false;
                 if(u && emrCell(r, EMR_COLS.uc) !== u) return false;
                 if(q){
@@ -2596,6 +2610,7 @@
                 return true;
             });
         }
+
 
         function emrSwitch(mode){
             emrMode = mode;
@@ -2791,7 +2806,7 @@
             if(!grid) return;
             const ym = emrGetReportMonth();
             // Total entries still = rows in filter; antigens = doses dated in report month
-            let items = [{n: rows.length.toLocaleString(), l:'Total Entries'}];
+            let items = [{n: rows.length.toLocaleString(), l:'Total Entries ('+emrMonthLabel(ym)+')'}];
             EMR_VAX_ORDER.forEach(function(pair){
                 const key = pair[0], label = pair[1];
                 let c = 0;
@@ -2871,7 +2886,7 @@
                 });
                 const list = Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.n-a.n; });
                 emrSetStats([
-                    {n:data.length.toLocaleString(), l:'Total Entries'},
+                    {n:data.length.toLocaleString(), l:'Entries '+emrMonthLabel(emrGetReportMonth())},
                     {n:list.length, l:'UC groups'},
                     {n: new Set(list.map(function(x){return x.tehsil;})).size, l:'Tehsils'}
                 ]);
