@@ -2790,6 +2790,13 @@
             // Summary panel (district / tehsil / UC)
             emrUpdateSummaryPanel(data);
 
+            // Clear extra visual cards unless antigen / tehsilAg will fill them
+            const extra = document.getElementById('emrExtraVisual');
+            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg'){
+                extra.style.display = 'none';
+                extra.innerHTML = '';
+            }
+
             // Search detail cards
             emrRenderSearchCards(data);
 
@@ -2839,33 +2846,53 @@
             }
             else if(emrMode === 'antigen'){
                 const counts = {};
-                EMR_ANTIGENS.forEach(function(a){ counts[a[0]]=0; });
+                EMR_VAX_ORDER.forEach(function(a){ counts[a[0]]=0; });
                 data.forEach(function(r){
-                    EMR_ANTIGENS.forEach(function(a){
+                    EMR_VAX_ORDER.forEach(function(a){
                         if(emrHasDose(emrCell(r, EMR_COLS[a[0]]))) counts[a[0]]++;
                     });
                 });
+                const sumA = EMR_VAX_ORDER.reduce(function(s,a){ return s+counts[a[0]]; },0);
                 emrSetStats([
-                    {n:data.length.toLocaleString(), l:'Children (rows)'},
-                    {n: EMR_ANTIGENS.reduce(function(s,a){return s+counts[a[0]];},0).toLocaleString(), l:'Total doses marked'}
+                    {n:data.length.toLocaleString(), l:'Total Entries'},
+                    {n: sumA.toLocaleString(), l:'Total doses marked'}
                 ]);
-                const exp=[]; let sumA=0;
-                const rowsHtml = EMR_ANTIGENS.map(function(a){
-                    sumA += counts[a[0]];
-                    exp.push([a[1], counts[a[0]]]);
-                    return '<tr><td><strong>'+a[1]+'</strong></td><td>'+counts[a[0]].toLocaleString()+'</td></tr>';
-                }).join('');
-                emrRenderTable(['Antigen / Vaccine','Records with date (not No)'], rowsHtml, ['Antigen','Count'], exp, ['Total doses', sumA]);
+                // Card grid (screenshot style)
+                const grid = document.getElementById('emrAntigenCards');
+                const wrap = document.getElementById('emrTableWrap');
+                if(wrap) wrap.style.display = 'none';
+                let cardHost = document.getElementById('emrExtraVisual');
+                if(!cardHost){
+                    cardHost = document.createElement('div');
+                    cardHost.id = 'emrExtraVisual';
+                    const stats = document.getElementById('emrStats');
+                    if(stats && stats.parentNode) stats.parentNode.insertBefore(cardHost, stats.nextSibling);
+                }
+                cardHost.style.display = 'block';
+                let cards = '<div class="emr-summary-grid" style="margin-bottom:12px">';
+                cards += '<div class="emr-sum-item"><div class="n">'+data.length.toLocaleString()+'</div><div class="l">Total Entries</div></div>';
+                EMR_VAX_ORDER.forEach(function(a){
+                    cards += '<div class="emr-sum-item"><div class="n">'+counts[a[0]].toLocaleString()+'</div><div class="l">'+a[1]+'</div></div>';
+                });
+                cards += '</div>';
+                cardHost.innerHTML = cards;
+                const exp = EMR_VAX_ORDER.map(function(a){ return [a[1], counts[a[0]]]; });
+                exp.push(['Total doses', sumA]);
+                emrLastExport = {headers:['Antigen','Count'], rows: exp};
+                // keep empty table hidden but export works
+                emrRenderTable(['Antigen','Count'], '', ['Antigen','Count'], exp.slice(0,-1), ['Total doses', sumA]);
+                if(wrap) wrap.style.display = 'none';
             }
             else if(emrMode === 'tehsilAg'){
                 const tehsils = {};
                 data.forEach(function(r){
                     const t = emrCell(r, EMR_COLS.tehsil) || '—';
                     if(!tehsils[t]){
-                        tehsils[t] = {};
-                        EMR_ANTIGENS.forEach(function(a){ tehsils[t][a[0]]=0; });
+                        tehsils[t] = {rows:0};
+                        EMR_VAX_ORDER.forEach(function(a){ tehsils[t][a[0]]=0; });
                     }
-                    EMR_ANTIGENS.forEach(function(a){
+                    tehsils[t].rows++;
+                    EMR_VAX_ORDER.forEach(function(a){
                         if(emrHasDose(emrCell(r, EMR_COLS[a[0]]))) tehsils[t][a[0]]++;
                     });
                 });
@@ -2874,18 +2901,41 @@
                     {n:tlist.length, l:'Tehsils'},
                     {n:data.length.toLocaleString(), l:'Rows in filter'}
                 ]);
-                // compact table: Tehsil + key antigens
-                const keys = ['bcg','pentaI','pentaIII','measlesI','measlesII','ipv','ipv2','tcv'];
-                const labels = ['Tehsil','BCG','Penta-1','Penta-3','MR-1','MR-2','IPV-1','IPV-2','TCV'];
+                const keys = EMR_VAX_ORDER.map(function(a){ return a[0]; });
+                const labels = ['Tehsil','Entries'].concat(EMR_VAX_ORDER.map(function(a){ return a[1]; }));
                 const exp=[];
                 const totals = keys.map(function(){ return 0; });
+                let totalEntries = 0;
                 let rowsHtml = tlist.map(function(t){
-                    const row = [t].concat(keys.map(function(k){ return tehsils[t][k]; }));
+                    const row = [t, tehsils[t].rows].concat(keys.map(function(k){ return tehsils[t][k]; }));
+                    totalEntries += tehsils[t].rows;
                     keys.forEach(function(k,i){ totals[i] += tehsils[t][k]; });
                     exp.push(row);
-                    return '<tr>'+row.map(function(c,i){ return '<td>'+(i===0?'<strong>'+c+'</strong>':c.toLocaleString())+'</td>'; }).join('')+'</tr>';
+                    return '<tr>'+row.map(function(c,i){ return '<td>'+(i===0?'<strong>'+c+'</strong>':(typeof c==='number'?c.toLocaleString():c))+'</td>'; }).join('')+'</tr>';
                 }).join('');
-                emrRenderTable(labels, rowsHtml, labels, exp, ['Total'].concat(totals));
+
+                // Visual cards per tehsil
+                let cardHost = document.getElementById('emrExtraVisual');
+                if(!cardHost){
+                    cardHost = document.createElement('div');
+                    cardHost.id = 'emrExtraVisual';
+                    const stats = document.getElementById('emrStats');
+                    if(stats && stats.parentNode) stats.parentNode.insertBefore(cardHost, stats.nextSibling);
+                }
+                let cards = '';
+                tlist.forEach(function(t){
+                    cards += '<div style="margin-bottom:14px"><div style="font-weight:800;color:#0d5c3d;margin-bottom:8px">'+t+' <span style="font-weight:600;color:#666;font-size:12px">('+tehsils[t].rows+' entries)</span></div>';
+                    cards += '<div class="emr-summary-grid">';
+                    cards += '<div class="emr-sum-item"><div class="n">'+tehsils[t].rows+'</div><div class="l">Total Entries</div></div>';
+                    EMR_VAX_ORDER.forEach(function(a){
+                        cards += '<div class="emr-sum-item"><div class="n">'+tehsils[t][a[0]]+'</div><div class="l">'+a[1]+'</div></div>';
+                    });
+                    cards += '</div></div>';
+                });
+                cardHost.innerHTML = cards;
+                cardHost.style.display = 'block';
+
+                emrRenderTable(labels, rowsHtml, labels, exp, ['Total', totalEntries].concat(totals));
             }
             else if(emrMode === 'phone'){
                 const miss = data.filter(function(r){ return emrPhoneMissing(emrCell(r, EMR_COLS.phone)); });
@@ -2960,11 +3010,21 @@
                 let list = after2;
                 if(emrLateFilter === 'after4') list = after4;
                 else if(emrLateFilter === 'all' || emrLateFilter === 'filter'){
-                    // all with valid time after 2 still for late tab meaning — show after2 as default meaningful set
                     if(emrLateFilter === 'all'){
                         list = data.filter(function(r){ return emrUpdatedObj(r).hour != null; });
                     } else list = data;
                 }
+                // Sort: sab se late pehle (11:59 PM ke qareeb pehle)
+                list = list.slice().sort(function(a,b){
+                    const ua = emrUpdatedObj(a), ub = emrUpdatedObj(b);
+                    const ma = (ua.hour||0)*60 + (ua.minute||0);
+                    const mb = (ub.hour||0)*60 + (ub.minute||0);
+                    if(mb !== ma) return mb - ma;
+                    // same time: later calendar date first
+                    const da = ua.date ? ua.date.getTime() : 0;
+                    const db = ub.date ? ub.date.getTime() : 0;
+                    return db - da;
+                });
                 const exp=[]; let i=0;
                 const rowsHtml = list.slice(0,2000).map(function(r){
                     i++;
