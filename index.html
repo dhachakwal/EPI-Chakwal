@@ -576,6 +576,15 @@
                 <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
 
                 <div class="emr-filter">
+                    <label>Period
+                        <select id="emrPeriod" onchange="emrOnPeriodChange()">
+                            <option value="month">Full Month</option>
+                            <option value="day">Day-wise</option>
+                        </select>
+                    </label>
+                    <label id="emrDayLabel" style="display:none">Select Date
+                        <select id="emrDaySelect" onchange="emrApply()"><option value="">—</option></select>
+                    </label>
                     <label>Tehsil
                         <select id="emrTehsil" onchange="emrOnFilterChange()"><option value="">All Tehsils</option></select>
                     </label>
@@ -2618,6 +2627,7 @@
                 }catch(te){ console.warn('targets load', te); emrTargets = []; }
 
                 emrFillTehsilUC();
+                emrPopulateDaySelect();
                 emrApply();
                 if(meta) meta.textContent = emrRows.length.toLocaleString() + ' records · refreshed ' + new Date().toLocaleString();
                 if(status) status.style.display='none';
@@ -2663,23 +2673,87 @@
         }
 
         
+        function emrYmdFromDate(dt){
+            if(!dt) return '';
+            const y = dt.getFullYear();
+            const m = dt.getMonth()+1;
+            const d = dt.getDate();
+            return y + '-' + (m<10?'0':'')+m + '-' + (d<10?'0':'')+d;
+        }
+        function emrPeriodMode(){
+            const el = document.getElementById('emrPeriod');
+            return (el && el.value === 'day') ? 'day' : 'month';
+        }
+        function emrSelectedDayYmd(){
+            const el = document.getElementById('emrDaySelect');
+            return (el && el.value) ? el.value : '';
+        }
+        function emrPeriodLabel(){
+            if(emrPeriodMode() === 'day'){
+                const ymd = emrSelectedDayYmd();
+                if(!ymd) return 'Day-wise (select date)';
+                const p = ymd.split('-');
+                return (+p[1])+'/'+(+p[2])+'/'+p[0];
+            }
+            return emrMonthLabel(emrGetReportMonth());
+        }
+        function emrOnPeriodChange(){
+            const mode = emrPeriodMode();
+            const lab = document.getElementById('emrDayLabel');
+            if(lab) lab.style.display = (mode === 'day') ? '' : 'none';
+            if(mode === 'day') emrPopulateDaySelect();
+            emrApply();
+        }
+        function emrPopulateDaySelect(){
+            const sel = document.getElementById('emrDaySelect');
+            if(!sel) return;
+            const set = {};
+            (emrRows||[]).forEach(function(r){
+                const u = emrUpdatedObj(r);
+                if(u.date) set[emrYmdFromDate(u.date)] = true;
+            });
+            const days = Object.keys(set).sort().reverse();
+            const cur = sel.value;
+            sel.innerHTML = '';
+            if(!days.length){
+                sel.innerHTML = '<option value="">No dates</option>';
+                return;
+            }
+            days.forEach(function(ymd){
+                const p = ymd.split('-');
+                const label = (+p[1])+'/'+(+p[2])+'/'+p[0];
+                sel.innerHTML += '<option value="'+ymd+'">'+label+'</option>';
+            });
+            if(cur && set[cur]) sel.value = cur;
+            else sel.value = days[0];
+        }
         function emrRowInReportMonth(row, ym){
             ym = ym || emrGetReportMonth();
             const u = emrUpdatedObj(row);
             if(u.date) return emrSameMonth(u.date, ym);
-            // fallback: any antigen dose in month => treat as activity (weak)
             return false;
         }
-        /** Tehsil/UC/search filter + optional month on LastUpdatedDate */
+        function emrRowOnSelectedDay(row){
+            const ymd = emrSelectedDayYmd();
+            if(!ymd) return false;
+            const u = emrUpdatedObj(row);
+            if(!u.date) return false;
+            return emrYmdFromDate(u.date) === ymd;
+        }
+        /** Tehsil/UC/search + month OR day on LastUpdatedDate */
         function emrFiltered(monthOnly){
             const t = (document.getElementById('emrTehsil')||{}).value || '';
             const u = (document.getElementById('emrUC')||{}).value || '';
             const q = ((document.getElementById('emrSearch')||{}).value || '').toLowerCase().trim();
             const ym = emrGetReportMonth();
+            const dayMode = emrPeriodMode() === 'day';
             return emrRows.filter(function(r){
                 if(monthOnly !== false){
-                    // default: only rows whose LastUpdatedDate is in report month
-                    if(!emrRowInReportMonth(r, ym)) return false;
+                    if(dayMode){
+                        if(!emrRowOnSelectedDay(r)) return false;
+                    } else {
+                        if(!emrRowInReportMonth(r, ym)) return false;
+                    }
                 }
                 if(t && emrCell(r, EMR_COLS.tehsil) !== t) return false;
                 if(u && emrCell(r, EMR_COLS.uc) !== u) return false;
@@ -3136,10 +3210,17 @@
             if(!dt || !ym) return false;
             return dt.getFullYear() === ym.year && dt.getMonth() === ym.month;
         }
-        /** Count dose only if antigen column date falls in report month */
+        /** Count dose if antigen date matches period (month or selected day) */
         function emrHasDoseThisMonth(row, colKey, ym){
             const raw = emrCell(row, EMR_COLS[colKey]);
             const dt = emrParseDoseDate(raw);
+            if(!dt) return false;
+            if(emrPeriodMode() === 'day'){
+                const ymd = emrSelectedDayYmd();
+                if(!ymd) return false;
+                return emrYmdFromDate(dt) === ymd;
+            }
+            ym = ym || emrGetReportMonth();
             return emrSameMonth(dt, ym);
         }
         function emrMonthLabel(ym){
@@ -3184,13 +3265,14 @@
             if(t && u) scope = 'Scope: Tehsil '+t+' · UC '+u;
             else if(t) scope = 'Scope: Tehsil '+t+' (All UCs)';
             else if(u) scope = 'Scope: UC '+u;
+            scope += ' · '+emrPeriodLabel();
             if(scopeEl) scopeEl.textContent = scope;
 
             const rows = data || emrFiltered();
             if(!grid) return;
             const ym = emrGetReportMonth();
             // Total entries still = rows in filter; antigens = doses dated in report month
-            let items = [{n: rows.length.toLocaleString(), l:'Total Entries ('+emrMonthLabel(ym)+')'}];
+            let items = [{n: rows.length.toLocaleString(), l:'Total Entries ('+emrPeriodLabel()+')'}];
             EMR_VAX_ORDER.forEach(function(pair){
                 const key = pair[0], label = pair[1];
                 let c = 0;
@@ -3205,7 +3287,7 @@
             const upto2 = document.getElementById('emrDataUpto');
             if(upto2){
                 const base = emrLatestUpdated(emrRows);
-                upto2.innerHTML = base + ' · <span style="color:#1565c0">Antigen counts: '+emrMonthLabel(ym)+'</span>';
+                upto2.innerHTML = base + ' · <span style="color:#1565c0">Period: '+emrPeriodLabel()+'</span>';
             }
             grid.innerHTML = items.map(function(it){
                 return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
@@ -3225,7 +3307,7 @@
                 const sv = tSel ? emrTargetFor(tSel,'surviving') : emrDistrictTarget('surviving');
                 const scope = tSel ? ('Tehsil '+tSel) : 'District';
                 const uptoLabel = emrLatestUpdated(emrRows);
-                let htmlC = '<div style="font-weight:800;color:#0d5c3d;margin:4px 0 8px;font-size:13.5px">Target vs Coverage ('+scope+' · '+emrMonthLabel(ym)+' Till '+uptoLabel+')</div>';
+                let htmlC = '<div style="font-weight:800;color:#0d5c3d;margin:4px 0 8px;font-size:13.5px">Target vs Coverage ('+scope+' · '+emrPeriodLabel()+' Till '+uptoLabel+')</div>';
                 htmlC += '<div style="font-size:12px;color:#666;margin-bottom:8px">Newborn target (BCG, Hep-B): <strong>'+nb.toLocaleString()+'</strong> · Surviving target (other antigens): <strong>'+sv.toLocaleString()+'</strong></div>';
                 htmlC += '<div class="emr-summary-grid">';
                 EMR_COVERAGE_ANTIGENS.forEach(function(a){
