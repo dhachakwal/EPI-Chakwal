@@ -626,6 +626,7 @@
                     <button type="button" class="emr-tab" data-emr="dropout" onclick="emrSwitch('dropout')">9. Drop-out</button>
                     <button type="button" class="emr-tab" data-emr="targets" onclick="emrSwitch('targets')">10. Targets vs Coverage</button>
                     <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
+                    <button type="button" class="emr-tab" data-emr="overdue" onclick="emrSwitch('overdue')">12. Overdue Children (Not Vaccinated)</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -3627,6 +3628,92 @@
         }
 
 
+        
+        // Overdue: no dose + (today/ref > due + 28 days)
+        const EMR_OVERDUE_GRACE = 28;
+        function emrAddDays(dt, days){
+            const d = new Date(dt.getTime());
+            d.setDate(d.getDate() + days);
+            return d;
+        }
+        function emrRefDate(row){
+            const u = emrUpdatedObj(row);
+            return (u && u.date) ? new Date(u.date.getTime()) : new Date();
+        }
+        /** Compute due Date for antigen; null if cannot compute */
+        function emrAntigenDueDate(row, key, dob){
+            if(!dob) return null;
+            const p1 = emrParseDoseDate(emrCell(row, EMR_COLS.pentaI));
+            const p2 = emrParseDoseDate(emrCell(row, EMR_COLS.pentaII));
+            // Age-based defaults
+            if(key === 'bcg') return emrAddDays(dob, 30);
+            if(key === 'hepB') return emrAddDays(dob, 15);
+            if(key === 'opv0') return emrAddDays(dob, 15);
+            // 6 weeks / 45 days cluster
+            if(key === 'pentaI' || key === 'opvI' || key === 'pneumoI' || key === 'rota1') return emrAddDays(dob, 45);
+            // 10 weeks or Penta1 + 28
+            if(key === 'pentaII' || key === 'opvII' || key === 'pneumoII' || key === 'rota2'){
+                if(p1) return emrAddDays(p1, 28);
+                return emrAddDays(dob, 70);
+            }
+            // 14 weeks or Penta2 + 28
+            if(key === 'pentaIII' || key === 'opvIII' || key === 'pneumoIII' || key === 'ipv'){
+                if(p2) return emrAddDays(p2, 28);
+                return emrAddDays(dob, 98);
+            }
+            if(key === 'measlesI' || key === 'ipv2' || key === 'tcv') return emrAddDays(dob, 270);
+            if(key === 'measlesII') return emrAddDays(dob, 450);
+            if(key === 'dpt') return emrAddDays(dob, 540);
+            return null;
+        }
+        const EMR_OVERDUE_ANTIGENS = [
+            {key:'bcg', label:'BCG'},
+            {key:'hepB', label:'Hep Birth Dose'},
+            {key:'opv0', label:'OPV-0'},
+            {key:'pentaI', label:'Penta-1'},
+            {key:'opvI', label:'OPV-1'},
+            {key:'pneumoI', label:'PCV13-1'},
+            {key:'rota1', label:'Rota-1'},
+            {key:'pentaII', label:'Penta-2'},
+            {key:'opvII', label:'OPV-2'},
+            {key:'pneumoII', label:'PCV13-2'},
+            {key:'rota2', label:'Rota-2'},
+            {key:'pentaIII', label:'Penta-3'},
+            {key:'opvIII', label:'OPV-3'},
+            {key:'pneumoIII', label:'PCV13-3'},
+            {key:'ipv', label:'IPV-1'},
+            {key:'measlesI', label:'MR-1'},
+            {key:'ipv2', label:'IPV-2'},
+            {key:'tcv', label:'TCV'},
+            {key:'measlesII', label:'MR-2'},
+            {key:'dpt', label:'DTP'}
+        ];
+        function emrOverdueAntigens(row){
+            const dob = emrEstimateDOB(row);
+            if(!dob) return [];
+            const ref = emrRefDate(row);
+            const out = [];
+            EMR_OVERDUE_ANTIGENS.forEach(function(a){
+                const raw = emrCell(row, EMR_COLS[a.key]);
+                if(emrHasDose(raw)) return; // already vaccinated — not overdue-missing
+                const due = emrAntigenDueDate(row, a.key, dob);
+                if(!due) return;
+                const overdueFrom = emrAddDays(due, EMR_OVERDUE_GRACE);
+                if(ref.getTime() > overdueFrom.getTime()){
+                    const daysPastDue = emrDaysBetween(due, ref);
+                    out.push({
+                        key: a.key,
+                        label: a.label,
+                        dueStr: (due.getMonth()+1)+'/'+due.getDate()+'/'+due.getFullYear(),
+                        daysPastDue: daysPastDue,
+                        daysPastGrace: emrDaysBetween(overdueFrom, ref)
+                    });
+                }
+            });
+            return out;
+        }
+
+
         function emrApply(){
             const chartWrap = document.getElementById('emrChartWrap');
             if(chartWrap) chartWrap.style.display = (emrMode === 'targets') ? 'block' : 'none';
@@ -3645,7 +3732,7 @@
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
             const extra = document.getElementById('emrExtraVisual');
-            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter'){
+            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter' && emrMode !== 'overdue'){
                 extra.style.display = 'none';
                 extra.innerHTML = '';
             }
@@ -3985,6 +4072,44 @@
                         + '<strong>Rule:</strong> Due ages — BCG 1 mo · Hep-B/OPV-0 15 d · Penta-1 6 wk · Penta-2 10 wk · Penta-3/IPV-1 14 wk · MR-1/IPV-2/TCV 9 mo · MR-2 15 mo · DTP 18 mo. '
                         + '<strong>Defaulter</strong> = dose given <em>more than 1 month after</em> due age (DOB estimated from Age + LastUpdatedDate). '
                         + 'Uses same Period / Tehsil / UC filters as other tabs.</div>';
+                }
+            }
+            else if(emrMode === 'overdue'){
+                const rows = [];
+                data.forEach(function(r){
+                    const ovs = emrOverdueAntigens(r);
+                    if(!ovs.length) return;
+                    rows.push({r:r, ovs:ovs});
+                });
+                // sort by most overdue antigens count then name
+                rows.sort(function(a,b){ return b.ovs.length - a.ovs.length; });
+                emrSetStats([
+                    {n: rows.length.toLocaleString(), l:'Overdue children'},
+                    {n: data.length.toLocaleString(), l:'In period/filter'},
+                    {n: emrPeriodLabel(), l:'Period'},
+                    {n: 'Due + 28d', l:'Overdue rule'}
+                ]);
+                const exp = [];
+                let i = 0;
+                const rowsHtml = rows.slice(0, 2000).map(function(item){
+                    i++;
+                    const r = item.r;
+                    const labels = item.ovs.map(function(d){ return d.label; }).join(', ');
+                    const detail = item.ovs.map(function(d){ return d.label+' (due '+d.dueStr+', +'+d.daysPastDue+'d)'; }).join(' | ');
+                    const row = [i, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.father), emrCell(r,EMR_COLS.age), emrCell(r,EMR_COLS.mr), emrCell(r,EMR_COLS.phone), labels, detail];
+                    exp.push(row);
+                    return '<tr><td>'+row[0]+'</td><td>'+row[1]+'</td><td>'+row[2]+'</td><td><strong>'+row[3]+'</strong></td><td>'+row[4]+'</td><td>'+row[5]+'</td><td>'+row[6]+'</td><td>'+row[7]+'</td><td style="color:#e65100;font-weight:700">'+row[8]+'</td><td style="font-size:11px;text-align:left">'+row[9]+'</td></tr>';
+                }).join('') + (rows.length>2000?'<tr><td colspan="10" style="text-align:center;color:#888">Showing first 2000 of '+rows.length+'</td></tr>':'');
+                const headers = ['Sr','Tehsil','UC','Name','Father','Age','MR','Phone','Overdue Antigen(s)','Due date + days past'];
+                emrRenderTable(headers, rowsHtml || '', headers, exp, ['Total', rows.length+' children','','','','','','','','']);
+                const extra = document.getElementById('emrExtraVisual');
+                if(extra){
+                    extra.style.display = 'block';
+                    extra.innerHTML = '<div style="font-size:12.5px;color:#555;line-height:1.55;padding:8px 4px">'
+                        + '<strong>Overdue Children (Not Vaccinated):</strong> teeka abhi <em>No</em> hai, lekin due date ke <strong>28 din baad</strong> bhi nahi laga. '
+                        + 'Schedule: BCG ≤1 mo · Hep-B/OPV-0 ≤15 d · Penta-1/OPV-1/PCV1/Rota-1 @45 d · '
+                        + 'Penta-2 cluster = Penta-1 +28 d (ya 10 wk) · Penta-3 cluster = Penta-2 +28 d (ya 14 wk) · '
+                        + 'MR-1/IPV-2/TCV @9 mo · MR-2 @15 mo · DTP @18 mo. DOB = Age + LastUpdatedDate. Same Period/Tehsil/UC filters.</div>';
                 }
             }
             else if(emrMode === 'targets'){
