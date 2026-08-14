@@ -625,6 +625,7 @@
                     <button type="button" class="emr-tab" data-emr="late" onclick="emrSwitch('late')">8. Late Entry</button>
                     <button type="button" class="emr-tab" data-emr="dropout" onclick="emrSwitch('dropout')">9. Drop-out</button>
                     <button type="button" class="emr-tab" data-emr="targets" onclick="emrSwitch('targets')">10. Targets vs Coverage</button>
+                    <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -3554,6 +3555,78 @@
         }
 
 
+        
+        // Due age (days from birth) — defaulter if dose after due + 30 days
+        const EMR_DUE_SCHEDULE = [
+            {key:'bcg', label:'BCG', dueDays:30},
+            {key:'hepB', label:'Hep Birth Dose', dueDays:15},
+            {key:'opv0', label:'OPV-0', dueDays:15},
+            {key:'pentaI', label:'Penta-1', dueDays:42},
+            {key:'pentaII', label:'Penta-2', dueDays:70},
+            {key:'pentaIII', label:'Penta-3', dueDays:98},
+            {key:'ipv', label:'IPV-1', dueDays:98},
+            {key:'measlesI', label:'MR-1', dueDays:270},
+            {key:'ipv2', label:'IPV-2', dueDays:270},
+            {key:'tcv', label:'TCV', dueDays:270},
+            {key:'measlesII', label:'MR-2', dueDays:450},
+            {key:'dpt', label:'DTP', dueDays:540}
+        ];
+        const EMR_DEFAULT_GRACE_DAYS = 30; // 1 month after due
+
+        function emrParseAgeToDays(ageStr){
+            if(!ageStr) return null;
+            const s = String(ageStr);
+            let days = 0, found = false;
+            const y = s.match(/(\d+)\s*Year/i);
+            const m = s.match(/(\d+)\s*Month/i);
+            const d = s.match(/(\d+)\s*Day/i);
+            if(y){ days += parseInt(y[1],10)*365; found = true; }
+            if(m){ days += parseInt(m[1],10)*30; found = true; }
+            if(d){ days += parseInt(d[1],10); found = true; }
+            return found ? days : null;
+        }
+        function emrEstimateDOB(row){
+            const ageDays = emrParseAgeToDays(emrCell(row, EMR_COLS.age));
+            if(ageDays == null) return null;
+            const u = emrUpdatedObj(row);
+            const ref = (u && u.date) ? new Date(u.date.getTime()) : new Date();
+            const dob = new Date(ref.getTime());
+            dob.setDate(dob.getDate() - ageDays);
+            return dob;
+        }
+        function emrDaysBetween(a, b){
+            // a,b Date — full days b - a
+            const ms = b.getTime() - a.getTime();
+            return Math.floor(ms / 86400000);
+        }
+        /** Returns list of {label, dueDays, doseDate, ageAtDoseDays, lateByDays} for defaulter antigens */
+        function emrDefaulterAntigens(row){
+            const dob = emrEstimateDOB(row);
+            if(!dob) return [];
+            const out = [];
+            EMR_DUE_SCHEDULE.forEach(function(sch){
+                const raw = emrCell(row, EMR_COLS[sch.key]);
+                if(!emrHasDose(raw)) return;
+                const doseDt = emrParseDoseDate(raw);
+                if(!doseDt) return;
+                const ageAtDose = emrDaysBetween(dob, doseDt);
+                if(ageAtDose < 0) return; // bad data
+                const limit = sch.dueDays + EMR_DEFAULT_GRACE_DAYS;
+                if(ageAtDose > limit){
+                    out.push({
+                        key: sch.key,
+                        label: sch.label,
+                        dueDays: sch.dueDays,
+                        doseDate: raw,
+                        ageAtDoseDays: ageAtDose,
+                        lateByDays: ageAtDose - sch.dueDays
+                    });
+                }
+            });
+            return out;
+        }
+
+
         function emrApply(){
             const chartWrap = document.getElementById('emrChartWrap');
             if(chartWrap) chartWrap.style.display = (emrMode === 'targets') ? 'block' : 'none';
@@ -3572,7 +3645,7 @@
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
             const extra = document.getElementById('emrExtraVisual');
-            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets'){
+            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter'){
                 extra.style.display = 'none';
                 extra.innerHTML = '';
             }
@@ -3876,6 +3949,43 @@
                 }).join('');
                 // total = first block (overall for filter) already first row; add formula note row in total
                 emrRenderTable(headers, rowsHtml, headers, expRows, null);
+            }
+            else if(emrMode === 'defaulter'){
+                // Children vaccinated after due age + 1 month grace
+                const rows = [];
+                data.forEach(function(r){
+                    const defs = emrDefaulterAntigens(r);
+                    if(!defs.length) return;
+                    rows.push({r:r, defs:defs});
+                });
+                emrSetStats([
+                    {n: rows.length.toLocaleString(), l:'Defaulter children'},
+                    {n: data.length.toLocaleString(), l:'In period/filter'},
+                    {n: emrPeriodLabel(), l:'Period'},
+                    {n: '+1 month', l:'Grace after due'}
+                ]);
+                const exp = [];
+                let i = 0;
+                const rowsHtml = rows.slice(0, 2000).map(function(item){
+                    i++;
+                    const r = item.r;
+                    const labels = item.defs.map(function(d){ return d.label; }).join(', ');
+                    const doses = item.defs.map(function(d){ return d.label+': '+d.doseDate+' (late '+d.lateByDays+'d)'; }).join(' | ');
+                    const row = [i, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.father), emrCell(r,EMR_COLS.age), emrCell(r,EMR_COLS.mr), emrCell(r,EMR_COLS.phone), labels, doses];
+                    exp.push(row);
+                    return '<tr><td>'+row[0]+'</td><td>'+row[1]+'</td><td>'+row[2]+'</td><td><strong>'+row[3]+'</strong></td><td>'+row[4]+'</td><td>'+row[5]+'</td><td>'+row[6]+'</td><td>'+row[7]+'</td><td style="color:#c62828;font-weight:700">'+row[8]+'</td><td style="font-size:11px;text-align:left">'+row[9]+'</td></tr>';
+                }).join('') + (rows.length>2000?'<tr><td colspan="10" style="text-align:center;color:#888">Showing first 2000 of '+rows.length+'</td></tr>':'');
+                const headers = ['Sr','Tehsil','UC','Name','Father','Age','MR','Phone','Defaulter Antigen(s)','Dose date + late by'];
+                emrRenderTable(headers, rowsHtml || '', headers, exp, ['Total', rows.length+' children','','','','','','','','']);
+                // note under table via status-ish
+                const extra = document.getElementById('emrExtraVisual');
+                if(extra){
+                    extra.style.display = 'block';
+                    extra.innerHTML = '<div style="font-size:12.5px;color:#555;line-height:1.5;padding:8px 4px">'
+                        + '<strong>Rule:</strong> Due ages — BCG 1 mo · Hep-B/OPV-0 15 d · Penta-1 6 wk · Penta-2 10 wk · Penta-3/IPV-1 14 wk · MR-1/IPV-2/TCV 9 mo · MR-2 15 mo · DTP 18 mo. '
+                        + '<strong>Defaulter</strong> = dose given <em>more than 1 month after</em> due age (DOB estimated from Age + LastUpdatedDate). '
+                        + 'Uses same Period / Tehsil / UC filters as other tabs.</div>';
+                }
             }
             else if(emrMode === 'targets'){
                 const ym = emrGetReportMonth();
