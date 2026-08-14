@@ -3629,7 +3629,8 @@
 
 
         
-        // Overdue: no dose + (today/ref > due + 28 days)
+
+        // Overdue: no dose + past due+28d + still within max eligible age
         const EMR_OVERDUE_GRACE = 28;
         function emrAddDays(dt, days){
             const d = new Date(dt.getTime());
@@ -3640,73 +3641,76 @@
             const u = emrUpdatedObj(row);
             return (u && u.date) ? new Date(u.date.getTime()) : new Date();
         }
-        /** Compute due Date for antigen; null if cannot compute */
-        function emrAntigenDueDate(row, key, dob){
-            if(!dob) return null;
-            const p1 = emrParseDoseDate(emrCell(row, EMR_COLS.pentaI));
-            const p2 = emrParseDoseDate(emrCell(row, EMR_COLS.pentaII));
-            // Age-based defaults
-            if(key === 'bcg') return emrAddDays(dob, 30);
-            if(key === 'hepB') return emrAddDays(dob, 15);
-            if(key === 'opv0') return emrAddDays(dob, 15);
-            // 6 weeks / 45 days cluster
-            if(key === 'pentaI' || key === 'opvI' || key === 'pneumoI' || key === 'rota1') return emrAddDays(dob, 45);
-            // 10 weeks or Penta1 + 28
-            if(key === 'pentaII' || key === 'opvII' || key === 'pneumoII' || key === 'rota2'){
-                if(p1) return emrAddDays(p1, 28);
-                return emrAddDays(dob, 70);
+        /**
+         * Schedule:
+         * dueDays from DOB OR prevKey+28; maxAgeDays = last eligible age (beyond this, not in overdue list)
+         */
+        const EMR_OVERDUE_SCHEDULE = [
+            {key:'bcg', label:'BCG', dueMode:'dob', dueDays:30, maxAgeDays:365},
+            {key:'hepB', label:'Hep Birth Dose', dueMode:'dob', dueDays:1, maxAgeDays:15},
+            {key:'opv0', label:'OPV-0', dueMode:'dob', dueDays:1, maxAgeDays:15},
+            {key:'pentaI', label:'Penta-1', dueMode:'dob', dueDays:45, maxAgeDays:5*365},
+            {key:'opvI', label:'OPV-1', dueMode:'dob', dueDays:45, maxAgeDays:5*365},
+            {key:'pneumoI', label:'PCV13-1', dueMode:'dob', dueDays:45, maxAgeDays:5*365},
+            {key:'rota1', label:'Rota-1', dueMode:'dob', dueDays:45, maxAgeDays:2*365},
+            {key:'pentaII', label:'Penta-2', dueMode:'prev', prevKey:'pentaI', interval:28, fallbackDays:70, maxAgeDays:5*365},
+            {key:'opvII', label:'OPV-2', dueMode:'prev', prevKey:'opvI', interval:28, fallbackDays:70, maxAgeDays:5*365},
+            {key:'pneumoII', label:'PCV13-2', dueMode:'prev', prevKey:'pneumoI', interval:28, fallbackDays:70, maxAgeDays:5*365},
+            {key:'rota2', label:'Rota-2', dueMode:'prev', prevKey:'rota1', interval:28, fallbackDays:70, maxAgeDays:2*365},
+            {key:'pentaIII', label:'Penta-3', dueMode:'prev', prevKey:'pentaII', interval:28, fallbackDays:98, maxAgeDays:5*365},
+            {key:'opvIII', label:'OPV-3', dueMode:'prev', prevKey:'opvII', interval:28, fallbackDays:98, maxAgeDays:5*365},
+            {key:'pneumoIII', label:'PCV13-3', dueMode:'prev', prevKey:'pneumoII', interval:28, fallbackDays:98, maxAgeDays:5*365},
+            {key:'ipv', label:'IPV-1', dueMode:'dob', dueDays:98, maxAgeDays:5*365},
+            {key:'measlesI', label:'MR-1', dueMode:'dob', dueDays:270, maxAgeDays:5*365},
+            {key:'ipv2', label:'IPV-2', dueMode:'dob', dueDays:270, maxAgeDays:5*365},
+            {key:'tcv', label:'TCV', dueMode:'dob', dueDays:270, maxAgeDays:5*365},
+            {key:'measlesII', label:'MR-2', dueMode:'dob', dueDays:450, maxAgeDays:5*365},
+            {key:'dpt', label:'DTP', dueMode:'dob', dueDays:540, maxAgeDays:5*365}
+        ];
+        function emrAntigenDueDate(row, sch, dob){
+            if(!dob || !sch) return null;
+            if(sch.dueMode === 'dob') return emrAddDays(dob, sch.dueDays);
+            if(sch.dueMode === 'prev'){
+                const prevRaw = emrCell(row, EMR_COLS[sch.prevKey]);
+                const prevDt = emrParseDoseDate(prevRaw);
+                if(prevDt) return emrAddDays(prevDt, sch.interval || 28);
+                return emrAddDays(dob, sch.fallbackDays || 70);
             }
-            // 14 weeks or Penta2 + 28
-            if(key === 'pentaIII' || key === 'opvIII' || key === 'pneumoIII' || key === 'ipv'){
-                if(p2) return emrAddDays(p2, 28);
-                return emrAddDays(dob, 98);
-            }
-            if(key === 'measlesI' || key === 'ipv2' || key === 'tcv') return emrAddDays(dob, 270);
-            if(key === 'measlesII') return emrAddDays(dob, 450);
-            if(key === 'dpt') return emrAddDays(dob, 540);
             return null;
         }
-        const EMR_OVERDUE_ANTIGENS = [
-            {key:'bcg', label:'BCG'},
-            {key:'hepB', label:'Hep Birth Dose'},
-            {key:'opv0', label:'OPV-0'},
-            {key:'pentaI', label:'Penta-1'},
-            {key:'opvI', label:'OPV-1'},
-            {key:'pneumoI', label:'PCV13-1'},
-            {key:'rota1', label:'Rota-1'},
-            {key:'pentaII', label:'Penta-2'},
-            {key:'opvII', label:'OPV-2'},
-            {key:'pneumoII', label:'PCV13-2'},
-            {key:'rota2', label:'Rota-2'},
-            {key:'pentaIII', label:'Penta-3'},
-            {key:'opvIII', label:'OPV-3'},
-            {key:'pneumoIII', label:'PCV13-3'},
-            {key:'ipv', label:'IPV-1'},
-            {key:'measlesI', label:'MR-1'},
-            {key:'ipv2', label:'IPV-2'},
-            {key:'tcv', label:'TCV'},
-            {key:'measlesII', label:'MR-2'},
-            {key:'dpt', label:'DTP'}
-        ];
         function emrOverdueAntigens(row){
             const dob = emrEstimateDOB(row);
             if(!dob) return [];
             const ref = emrRefDate(row);
+            const ageDaysNow = emrDaysBetween(dob, ref);
+            // If Penta-1 already given → Hep-B & OPV-0 no longer eligible / not overdue
+            const penta1Given = emrHasDose(emrCell(row, EMR_COLS.pentaI));
+
             const out = [];
-            EMR_OVERDUE_ANTIGENS.forEach(function(a){
-                const raw = emrCell(row, EMR_COLS[a.key]);
-                if(emrHasDose(raw)) return; // already vaccinated — not overdue-missing
-                const due = emrAntigenDueDate(row, a.key, dob);
+            EMR_OVERDUE_SCHEDULE.forEach(function(sch){
+                if(penta1Given && (sch.key === 'hepB' || sch.key === 'opv0')) return;
+
+                const raw = emrCell(row, EMR_COLS[sch.key]);
+                if(emrHasDose(raw)) return; // vaccinated
+
+                // Beyond max eligible age → do not list
+                if(ageDaysNow > sch.maxAgeDays) return;
+
+                const due = emrAntigenDueDate(row, sch, dob);
                 if(!due) return;
+
+                // For prev-mode: if previous dose missing, still use fallback age due
+                // but if previous is required sequence and child never got prev, still can show based on fallback
+
                 const overdueFrom = emrAddDays(due, EMR_OVERDUE_GRACE);
                 if(ref.getTime() > overdueFrom.getTime()){
-                    const daysPastDue = emrDaysBetween(due, ref);
+                    // also must still be within max age at ref
                     out.push({
-                        key: a.key,
-                        label: a.label,
+                        key: sch.key,
+                        label: sch.label,
                         dueStr: (due.getMonth()+1)+'/'+due.getDate()+'/'+due.getFullYear(),
-                        daysPastDue: daysPastDue,
-                        daysPastGrace: emrDaysBetween(overdueFrom, ref)
+                        daysPastDue: emrDaysBetween(due, ref),
+                        maxAgeLabel: sch.maxAgeDays >= 5*365 ? '<5 yr' : (sch.maxAgeDays >= 2*365 ? '<2 yr' : (sch.maxAgeDays <= 15 ? '≤15 d' : (sch.maxAgeDays <= 365 ? '≤1 yr' : '')))
                     });
                 }
             });
@@ -4106,10 +4110,10 @@
                 if(extra){
                     extra.style.display = 'block';
                     extra.innerHTML = '<div style="font-size:12.5px;color:#555;line-height:1.55;padding:8px 4px">'
-                        + '<strong>Overdue Children (Not Vaccinated):</strong> teeka abhi <em>No</em> hai, lekin due date ke <strong>28 din baad</strong> bhi nahi laga. '
-                        + 'Schedule: BCG ≤1 mo · Hep-B/OPV-0 ≤15 d · Penta-1/OPV-1/PCV1/Rota-1 @45 d · '
-                        + 'Penta-2 cluster = Penta-1 +28 d (ya 10 wk) · Penta-3 cluster = Penta-2 +28 d (ya 14 wk) · '
-                        + 'MR-1/IPV-2/TCV @9 mo · MR-2 @15 mo · DTP @18 mo. DOB = Age + LastUpdatedDate. Same Period/Tehsil/UC filters.</div>';
+                        + '<strong>Overdue Children (Not Vaccinated):</strong> dose <em>No</em>, due se <strong>28+ din</strong> guzar gaye, aur abhi bhi <strong>max eligible age</strong> ke andar. '
+                        + 'Hep-B / OPV-0: agar <strong>Penta-1 lag chuka</strong> ho to list me nahi (ab nahi lag sakte). '
+                        + 'Max age: BCG ≤1 yr · Hep-B/OPV-0 ≤15 d · Rota ≤2 yr · baqi mostly &lt;5 yr. '
+                        + 'Intervals: Penta/OPV/PCV/Rota series previous dose +28 d. Same Period/Tehsil/UC filters.</div>';
                 }
             }
             else if(emrMode === 'targets'){
