@@ -311,6 +311,8 @@
         .emr-summary-scope{font-size:13px;font-weight:700;color:#1565c0;margin-bottom:10px}
         .emr-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
         .emr-sum-item{background:#fff;border-radius:10px;padding:10px 8px;text-align:center;border-bottom:3px solid #1a8a5c;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .emr-sum-item.clickable{cursor:pointer;transition:transform .12s,box-shadow .12s}
+        .emr-sum-item.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(13,92,61,.2);border-bottom-color:#0d5c3d}
         .emr-sum-item .n{font-size:18px;font-weight:800;color:#0d5c3d}
         .emr-sum-item .l{font-size:11px;font-weight:700;color:#555;margin-top:2px}
         .emr-table tfoot td{background:#e8f5e9;font-weight:800;color:#0d5c3d;border-top:2px solid #0d5c3d;position:sticky;bottom:0}
@@ -4091,6 +4093,70 @@
             return Math.round(ach * 1000 / tgt) / 10;
         }
 
+        
+        function emrShowAntigenEntries(key, label){
+            if(!emrRows.length){
+                alert('Please click Refresh Data first.');
+                return;
+            }
+            const ym = emrGetReportMonth();
+            const base = emrFiltered();
+            let matched = [];
+            if(key === '__all__'){
+                matched = base.slice();
+            } else {
+                matched = base.filter(function(r){ return emrHasDoseThisMonth(r, key, ym); });
+            }
+            window._emrSearchMatches = matched;
+
+            const body = document.getElementById('emrChildModalBody');
+            const status = document.getElementById('emrChildModalStatus');
+            const modal = document.getElementById('emrChildModal');
+            if(!body || !modal) return;
+
+            if(!matched.length){
+                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No entries for <strong>'+(label||key)+'</strong> in current filters / period.</div>';
+                if(status) status.textContent = '0 · '+(label||'')+' · '+emrPeriodLabel();
+                modal.classList.add('active');
+                return;
+            }
+
+            const max = Math.min(matched.length, 500);
+            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px"><strong>'+(label||key)+'</strong> — '+matched.length+' entr'+(matched.length===1?'y':'ies')+' · '+emrPeriodLabel()+'. Click <strong>Name</strong> for full detail.</div>';
+            table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
+            table += '<table class="emr-table" style="min-width:900px"><thead><tr>';
+            const headers = ['Sr','Tehsil','UC','MR Number','Name','Father','Age','Gender','Phone','Dose date'];
+            headers.forEach(function(h){ table += '<th>'+h+'</th>'; });
+            table += '</tr></thead><tbody>';
+            for(let i=0;i<max;i++){
+                const r = matched[i];
+                const name = emrCell(r, EMR_COLS.name) || '—';
+                let dose = '—';
+                if(key !== '__all__' && EMR_COLS[key] != null){
+                    dose = emrCell(r, EMR_COLS[key]) || '—';
+                }
+                table += '<tr>';
+                table += '<td>'+(i+1)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.tehsil)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.uc)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.mr)+'</td>';
+                table += '<td><a href="javascript:void(0)" onclick="emrShowChildDetail('+i+')" style="color:#0d5c3d;font-weight:700;text-decoration:underline">'+name+'</a></td>';
+                table += '<td>'+emrCell(r,EMR_COLS.father)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.age)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.gender)+'</td>';
+                table += '<td>'+emrCell(r,EMR_COLS.phone)+'</td>';
+                table += '<td>'+dose+'</td>';
+                table += '</tr>';
+            }
+            if(matched.length > max){
+                table += '<tr><td colspan="10" style="text-align:center;color:#888">Showing first '+max+' of '+matched.length+'</td></tr>';
+            }
+            table += '</tbody></table></div>';
+            body.innerHTML = table;
+            if(status) status.textContent = matched.length+' · '+(label||'')+' · '+emrPeriodLabel();
+            modal.classList.add('active');
+        }
+
         function emrUpdateSummaryPanel(data){
             const scopeEl = document.getElementById('emrSummaryScope');
             const grid = document.getElementById('emrSummaryGrid');
@@ -4126,8 +4192,17 @@
                 const base = emrLatestUpdated(emrRows);
                 upto2.innerHTML = base + ' · <span style="color:#1565c0">Period: '+emrPeriodLabel()+'</span>';
             }
+            let gi = 0;
             grid.innerHTML = items.map(function(it){
-                return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+                if(gi === 0){
+                    gi++;
+                    return '<div class="emr-sum-item clickable" onclick="emrShowAntigenEntries(\'__all__\',\'Total Entries\')" title="Click to view entries"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+                }
+                const pair = EMR_VAX_ORDER[gi-1];
+                gi++;
+                if(!pair) return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+                const k = pair[0], lab = pair[1];
+                return '<div class="emr-sum-item clickable" onclick="emrShowAntigenEntries(\''+k+'\',\''+lab.replace(/'/g,"\\'")+'\')" title="Click to view '+lab+' entries"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
 
             // Coverage vs target strip (district / selected tehsil)
@@ -4151,7 +4226,7 @@
                     const ach = emrCountAntigenMonth(rows, a.key, ym);
                     const tgt = a.target==='newborn' ? nb : sv;
                     const pct = emrCoveragePct(ach, tgt);
-                    htmlC += '<div class="emr-sum-item" style="border-bottom-color:'+(pct>=80?'#2e7d32':(pct>=50?'#f9a825':'#e65100'))+'">'
+                    htmlC += '<div class="emr-sum-item clickable" style="border-bottom-color:'+(pct>=80?'#2e7d32':(pct>=50?'#f9a825':'#e65100'))+'" onclick="emrShowAntigenEntries(\''+a.key+'\',\''+a.label.replace(/'/g,"\\'")+'\')" title="Click to view '+a.label+' entries">'
                         + '<div class="n">'+pct+'%</div>'
                         + '<div class="l">'+a.label+'</div>'
                         + '<div style="font-size:10px;color:#888;margin-top:2px">'+ach+' / '+tgt+'</div>'
