@@ -2701,9 +2701,16 @@
                     mk: dt ? fxMonthKey(dt) : ''
                 };
             });
+            const first = raw(15), last = raw(16);
+            const fullName = (first + ' ' + last).trim() || '—';
             return {
                 tehsil: raw(1) || '—',
                 hf: raw(2) || '—',
+                gender: raw(7) || '—',
+                dob: raw(8) || '—',
+                mr: raw(10) || '—',
+                name: fullName,
+                phone: raw(17) || '—',
                 created: created,
                 createdYmd: created ? fxYmd(created) : '',
                 createdMk: created ? fxMonthKey(created) : '',
@@ -2900,37 +2907,77 @@
             return counts;
         }
         
+        function fxBuildChildCardHtml(r){
+            let vax = '';
+            FX_VAX_DEF.forEach(function(def){
+                const key = def[0], label = def[1];
+                const d = r.doses && r.doses[key];
+                const has = d && d.yes;
+                const dateStr = has ? (d.ymd ? formatYmdLong(d.ymd) : 'Yes') : 'No';
+                vax += '<div class="emr-vax-item'+(has?'':' no-dose')+'"><div class="emr-vax-name">'+label+'</div><div class="emr-vax-date">'+dateStr+'</div></div>';
+            });
+            return '<div class="emr-child-card" style="margin:0">'
+                + '<h4 style="margin-top:0">'+(r.name||'—')+'</h4>'
+                + '<div class="emr-child-meta">'
+                + '<div><span>Tehsil:</span> <strong>'+(r.tehsil||'—')+'</strong></div>'
+                + '<div><span>Health Facility:</span> <strong>'+(r.hf||'—')+'</strong></div>'
+                + '<div><span>MR Number:</span> <strong>'+(r.mr||'—')+'</strong></div>'
+                + '<div><span>Date of Birth:</span> <strong>'+(r.dob||'—')+'</strong></div>'
+                + '<div><span>Gender:</span> <strong>'+(r.gender||'—')+'</strong></div>'
+                + '<div><span>Phone Number:</span> <strong>'+(r.phone||'—')+'</strong></div>'
+                + '<div><span>Entry date:</span> <strong>'+(r.createdYmd?formatYmdLong(r.createdYmd):'—')+'</strong></div>'
+                + '</div>'
+                + '<div style="font-weight:700;color:#0d5c3d;margin:8px 0 6px;font-size:13px">Vaccination Dates</div>'
+                + '<div class="emr-vax-grid">'+vax+'</div>'
+                + '</div>';
+        }
+        function fxShowChildDetail(idx){
+            const list = window._fxSearchMatches || [];
+            const r = list[idx];
+            if(!r) return;
+            const body = document.getElementById('emrChildModalBody');
+            const status = document.getElementById('emrChildModalStatus');
+            if(!body) return;
+            const back = '<div style="margin-bottom:10px"><button type="button" class="btn btn-sm btn-outline" onclick="fxReopenLastList()" style="border-color:#0d5c3d;color:#0d5c3d">← Back to list</button></div>';
+            body.innerHTML = back + '<div id="emrSearchCard0">'+fxBuildChildCardHtml(r)+'</div>';
+            if(status) status.textContent = 'Detail · '+(r.name||'')+' · Fixed Site · '+fxPeriodLabel();
+            const modalBox = body.parentNode;
+            if(modalBox) modalBox.scrollTop = 0;
+        }
+        function fxReopenLastList(){
+            if(window._fxLastListArgs){
+                fxShowAntigenEntries(window._fxLastListArgs[0], window._fxLastListArgs[1]);
+            }
+        }
         function fxShowAntigenEntries(key, label){
             if(!fxRecords.length){
                 alert('Please click Refresh Data first.');
                 return;
             }
+            window._fxLastListArgs = [key, label];
             const data = fxFiltered();
             let matched = [];
-            if(key === '__all__'){
-                matched = data.slice();
-            } else {
-                matched = data.filter(function(r){ return fxDoseInPeriod(r, key); });
-            }
-            // Build simple modal using emrChildModal if present, else alert count
+            if(key === '__all__') matched = data.slice();
+            else matched = data.filter(function(r){ return fxDoseInPeriod(r, key); });
+            window._fxSearchMatches = matched;
+
             const body = document.getElementById('emrChildModalBody');
             const status = document.getElementById('emrChildModalStatus');
             const modal = document.getElementById('emrChildModal');
-            if(!body || !modal){
-                alert((label||key)+': '+matched.length+' entries');
-                return;
-            }
+            if(!body || !modal) return;
+
             if(!matched.length){
-                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No entries for <strong>'+(label||key)+'</strong> in current filters / period.</div>';
+                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No entries for <strong>'+(label||key)+'</strong> in the current filters / period.</div>';
                 if(status) status.textContent = '0 · Fixed Site · '+(label||'')+' · '+fxPeriodLabel();
                 modal.classList.add('active');
                 return;
             }
+
             const max = Math.min(matched.length, 500);
-            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px"><strong>Fixed Site — '+(label||key)+'</strong> · '+matched.length+' entr'+(matched.length===1?'y':'ies')+' · '+fxPeriodLabel()+'</div>';
+            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px">Click a <strong>name</strong> to open the full vaccination detail. Showing <strong>'+max+'</strong> of <strong>'+matched.length+'</strong> · Fixed Site · '+fxPeriodLabel()+' · <strong>'+(label||'')+'</strong></div>';
             table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
-            table += '<table class="emr-table" style="min-width:720px"><thead><tr>';
-            ['Sr','Tehsil','Health Facility','Dose / Flag'].forEach(function(h){ table += '<th>'+h+'</th>'; });
+            table += '<table class="emr-table" style="min-width:900px"><thead><tr>';
+            ['Sr','Tehsil','Health Facility','MR Number','Name','Gender','Phone','Entry date','Dose'].forEach(function(h){ table += '<th>'+h+'</th>'; });
             table += '</tr></thead><tbody>';
             for(let i=0;i<max;i++){
                 const r = matched[i];
@@ -2940,14 +2987,25 @@
                 } else if(key === '__all__'){
                     dose = r.createdYmd ? formatYmdLong(r.createdYmd) : '—';
                 }
-                table += '<tr><td>'+(i+1)+'</td><td>'+r.tehsil+'</td><td>'+r.hf+'</td><td>'+dose+'</td></tr>';
+                const name = r.name || '—';
+                table += '<tr>';
+                table += '<td>'+(i+1)+'</td>';
+                table += '<td>'+r.tehsil+'</td>';
+                table += '<td>'+r.hf+'</td>';
+                table += '<td>'+(r.mr||'—')+'</td>';
+                table += '<td><a href="javascript:void(0)" onclick="fxShowChildDetail('+i+')" style="color:#0d5c3d;font-weight:700;text-decoration:underline">'+name+'</a></td>';
+                table += '<td>'+(r.gender||'—')+'</td>';
+                table += '<td>'+(r.phone||'—')+'</td>';
+                table += '<td>'+(r.createdYmd?formatYmdLong(r.createdYmd):'—')+'</td>';
+                table += '<td>'+dose+'</td>';
+                table += '</tr>';
             }
             if(matched.length > max){
-                table += '<tr><td colspan="4" style="text-align:center;color:#888">Showing first '+max+' of '+matched.length+'</td></tr>';
+                table += '<tr><td colspan="9" style="text-align:center;color:#888">Showing first '+max+' of '+matched.length+'</td></tr>';
             }
             table += '</tbody></table></div>';
             body.innerHTML = table;
-            if(status) status.textContent = matched.length+' · Fixed Site · '+(label||'')+' · '+fxPeriodLabel();
+            if(status) status.textContent = matched.length+' result(s) · Fixed Site · '+(label||'')+' · '+fxPeriodLabel();
             modal.classList.add('active');
         }
 
@@ -3909,7 +3967,7 @@
 
             // List table — click Name for full card
             const max = Math.min(matched.length, 500);
-            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px">Name par <strong>click</strong> karein — detail popup (vaccination dates) khulega. Showing <strong>'+max+'</strong> of <strong>'+matched.length+'</strong></div>';
+            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px">Click a <strong>name</strong> to open the full vaccination detail. Showing <strong>'+max+'</strong> of <strong>'+matched.length+'</strong></div>';
             table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
             table += '<table class="emr-table" style="min-width:900px"><thead><tr>';
             const headers = ['Sr','Division','District','Tehsil','UC','MR Number','Name','Father Name','Age','Gender','Address','Phone'];
@@ -3935,7 +3993,7 @@
             }
             table += '</tbody></table></div>';
             body.innerHTML = table;
-            if(status) status.textContent = matched.length + ' child(ren) · ' + emrPeriodLabel() + ' · filters applied';
+            if(status) status.textContent = matched.length + ' result(s) · ' + emrPeriodLabel() + ' · filters applied';
             modal.classList.add('active');
         }
         function emrShowChildDetail(idx){
