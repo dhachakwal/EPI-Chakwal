@@ -331,8 +331,8 @@
         .section-title.collapsible-header{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
         .section-title .section-arrow{font-size:14px;color:#0d5c3d;transition:transform .2s;flex-shrink:0;width:28px;height:28px;border-radius:8px;background:#e8f5e9;display:inline-flex;align-items:center;justify-content:center}
         .section-title.open .section-arrow{transform:rotate(90deg);background:#0d5c3d;color:#fff}
-        .section-collapse-body{display:none;margin-bottom:8px}
-        .section-collapse-body.open{display:block}
+        .section-collapse-body{display:none!important;margin-bottom:8px}
+        .section-collapse-body.open{display:block!important}
     
     </style>
 </head>
@@ -1269,70 +1269,82 @@
             if(!body || !body.classList.contains('section-collapse-body')) return;
             const open = body.classList.toggle('open');
             header.classList.toggle('open', open);
+            const arrow = header.querySelector('.section-arrow');
+            if(arrow) arrow.textContent = open ? '▼' : '▶';
         }
         function initCollapsibleSections(){
-            const main = document.querySelector('.main-content');
-            if(!main || main.getAttribute('data-collapse-ready') === '1') return;
-            main.setAttribute('data-collapse-ready','1');
+            try{
+                const main = document.querySelector('.main-content');
+                if(!main) return;
+                if(main.getAttribute('data-collapse-ready') === '1') return;
+                main.setAttribute('data-collapse-ready', '1');
 
-            function processTitle(titleEl){
-                if(!titleEl || titleEl.getAttribute('data-collapse') === '1') return;
-                titleEl.setAttribute('data-collapse','1');
-                titleEl.classList.add('collapsible-header');
-                // preserve existing inner content, add arrow
-                if(!titleEl.querySelector('.section-arrow')){
-                    const arrow = document.createElement('span');
-                    arrow.className = 'section-arrow';
-                    arrow.textContent = '▶';
-                    titleEl.appendChild(arrow);
+                function isSectionTitle(el){
+                    return el && el.nodeType === 1 && el.classList && el.classList.contains('section-title');
                 }
-                // gather following siblings until next section-title
-                const parent = titleEl.parentNode;
-                const body = document.createElement('div');
-                body.className = 'section-collapse-body';
-                let n = titleEl.nextSibling;
-                const toMove = [];
-                while(n){
-                    const next = n.nextSibling;
-                    if(n.nodeType === 1){
-                        if(n.classList && n.classList.contains('section-title')) break;
-                        if(n.classList && n.classList.contains('section-collapse-body')) break;
-                        // stop if another collapsible header
-                        if(n.querySelector && n.querySelector('.section-title') && n.id === 'sweepExportArea'){
-                            // don't swallow next major block incorrectly
+                function isBoundary(el){
+                    if(!el || el.nodeType !== 1) return false;
+                    if(isSectionTitle(el)) return true;
+                    if(el.id === 'sweepExportArea') return true;
+                    if(el.classList && el.classList.contains('section-collapse-body')) return true;
+                    return false;
+                }
+                function processTitle(titleEl){
+                    if(!titleEl || titleEl.getAttribute('data-collapse') === '1') return;
+                    titleEl.setAttribute('data-collapse', '1');
+                    titleEl.classList.add('collapsible-header');
+                    if(!titleEl.querySelector('.section-arrow')){
+                        const arrow = document.createElement('span');
+                        arrow.className = 'section-arrow';
+                        arrow.textContent = '▶';
+                        arrow.setAttribute('aria-hidden', 'true');
+                        titleEl.appendChild(arrow);
+                    }
+                    const parent = titleEl.parentNode;
+                    const body = document.createElement('div');
+                    body.className = 'section-collapse-body';
+                    // default CLOSED — no .open class
+                    let n = titleEl.nextSibling;
+                    while(n){
+                        const next = n.nextSibling;
+                        if(n.nodeType === 1 && isBoundary(n)) break;
+                        if(n.nodeType === 1 || (n.nodeType === 3 && String(n.textContent).trim())){
+                            body.appendChild(n);
                         }
+                        n = next;
                     }
-                    if(n.nodeType === 1 || (n.nodeType === 3 && String(n.textContent).trim())){
-                        // if element is another section-title, stop
-                        if(n.nodeType === 1 && n.classList && n.classList.contains('section-title')) break;
-                        toMove.push(n);
-                    }
-                    n = next;
-                    if(toMove.length && n && n.nodeType===1 && n.classList && n.classList.contains('section-title')) break;
+                    if(titleEl.nextSibling) parent.insertBefore(body, titleEl.nextSibling);
+                    else parent.appendChild(body);
+
+                    titleEl.style.cursor = 'pointer';
+                    titleEl.addEventListener('click', function(e){
+                        if(e.target && (e.target.closest && e.target.closest('button'))) return;
+                        if(e.target && e.target.tagName === 'BUTTON') return;
+                        e.preventDefault();
+                        toggleSectionHeader(titleEl);
+                    });
                 }
-                toMove.forEach(function(node){ body.appendChild(node); });
-                if(titleEl.nextSibling) parent.insertBefore(body, titleEl.nextSibling);
-                else parent.appendChild(body);
 
-                titleEl.addEventListener('click', function(e){
-                    // don't toggle when clicking PDF/PNG buttons inside title
-                    if(e.target && (e.target.tagName === 'BUTTON' || e.target.closest('button'))) return;
-                    toggleSectionHeader(titleEl);
+                // 1) Sweep block: title inside #sweepExportArea
+                const sweepArea = document.getElementById('sweepExportArea');
+                if(sweepArea){
+                    const st = sweepArea.querySelector(':scope > .section-title, .section-title');
+                    if(st) processTitle(st);
+                }
+
+                // 2) All direct section titles under main-content
+                Array.from(main.children).forEach(function(ch){
+                    if(isSectionTitle(ch)) processTitle(ch);
                 });
-            }
 
-            // Process #sweepExportArea first: title inside it
-            const sweepArea = document.getElementById('sweepExportArea');
-            if(sweepArea){
-                const st = sweepArea.querySelector('.section-title');
-                if(st) processTitle(st);
+                // 3) Any remaining section-title not yet processed (safety)
+                main.querySelectorAll('.section-title').forEach(function(st){
+                    if(st.getAttribute('data-collapse') !== '1') processTitle(st);
+                });
+            }catch(err){
+                console.error('initCollapsibleSections', err);
             }
-            // Direct section titles under main (not already processed)
-            Array.from(main.children).forEach(function(ch){
-                if(ch.classList && ch.classList.contains('section-title')) processTitle(ch);
-            });
         }
-
 
         function toggleEventsSidebar(){
             var sb = document.getElementById('eventsSidebar');
@@ -4403,7 +4415,7 @@
 
         // auto-load EMR when page ready
         document.addEventListener('DOMContentLoaded', function(){
-            checkSiteLock(); collapseEventsSidebarDefault();
+            checkSiteLock(); collapseEventsSidebarDefault(); initCollapsibleSections();
             setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); }, 1200);
         });
 
@@ -4621,7 +4633,7 @@
             });
             items.forEach(function(item){ list.appendChild(item); });
         }
-        document.addEventListener('DOMContentLoaded', function(){ checkSiteLock(); collapseEventsSidebarDefault(); loadSweepData(); sortNewsList(); });
+        document.addEventListener('DOMContentLoaded', function(){ checkSiteLock(); collapseEventsSidebarDefault(); initCollapsibleSections(); loadSweepData(); sortNewsList(); });
         setTimeout(loadSweepData, 400);
 
         // Auto-clear Live after midnight (PKT): if page left open, re-render when calendar day changes
@@ -4640,5 +4652,12 @@
         })();
 
     </script>
+<script>
+        if(document.readyState === 'loading'){
+            document.addEventListener('DOMContentLoaded', function(){ try{ initCollapsibleSections(); }catch(e){} });
+        } else {
+            try{ initCollapsibleSections(); }catch(e){}
+        }
+        </script>
 </body>
 </html>
