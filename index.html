@@ -2651,6 +2651,16 @@
             const t = Date.parse(s);
             return isNaN(t) ? null : new Date(t);
         }
+        
+        function formatYmdLong(ymd){
+            if(!ymd || ymd.indexOf('-')<0) return ymd||'—';
+            const p = ymd.split('-');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const d = ('0'+p[2]).slice(-2);
+            const mon = months[(+p[1])-1] || p[1];
+            return d+'-'+mon+'-'+p[0];
+        }
+
         function fxYmd(dt){
             if(!dt) return '';
             const y=dt.getFullYear(), m=dt.getMonth()+1, d=dt.getDate();
@@ -2716,8 +2726,7 @@
             if(fxPeriodMode()==='day'){
                 const ymd=fxSelectedDay();
                 if(!ymd) return 'Day-wise';
-                const p=ymd.split('-');
-                return (+p[1])+'/'+(+p[2])+'/'+p[0];
+                return formatYmdLong(ymd);
             }
             return fxMonthLabelFromKey(fxSelectedMonthKey()) || 'Full Month';
         }
@@ -2750,8 +2759,7 @@
                 const list=Object.keys(days).sort().reverse();
                 const cur=dSel.value;
                 dSel.innerHTML = list.map(function(ymd){
-                    const p=ymd.split('-');
-                    return '<option value="'+ymd+'">'+(+p[1])+'/'+(+p[2])+'/'+p[0]+'</option>';
+                    return '<option value="'+ymd+'">'+formatYmdLong(ymd)+'</option>';
                 }).join('') || '<option value="">No dates</option>';
                 if(cur && days[cur]) dSel.value=cur;
                 else if(list.length) dSel.value=list[0];
@@ -2891,6 +2899,58 @@
             }
             return counts;
         }
+        
+        function fxShowAntigenEntries(key, label){
+            if(!fxRecords.length){
+                alert('Please click Refresh Data first.');
+                return;
+            }
+            const data = fxFiltered();
+            let matched = [];
+            if(key === '__all__'){
+                matched = data.slice();
+            } else {
+                matched = data.filter(function(r){ return fxDoseInPeriod(r, key); });
+            }
+            // Build simple modal using emrChildModal if present, else alert count
+            const body = document.getElementById('emrChildModalBody');
+            const status = document.getElementById('emrChildModalStatus');
+            const modal = document.getElementById('emrChildModal');
+            if(!body || !modal){
+                alert((label||key)+': '+matched.length+' entries');
+                return;
+            }
+            if(!matched.length){
+                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No entries for <strong>'+(label||key)+'</strong> in current filters / period.</div>';
+                if(status) status.textContent = '0 · Fixed Site · '+(label||'')+' · '+fxPeriodLabel();
+                modal.classList.add('active');
+                return;
+            }
+            const max = Math.min(matched.length, 500);
+            let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px"><strong>Fixed Site — '+(label||key)+'</strong> · '+matched.length+' entr'+(matched.length===1?'y':'ies')+' · '+fxPeriodLabel()+'</div>';
+            table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
+            table += '<table class="emr-table" style="min-width:720px"><thead><tr>';
+            ['Sr','Tehsil','Health Facility','Dose / Flag'].forEach(function(h){ table += '<th>'+h+'</th>'; });
+            table += '</tr></thead><tbody>';
+            for(let i=0;i<max;i++){
+                const r = matched[i];
+                let dose = '—';
+                if(key !== '__all__' && r.doses && r.doses[key]){
+                    dose = r.doses[key].ymd ? formatYmdLong(r.doses[key].ymd) : (r.doses[key].yes ? 'Yes' : '—');
+                } else if(key === '__all__'){
+                    dose = r.createdYmd ? formatYmdLong(r.createdYmd) : '—';
+                }
+                table += '<tr><td>'+(i+1)+'</td><td>'+r.tehsil+'</td><td>'+r.hf+'</td><td>'+dose+'</td></tr>';
+            }
+            if(matched.length > max){
+                table += '<tr><td colspan="4" style="text-align:center;color:#888">Showing first '+max+' of '+matched.length+'</td></tr>';
+            }
+            table += '</tbody></table></div>';
+            body.innerHTML = table;
+            if(status) status.textContent = matched.length+' · Fixed Site · '+(label||'')+' · '+fxPeriodLabel();
+            modal.classList.add('active');
+        }
+
         function fxUpdateSummary(data){
             const grid=document.getElementById('fxSummaryGrid');
             const scope=document.getElementById('fxSummaryScope');
@@ -2906,10 +2966,10 @@
             if(scope) scope.textContent=sc;
             if(!grid) return;
             const counts=fxCountDoses(data);
-            let html='<div class="emr-sum-item"><div class="n">'+data.length.toLocaleString()+'</div><div class="l">Total Entries ('+fxPeriodLabel()+')</div></div>';
+            let html='<div class="emr-sum-item clickable" onclick="fxShowAntigenEntries(\'__all__\',\'Total Entries\')" title="Click to view entries"><div class="n">'+data.length.toLocaleString()+'</div><div class="l">Total Entries ('+fxPeriodLabel()+')</div></div>';
             for(let j=0;j<FX_VAX_DEF.length;j++){
                 const v=FX_VAX_DEF[j];
-                html+='<div class="emr-sum-item"><div class="n">'+counts[v[0]].toLocaleString()+'</div><div class="l">'+v[1]+'</div></div>';
+                html+='<div class="emr-sum-item clickable" onclick="fxShowAntigenEntries(\''+v[0]+'\',\''+v[1].replace(/'/g,"\\'")+'\')" title="Click to view '+v[1]+' entries"><div class="n">'+counts[v[0]].toLocaleString()+'</div><div class="l">'+v[1]+'</div></div>';
             }
             grid.innerHTML=html;
             return counts;
@@ -3335,8 +3395,7 @@
             if(emrPeriodMode() === 'day'){
                 const ymd = emrSelectedDayYmd();
                 if(!ymd) return 'Day-wise (select date)';
-                const p = ymd.split('-');
-                return (+p[1])+'/'+(+p[2])+'/'+p[0];
+                return formatYmdLong(ymd);
             }
             return emrMonthLabel(emrGetReportMonth());
         }
@@ -3363,9 +3422,7 @@
                 return;
             }
             days.forEach(function(ymd){
-                const p = ymd.split('-');
-                const label = (+p[1])+'/'+(+p[2])+'/'+p[0];
-                sel.innerHTML += '<option value="'+ymd+'">'+label+'</option>';
+                sel.innerHTML += '<option value="'+ymd+'">'+formatYmdLong(ymd)+'</option>';
             });
             if(cur && set[cur]) sel.value = cur;
             else sel.value = days[0];
