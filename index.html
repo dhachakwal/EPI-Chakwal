@@ -327,6 +327,13 @@
         .site-lock-err{color:#c62828;font-size:13px;min-height:18px;margin-bottom:8px;font-weight:600}
         body.site-locked{overflow:hidden}
     
+    
+        .section-title.collapsible-header{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+        .section-title .section-arrow{font-size:14px;color:#0d5c3d;transition:transform .2s;flex-shrink:0;width:28px;height:28px;border-radius:8px;background:#e8f5e9;display:inline-flex;align-items:center;justify-content:center}
+        .section-title.open .section-arrow{transform:rotate(90deg);background:#0d5c3d;color:#fff}
+        .section-collapse-body{display:none;margin-bottom:8px}
+        .section-collapse-body.open{display:block}
+    
     </style>
 </head>
 <body>
@@ -627,6 +634,7 @@
                     <button type="button" class="emr-tab" data-emr="targets" onclick="emrSwitch('targets')">10. Targets vs Coverage</button>
                     <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
                     <button type="button" class="emr-tab" data-emr="overdue" onclick="emrSwitch('overdue')">12. Overdue Children (Not Vaccinated)</button>
+                    <button type="button" class="emr-tab" data-emr="duplicate" onclick="emrSwitch('duplicate')">13. Duplicate Children</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -1253,6 +1261,78 @@
                 btn.style.opacity = '1';
             }
         }
+
+        
+        function toggleSectionHeader(header){
+            if(!header) return;
+            const body = header.nextElementSibling;
+            if(!body || !body.classList.contains('section-collapse-body')) return;
+            const open = body.classList.toggle('open');
+            header.classList.toggle('open', open);
+        }
+        function initCollapsibleSections(){
+            const main = document.querySelector('.main-content');
+            if(!main || main.getAttribute('data-collapse-ready') === '1') return;
+            main.setAttribute('data-collapse-ready','1');
+
+            function processTitle(titleEl){
+                if(!titleEl || titleEl.getAttribute('data-collapse') === '1') return;
+                titleEl.setAttribute('data-collapse','1');
+                titleEl.classList.add('collapsible-header');
+                // preserve existing inner content, add arrow
+                if(!titleEl.querySelector('.section-arrow')){
+                    const arrow = document.createElement('span');
+                    arrow.className = 'section-arrow';
+                    arrow.textContent = '▶';
+                    titleEl.appendChild(arrow);
+                }
+                // gather following siblings until next section-title
+                const parent = titleEl.parentNode;
+                const body = document.createElement('div');
+                body.className = 'section-collapse-body';
+                let n = titleEl.nextSibling;
+                const toMove = [];
+                while(n){
+                    const next = n.nextSibling;
+                    if(n.nodeType === 1){
+                        if(n.classList && n.classList.contains('section-title')) break;
+                        if(n.classList && n.classList.contains('section-collapse-body')) break;
+                        // stop if another collapsible header
+                        if(n.querySelector && n.querySelector('.section-title') && n.id === 'sweepExportArea'){
+                            // don't swallow next major block incorrectly
+                        }
+                    }
+                    if(n.nodeType === 1 || (n.nodeType === 3 && String(n.textContent).trim())){
+                        // if element is another section-title, stop
+                        if(n.nodeType === 1 && n.classList && n.classList.contains('section-title')) break;
+                        toMove.push(n);
+                    }
+                    n = next;
+                    if(toMove.length && n && n.nodeType===1 && n.classList && n.classList.contains('section-title')) break;
+                }
+                toMove.forEach(function(node){ body.appendChild(node); });
+                if(titleEl.nextSibling) parent.insertBefore(body, titleEl.nextSibling);
+                else parent.appendChild(body);
+
+                titleEl.addEventListener('click', function(e){
+                    // don't toggle when clicking PDF/PNG buttons inside title
+                    if(e.target && (e.target.tagName === 'BUTTON' || e.target.closest('button'))) return;
+                    toggleSectionHeader(titleEl);
+                });
+            }
+
+            // Process #sweepExportArea first: title inside it
+            const sweepArea = document.getElementById('sweepExportArea');
+            if(sweepArea){
+                const st = sweepArea.querySelector('.section-title');
+                if(st) processTitle(st);
+            }
+            // Direct section titles under main (not already processed)
+            Array.from(main.children).forEach(function(ch){
+                if(ch.classList && ch.classList.contains('section-title')) processTitle(ch);
+            });
+        }
+
 
         function toggleEventsSidebar(){
             var sb = document.getElementById('eventsSidebar');
@@ -3143,6 +3223,17 @@
                 const has = emrHasDose(raw);
                 vax += '<div class="emr-vax-item'+(has?'':' no-dose')+'"><div class="emr-vax-name">'+label+'</div><div class="emr-vax-date">'+(has?raw:'No')+'</div></div>';
             });
+            const addr = emrCell(r, EMR_COLS.address) || '—';
+            const lat = parseFloat(emrCell(r, EMR_COLS.lat));
+            const lng = parseFloat(emrCell(r, EMR_COLS.lng));
+            const hasMap = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+            const mapUrl = hasMap ? ('https://www.google.com/maps?q='+lat+','+lng) : '';
+            const mapBlock = hasMap
+                ? ('<div style="margin:10px 0 12px;padding:10px 12px;background:#e8f5e9;border-radius:10px;border:1px solid #a5d6a7">'
+                    + '<div style="font-size:13px;margin-bottom:6px"><span style="color:#666">📍 Location (Lat/Lng):</span> <strong>'+lat+', '+lng+'</strong></div>'
+                    + '<a href="'+mapUrl+'" target="_blank" rel="noopener" style="display:inline-block;background:#0d5c3d;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700">📍 Open in Google Maps</a>'
+                    + '</div>')
+                : '<div style="margin:8px 0 12px;font-size:13px;color:#888">📍 Location: coordinates not available</div>';
             return '<div class="emr-child-card" style="margin:0">'
                 + '<h4 style="margin-top:0">'+emrCell(r,EMR_COLS.name)+'</h4>'
                 + '<div class="emr-child-meta">'
@@ -3153,7 +3244,9 @@
                 + '<div><span>Age:</span> <strong>'+emrCell(r,EMR_COLS.age)+'</strong></div>'
                 + '<div><span>Gender:</span> <strong>'+emrCell(r,EMR_COLS.gender)+'</strong></div>'
                 + '<div><span>Phone Number:</span> <strong>'+emrCell(r,EMR_COLS.phone)+'</strong></div>'
+                + '<div style="grid-column:1/-1"><span>Address:</span> <strong>'+addr+'</strong></div>'
                 + '</div>'
+                + mapBlock
                 + '<div style="font-weight:700;color:#0d5c3d;margin:8px 0 6px;font-size:13px">Vaccination Dates</div>'
                 + '<div class="emr-vax-grid">'+vax+'</div>'
                 + '</div>';
@@ -3718,6 +3811,36 @@
         }
 
 
+        
+        function emrNormDup(s){
+            return String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+        }
+        function emrDupKey(r){
+            // Name + Father + UC + Address (CNIC not in EMR sheet)
+            return [
+                emrNormDup(emrCell(r, EMR_COLS.name)),
+                emrNormDup(emrCell(r, EMR_COLS.father)),
+                emrNormDup(emrCell(r, EMR_COLS.uc)),
+                emrNormDup(emrCell(r, EMR_COLS.address))
+            ].join('||');
+        }
+        function emrFindDuplicates(rows){
+            const map = {};
+            (rows||[]).forEach(function(r, idx){
+                const k = emrDupKey(r);
+                if(!k || k === '||||||') return;
+                if(!map[k]) map[k] = [];
+                map[k].push({r:r, idx:idx});
+            });
+            const groups = [];
+            Object.keys(map).forEach(function(k){
+                if(map[k].length > 1) groups.push({key:k, items:map[k]});
+            });
+            groups.sort(function(a,b){ return b.items.length - a.items.length; });
+            return groups;
+        }
+
+
         function emrApply(){
             const chartWrap = document.getElementById('emrChartWrap');
             if(chartWrap) chartWrap.style.display = (emrMode === 'targets') ? 'block' : 'none';
@@ -3736,7 +3859,7 @@
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
             const extra = document.getElementById('emrExtraVisual');
-            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter' && emrMode !== 'overdue'){
+            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter' && emrMode !== 'overdue' && emrMode !== 'duplicate'){
                 extra.style.display = 'none';
                 extra.innerHTML = '';
             }
@@ -4114,6 +4237,39 @@
                         + 'Hep-B / OPV-0: agar <strong>Penta-1 lag chuka</strong> ho to list me nahi (ab nahi lag sakte). '
                         + 'Max age: BCG ≤1 yr · Hep-B/OPV-0 ≤15 d · Rota ≤2 yr · baqi mostly &lt;5 yr. '
                         + 'Intervals: Penta/OPV/PCV/Rota series previous dose +28 d. Same Period/Tehsil/UC filters.</div>';
+                }
+            }
+            else if(emrMode === 'duplicate'){
+                const groups = emrFindDuplicates(data);
+                let totalKids = 0;
+                groups.forEach(function(g){ totalKids += g.items.length; });
+                emrSetStats([
+                    {n: groups.length.toLocaleString(), l:'Duplicate groups'},
+                    {n: totalKids.toLocaleString(), l:'Children in groups'},
+                    {n: emrPeriodLabel(), l:'Period'},
+                    {n: 'Name+Father+UC+Addr', l:'Match key'}
+                ]);
+                const exp = [];
+                let rowsHtml = '';
+                let sr = 0;
+                groups.forEach(function(g, gi){
+                    g.items.forEach(function(item, j){
+                        sr++;
+                        const r = item.r;
+                        const row = [sr, 'Group '+(gi+1), g.items.length, emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.father), emrCell(r,EMR_COLS.address), emrCell(r,EMR_COLS.mr), emrCell(r,EMR_COLS.phone)];
+                        exp.push(row);
+                        rowsHtml += '<tr'+(j===0?' style="border-top:2px solid #0d5c3d"':'')+'>'
+                            + '<td>'+row[0]+'</td><td><strong>'+row[1]+'</strong></td><td>'+row[2]+'</td><td>'+row[3]+'</td><td>'+row[4]+'</td>'
+                            + '<td><strong>'+row[5]+'</strong></td><td>'+row[6]+'</td><td style="text-align:left;font-size:12px">'+row[7]+'</td><td>'+row[8]+'</td><td>'+row[9]+'</td></tr>';
+                    });
+                });
+                if(!groups.length) rowsHtml = '<tr><td colspan="10" style="text-align:center;color:#888">No duplicates found for current filters (Name + Father + UC + Address).</td></tr>';
+                const headers = ['Sr','Group','Count','Tehsil','UC','Name','Father','Address','MR','Phone'];
+                emrRenderTable(headers, rowsHtml, headers, exp, null);
+                const extra = document.getElementById('emrExtraVisual');
+                if(extra){
+                    extra.style.display = 'block';
+                    extra.innerHTML = '<div style="font-size:12.5px;color:#555;padding:8px 4px">Duplicate match on <strong>Name + Father Name + UC + Address</strong> (normalized). CNIC is not in EMR OutReach sheet columns, so CNIC not used. Same Period/Tehsil/UC filters apply.</div>';
                 }
             }
             else if(emrMode === 'targets'){
