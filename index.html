@@ -669,6 +669,9 @@
                             <option value="day">Day-wise</option>
                         </select>
                     </label>
+                    <label id="fxMonthLabel">Select Month
+                        <select id="fxMonthSelect" onchange="fxApply()"><option value="">—</option></select>
+                    </label>
                     <label id="fxDayLabel" style="display:none">Select Date
                         <select id="fxDaySelect" onchange="fxApply()"><option value="">—</option></select>
                     </label>
@@ -2612,67 +2615,36 @@
 
         
         
-        // ===== Child Immunization EMR — Fixed Site =====
+        // ===== Child Immunization EMR — Fixed Site (optimized) =====
         const FX_SHEET_ID = '1RecvAyFGOTYC7zwlLAMeQoFamDc29IBMwy6N63kL2cA';
-        const FX_COLS = {
-            district:0, tehsil:1, hf:2, hfCode:3, gender:7, dob:8, mr:10, createdAt:12,
-            firstName:15, lastName:16, phone:17,
-            // Yes/No flags
-            bcg:20, opv0:21, pentaI:22, pneumoI:23, opvI:24, pentaII:25, pneumoII:26,
-            pentaIII:27, opvIII:28, ipv:29, measlesI:30, measlesII:31, hepB:32, rota1:33, rota2:34, ipv2:35, dpt:36, tcv:37,
-            // Date-time
-            bcgDt:38, opv0Dt:39, pentaIDt:40, pneumoIDt:41, opvIDt:42, pentaIIDt:43, pneumoIIDt:44,
-            opvIIDt:45, pentaIIIDt:46, pneumoIIIDt:47, opvIIIDt:48, ipvDt:49, measlesIDt:50, measlesIIDt:51,
-            hepBDt:52, rota1Dt:53, rota2Dt:54, ipv2Dt:55, dptDt:56, tcvDt:57
-        };
-        const FX_VAX = [
-            ['hepB','Hep Birth Dose','hepB','hepBDt'],
-            ['bcg','BCG','bcg','bcgDt'],
-            ['opv0','OPV-0','opv0','opv0Dt'],
-            ['opvI','OPV-1','opvI','opvIDt'],
-            ['pentaI','Penta-1','pentaI','pentaIDt'],
-            ['pneumoI','PCV13-1','pneumoI','pneumoIDt'],
-            ['rota1','Rota-1','rota1','rota1Dt'],
-            ['opvII','OPV-2',null,'opvIIDt'],
-            ['pentaII','Penta-2','pentaII','pentaIIDt'],
-            ['pneumoII','PCV13-2','pneumoII','pneumoIIDt'],
-            ['rota2','Rota-2','rota2','rota2Dt'],
-            ['opvIII','OPV-3','opvIII','opvIIIDt'],
-            ['pentaIII','Penta-3','pentaIII','pentaIIIDt'],
-            ['pneumoIII','PCV13-3',null,'pneumoIIIDt'],
-            ['ipv','IPV-1','ipv','ipvDt'],
-            ['measlesI','MR-1','measlesI','measlesIDt'],
-            ['ipv2','IPV-2','ipv2','ipv2Dt'],
-            ['tcv','TCV','tcv','tcvDt'],
-            ['measlesII','MR-2','measlesII','measlesIIDt'],
-            ['dpt','DTP','dpt','dptDt']
+        // [key, label, flagCol, dateCol]
+        const FX_VAX_DEF = [
+            ['hepB','Hep Birth Dose',32,52],['bcg','BCG',20,38],['opv0','OPV-0',21,39],['opvI','OPV-1',24,42],
+            ['pentaI','Penta-1',22,40],['pneumoI','PCV13-1',23,41],['rota1','Rota-1',33,53],
+            ['opvII','OPV-2',null,45],['pentaII','Penta-2',25,43],['pneumoII','PCV13-2',26,44],['rota2','Rota-2',34,54],
+            ['opvIII','OPV-3',28,48],['pentaIII','Penta-3',27,46],['pneumoIII','PCV13-3',null,47],
+            ['ipv','IPV-1',29,49],['measlesI','MR-1',30,50],['ipv2','IPV-2',35,55],['tcv','TCV',37,57],
+            ['measlesII','MR-2',31,51],['dpt','DTP',36,56]
         ];
-        let fxRows = [];
+        let fxRecords = []; // normalized
         let fxMode = 'hf';
         let fxLastExport = {headers:[], rows:[]};
+        let fxCacheKey = '';
+        let fxCacheRows = null;
 
-        function fxCell(row, idx){
-            if(!row || idx==null) return '';
-            const c = row[idx];
-            if(c == null) return '';
-            if(typeof c === 'object' && c.raw != null) return String(c.raw).trim();
-            return String(c).trim();
-        }
-        function fxParseDate(val){
-            if(val == null || val === '') return null;
-            if(typeof val === 'object' && val.date) return val.date;
-            const s = String(val).trim();
+        function fxParseGvizDate(v, f){
+            if(v != null && typeof v === 'object' && typeof v.getFullYear === 'function') return v;
+            if(typeof v === 'string' && v.indexOf('Date(')===0){
+                const m = v.match(/Date\((\d+),(\d+),(\d+)/);
+                if(m) return new Date(+m[1], +m[2], +m[3], 0, 0, 0);
+            }
+            const s = (f != null && f !== '') ? String(f) : (v != null ? String(v) : '');
             if(!s || s.toLowerCase()==='no') return null;
-            // Google Date(y,m,d,...)
-            let m = s.match(/^Date\((\d+),(\d+),(\d+)/);
-            if(m) return new Date(+m[1], +m[2], +m[3]);
-            // M/D/YYYY or D/M/YYYY or with time
-            m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-            if(m){
-                let a=+m[1], b=+m[2], y=+m[3];
-                // prefer M/D/Y when US-style sheet (CreatedAt samples 8/1/2026)
+            const m2 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if(m2){
+                const a=+m2[1], b=+m2[2], y=+m2[3];
                 if(a>12) return new Date(y, b-1, a);
-                return new Date(y, a-1, b); // M/D/Y
+                return new Date(y, a-1, b); // M/D/Y sheet style
             }
             const t = Date.parse(s);
             return isNaN(t) ? null : new Date(t);
@@ -2682,25 +2654,57 @@
             const y=dt.getFullYear(), m=dt.getMonth()+1, d=dt.getDate();
             return y+'-'+(m<10?'0':'')+m+'-'+(d<10?'0':'')+d;
         }
-        function fxCreated(row){
-            return fxParseDate(fxCell(row, FX_COLS.createdAt));
+        function fxMonthKey(dt){
+            if(!dt) return '';
+            const y=dt.getFullYear(), m=dt.getMonth()+1;
+            return y+'-'+(m<10?'0':'')+m;
         }
-        function fxReportMonth(){
-            let best=null;
-            (fxRows||[]).forEach(function(r){
-                const d=fxCreated(r);
-                if(d && (!best||d>best)) best=d;
-            });
-            if(best) return {year:best.getFullYear(), month:best.getMonth()};
-            const n=new Date(); return {year:n.getFullYear(), month:n.getMonth()};
-        }
-        function fxMonthLabel(ym){
+        function fxMonthLabelFromKey(key){
+            if(!key) return '—';
+            const p=key.split('-');
             const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return names[ym.month]+' '+ym.year;
+            return names[(+p[1])-1]+' '+p[0];
+        }
+        function fxNormalizeRow(cells){
+            function raw(i){
+                const c = cells[i];
+                if(!c) return '';
+                if(c.f != null && c.f !== '') return String(c.f).trim();
+                if(c.v != null) return String(c.v).trim();
+                return '';
+            }
+            function flagYes(i){
+                if(i==null) return false;
+                const v = raw(i).toLowerCase();
+                return v==='yes'||v==='y'||v==='true'||v==='1';
+            }
+            const created = fxParseGvizDate(cells[12] && cells[12].v, cells[12] && cells[12].f);
+            const doses = {};
+            FX_VAX_DEF.forEach(function(def){
+                const key=def[0], fi=def[2], di=def[3];
+                const dt = di!=null ? fxParseGvizDate(cells[di]&&cells[di].v, cells[di]&&cells[di].f) : null;
+                doses[key] = {
+                    yes: flagYes(fi) || !!dt,
+                    ymd: dt ? fxYmd(dt) : '',
+                    mk: dt ? fxMonthKey(dt) : ''
+                };
+            });
+            return {
+                tehsil: raw(1) || '—',
+                hf: raw(2) || '—',
+                created: created,
+                createdYmd: created ? fxYmd(created) : '',
+                createdMk: created ? fxMonthKey(created) : '',
+                doses: doses
+            };
         }
         function fxPeriodMode(){
             const el=document.getElementById('fxPeriod');
             return (el && el.value==='day') ? 'day' : 'month';
+        }
+        function fxSelectedMonthKey(){
+            const el=document.getElementById('fxMonthSelect');
+            return (el && el.value) ? el.value : '';
         }
         function fxSelectedDay(){
             const el=document.getElementById('fxDaySelect');
@@ -2709,116 +2713,121 @@
         function fxPeriodLabel(){
             if(fxPeriodMode()==='day'){
                 const ymd=fxSelectedDay();
-                if(!ymd) return 'Day-wise (select date)';
+                if(!ymd) return 'Day-wise';
                 const p=ymd.split('-');
                 return (+p[1])+'/'+(+p[2])+'/'+p[0];
             }
-            return fxMonthLabel(fxReportMonth());
+            return fxMonthLabelFromKey(fxSelectedMonthKey()) || 'Full Month';
         }
-        function fxInPeriod(row){
-            const d=fxCreated(row);
-            if(!d) return false;
-            if(fxPeriodMode()==='day'){
-                const ymd=fxSelectedDay();
-                return ymd ? fxYmd(d)===ymd : false;
+        function fxOnPeriodChange(){
+            const day = fxPeriodMode()==='day';
+            const dayLab=document.getElementById('fxDayLabel');
+            const monLab=document.getElementById('fxMonthLabel');
+            if(dayLab) dayLab.style.display = day ? '' : 'none';
+            if(monLab) monLab.style.display = day ? 'none' : '';
+            fxApply();
+        }
+        function fxPopulateMonthsAndDays(){
+            const months={}, days={};
+            fxRecords.forEach(function(r){
+                if(r.createdMk) months[r.createdMk]=true;
+                if(r.createdYmd) days[r.createdYmd]=true;
+            });
+            const mSel=document.getElementById('fxMonthSelect');
+            if(mSel){
+                const list=Object.keys(months).sort().reverse();
+                const cur=mSel.value;
+                mSel.innerHTML = list.map(function(k){
+                    return '<option value="'+k+'">'+fxMonthLabelFromKey(k)+'</option>';
+                }).join('') || '<option value="">No months</option>';
+                if(cur && months[cur]) mSel.value=cur;
+                else if(list.length) mSel.value=list[0];
             }
-            const ym=fxReportMonth();
-            return d.getFullYear()===ym.year && d.getMonth()===ym.month;
-        }
-        function fxHasFlag(row, flagKey){
-            if(flagKey==null) return false;
-            const v=fxCell(row, FX_COLS[flagKey]).toLowerCase();
-            return v==='yes' || v==='y' || v==='true' || v==='1';
-        }
-        function fxDoseDate(row, dtKey){
-            if(!dtKey) return null;
-            return fxParseDate(fxCell(row, FX_COLS[dtKey]));
-        }
-        function fxHasDoseInPeriod(row, flagKey, dtKey){
-            const dt=fxDoseDate(row, dtKey);
-            if(dt){
-                if(fxPeriodMode()==='day'){
-                    const ymd=fxSelectedDay();
-                    return ymd ? fxYmd(dt)===ymd : false;
-                }
-                const ym=fxReportMonth();
-                return dt.getFullYear()===ym.year && dt.getMonth()===ym.month;
+            const dSel=document.getElementById('fxDaySelect');
+            if(dSel){
+                const list=Object.keys(days).sort().reverse();
+                const cur=dSel.value;
+                dSel.innerHTML = list.map(function(ymd){
+                    const p=ymd.split('-');
+                    return '<option value="'+ymd+'">'+(+p[1])+'/'+(+p[2])+'/'+p[0]+'</option>';
+                }).join('') || '<option value="">No dates</option>';
+                if(cur && days[cur]) dSel.value=cur;
+                else if(list.length) dSel.value=list[0];
             }
-            // fallback: flag Yes counts only in month mode if created in period
-            if(fxHasFlag(row, flagKey) && fxInPeriod(row)) return true;
-            return false;
         }
         function fxFiltered(){
             const t=(document.getElementById('fxTehsil')||{}).value||'';
             const hf=(document.getElementById('fxHF')||{}).value||'';
-            return (fxRows||[]).filter(function(r){
-                if(!fxInPeriod(r)) return false;
-                if(t && fxCell(r, FX_COLS.tehsil)!==t) return false;
-                if(hf && fxCell(r, FX_COLS.hf)!==hf) return false;
-                return true;
-            });
+            const day=fxPeriodMode()==='day';
+            const ymd=fxSelectedDay();
+            const mk=fxSelectedMonthKey();
+            const key = [day?'d':'m', day?ymd:mk, t, hf].join('|');
+            if(key === fxCacheKey && fxCacheRows) return fxCacheRows;
+            const out=[];
+            for(let i=0;i<fxRecords.length;i++){
+                const r=fxRecords[i];
+                if(day){
+                    if(!ymd || r.createdYmd !== ymd) continue;
+                } else {
+                    if(!mk || r.createdMk !== mk) continue;
+                }
+                if(t && r.tehsil !== t) continue;
+                if(hf && r.hf !== hf) continue;
+                out.push(r);
+            }
+            fxCacheKey=key; fxCacheRows=out;
+            return out;
         }
-        function fxOnPeriodChange(){
-            const mode=fxPeriodMode();
-            const lab=document.getElementById('fxDayLabel');
-            if(lab) lab.style.display = mode==='day' ? '' : 'none';
-            if(mode==='day') fxPopulateDays();
-            fxApply();
-        }
-        function fxPopulateDays(){
-            const sel=document.getElementById('fxDaySelect');
-            if(!sel) return;
-            const set={};
-            (fxRows||[]).forEach(function(r){
-                const d=fxCreated(r);
-                if(d) set[fxYmd(d)]=true;
-            });
-            const days=Object.keys(set).sort().reverse();
-            const cur=sel.value;
-            sel.innerHTML='';
-            if(!days.length){ sel.innerHTML='<option value="">No dates</option>'; return; }
-            days.forEach(function(ymd){
-                const p=ymd.split('-');
-                sel.innerHTML += '<option value="'+ymd+'">'+(+p[1])+'/'+(+p[2])+'/'+p[0]+'</option>';
-            });
-            if(cur && set[cur]) sel.value=cur; else sel.value=days[0];
+        function fxDoseInPeriod(r, key){
+            const d=r.doses[key];
+            if(!d) return false;
+            if(fxPeriodMode()==='day'){
+                const ymd=fxSelectedDay();
+                return ymd && d.ymd === ymd;
+            }
+            const mk=fxSelectedMonthKey();
+            // Prefer dose date in selected month; else Yes + created in month
+            if(d.mk && mk) return d.mk === mk;
+            return !!(d.yes && r.createdMk === mk);
         }
         function fxFillFilters(){
             const tsel=document.getElementById('fxTehsil');
-            const hsel=document.getElementById('fxHF');
             if(!tsel) return;
-            const tehsils={}, hfs={};
-            (fxRows||[]).forEach(function(r){
-                const t=fxCell(r, FX_COLS.tehsil); if(t) tehsils[t]=true;
-                const h=fxCell(r, FX_COLS.hf); if(h) hfs[h]=true;
-            });
+            const tehsils={};
+            fxRecords.forEach(function(r){ if(r.tehsil) tehsils[r.tehsil]=true; });
             const ct=tsel.value;
-            tsel.innerHTML='<option value="">All Tehsils</option>';
-            Object.keys(tehsils).sort().forEach(function(t){ tsel.innerHTML += '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>'; });
+            tsel.innerHTML='<option value="">All Tehsils</option>'+Object.keys(tehsils).sort().map(function(t){
+                return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+            }).join('');
             if(ct && tehsils[ct]) tsel.value=ct;
             fxOnTehsilChange(true);
         }
-        function fxOnTehsilChange(skipApply){
+        function fxOnTehsilChange(skip){
             const t=(document.getElementById('fxTehsil')||{}).value||'';
             const hsel=document.getElementById('fxHF');
             if(!hsel) return;
             const hfs={};
-            (fxRows||[]).forEach(function(r){
-                if(t && fxCell(r, FX_COLS.tehsil)!==t) return;
-                const h=fxCell(r, FX_COLS.hf); if(h) hfs[h]=true;
+            fxRecords.forEach(function(r){
+                if(t && r.tehsil!==t) return;
+                if(r.hf) hfs[r.hf]=true;
             });
             const ch=hsel.value;
-            hsel.innerHTML='<option value="">All Facilities</option>';
-            Object.keys(hfs).sort().forEach(function(h){ hsel.innerHTML += '<option value="'+h.replace(/"/g,'&quot;')+'">'+h+'</option>'; });
+            hsel.innerHTML='<option value="">All Facilities</option>'+Object.keys(hfs).sort().map(function(h){
+                return '<option value="'+h.replace(/"/g,'&quot;')+'">'+h+'</option>';
+            }).join('');
             if(ch && hfs[ch]) hsel.value=ch;
-            if(!skipApply) fxApply();
+            fxCacheKey=''; fxCacheRows=null;
+            if(!skip) fxApply();
         }
         function fxResetFilters(){
             const p=document.getElementById('fxPeriod'); if(p) p.value='month';
-            const dl=document.getElementById('fxDayLabel'); if(dl) dl.style.display='none';
+            const dayLab=document.getElementById('fxDayLabel'); if(dayLab) dayLab.style.display='none';
+            const monLab=document.getElementById('fxMonthLabel'); if(monLab) monLab.style.display='';
+            fxPopulateMonthsAndDays();
             const t=document.getElementById('fxTehsil'); if(t) t.value='';
             fxFillFilters();
             const hf=document.getElementById('fxHF'); if(hf) hf.value='';
+            fxCacheKey=''; fxCacheRows=null;
             fxApply();
         }
         function fxSwitch(mode){
@@ -2842,8 +2851,8 @@
             if(!wrap||!head||!body) return;
             head.innerHTML='<tr>'+headers.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr>';
             let htmlBody=rowsHtml||('<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>');
-            if(totalCells && totalCells.length){
-                htmlBody += '<tr style="background:#e8f5e9">'+totalCells.map(function(c,i){
+            if(totalCells&&totalCells.length){
+                htmlBody+='<tr style="background:#e8f5e9">'+totalCells.map(function(c,i){
                     return '<td style="font-weight:800;color:#0d5c3d;border-top:2px solid #0d5c3d">'+(i===0?'<strong>'+c+'</strong>':c)+'</td>';
                 }).join('')+'</tr>';
             }
@@ -2853,165 +2862,188 @@
             if(totalCells&&totalCells.length) exp.push(totalCells);
             fxLastExport={headers:exportHeaders||headers, rows:exp};
         }
-        function fxLatestCreated(){
+        function fxLatestLabel(){
             let best=null;
-            (fxRows||[]).forEach(function(r){
-                const d=fxCreated(r);
+            for(let i=0;i<fxRecords.length;i++){
+                const d=fxRecords[i].created;
                 if(d && (!best||d>best)) best=d;
-            });
+            }
             if(!best) return '—';
             let h=best.getHours(), m=best.getMinutes();
-            const ap=h>=12?'PM':'AM'; h=h%12; if(h===0)h=12;
+            const ap=h>=12?'PM':'AM'; h=h%12; if(!h)h=12;
             return (best.getMonth()+1)+'/'+best.getDate()+'/'+best.getFullYear()+' '+h+':'+(m<10?'0':'')+m+' '+ap;
+        }
+        function fxCountDoses(data){
+            const counts={};
+            FX_VAX_DEF.forEach(function(v){ counts[v[0]]=0; });
+            for(let i=0;i<data.length;i++){
+                const r=data[i];
+                for(let j=0;j<FX_VAX_DEF.length;j++){
+                    const k=FX_VAX_DEF[j][0];
+                    if(fxDoseInPeriod(r,k)) counts[k]++;
+                }
+            }
+            return counts;
         }
         function fxUpdateSummary(data){
             const grid=document.getElementById('fxSummaryGrid');
             const scope=document.getElementById('fxSummaryScope');
             const upto=document.getElementById('fxDataUpto');
-            if(upto) upto.textContent=fxLatestCreated()+' · Period: '+fxPeriodLabel();
+            if(upto) upto.textContent=fxLatestLabel()+' · Period: '+fxPeriodLabel();
             const t=(document.getElementById('fxTehsil')||{}).value||'';
             const hf=(document.getElementById('fxHF')||{}).value||'';
             let sc='Scope: District Chakwal (All)';
-            if(t && hf) sc='Scope: Tehsil '+t+' · HF '+hf;
+            if(t&&hf) sc='Scope: Tehsil '+t+' · HF '+hf;
             else if(t) sc='Scope: Tehsil '+t;
             else if(hf) sc='Scope: '+hf;
-            sc += ' · '+fxPeriodLabel();
+            sc+=' · '+fxPeriodLabel();
             if(scope) scope.textContent=sc;
             if(!grid) return;
-            let items=[{n:data.length.toLocaleString(), l:'Total Entries ('+fxPeriodLabel()+')'}];
-            FX_VAX.forEach(function(v){
-                let c=0;
-                data.forEach(function(r){ if(fxHasDoseInPeriod(r, v[2], v[3])) c++; });
-                items.push({n:c.toLocaleString(), l:v[1]});
-            });
-            grid.innerHTML=items.map(function(it){
-                return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
-            }).join('');
+            const counts=fxCountDoses(data);
+            let html='<div class="emr-sum-item"><div class="n">'+data.length.toLocaleString()+'</div><div class="l">Total Entries ('+fxPeriodLabel()+')</div></div>';
+            for(let j=0;j<FX_VAX_DEF.length;j++){
+                const v=FX_VAX_DEF[j];
+                html+='<div class="emr-sum-item"><div class="n">'+counts[v[0]].toLocaleString()+'</div><div class="l">'+v[1]+'</div></div>';
+            }
+            grid.innerHTML=html;
+            return counts;
         }
         function fxApply(){
-            const data=fxFiltered();
+            fxCacheKey=''; fxCacheRows=null;
             const status=document.getElementById('fxStatus');
-            if(status) status.style.display='none';
             const extra=document.getElementById('fxExtraVisual');
             if(extra){ extra.style.display='none'; extra.innerHTML=''; }
-            fxUpdateSummary(data);
-
-            if(fxMode==='hf'){
-                const map={};
-                data.forEach(function(r){
-                    const t=fxCell(r,FX_COLS.tehsil)||'—';
-                    const h=fxCell(r,FX_COLS.hf)||'—';
-                    const k=t+'||'+h;
-                    if(!map[k]) map[k]={t:t,h:h,n:0};
-                    map[k].n++;
-                });
-                const list=Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return b.n-a.n;});
-                fxSetStats([
-                    {n:data.length.toLocaleString(), l:'Entries '+fxPeriodLabel()},
-                    {n:list.length, l:'Health facilities'},
-                    {n:new Set(list.map(function(x){return x.t;})).size, l:'Tehsils'}
-                ]);
-                const exp=[]; let i=0; let sum=0;
-                const rowsHtml=list.map(function(x){
-                    i++; sum+=x.n; exp.push([i,x.t,x.h,x.n]);
-                    return '<tr><td>'+i+'</td><td>'+x.t+'</td><td>'+x.h+'</td><td><strong>'+x.n+'</strong></td></tr>';
-                }).join('');
-                fxRenderTable(['Sr','Tehsil','Health Facility','No. of Entries'], rowsHtml, ['Sr','Tehsil','HF','Entries'], exp, ['Total','','',sum]);
+            if(!fxRecords.length){
+                if(status){ status.style.display='block'; status.textContent='No data loaded.'; }
+                return;
             }
-            else if(fxMode==='tehsil'){
-                const map={};
-                data.forEach(function(r){
-                    const t=fxCell(r,FX_COLS.tehsil)||'—';
-                    if(!map[t]) map[t]={n:0,hfs:{}};
-                    map[t].n++;
-                    map[t].hfs[fxCell(r,FX_COLS.hf)||'—']=1;
-                });
-                const list=Object.keys(map).sort().map(function(t){return {t:t, hfs:Object.keys(map[t].hfs).length, n:map[t].n};});
-                fxSetStats([{n:list.length,l:'Tehsils'},{n:data.length.toLocaleString(),l:'Entries'}]);
-                const exp=[]; let i=0; let sumN=0; let sumH=0;
-                const rowsHtml=list.map(function(x){
-                    i++; sumN+=x.n; sumH+=x.hfs; exp.push([i,x.t,x.hfs,x.n]);
-                    return '<tr><td>'+i+'</td><td>'+x.t+'</td><td>'+x.hfs+'</td><td><strong>'+x.n+'</strong></td></tr>';
-                }).join('');
-                fxRenderTable(['Sr','Tehsil','Facilities with entries','Total Entries'], rowsHtml, ['Sr','Tehsil','HFs','Entries'], exp, ['Total','',sumH,sumN]);
-            }
-            else if(fxMode==='antigen'){
-                const counts={};
-                FX_VAX.forEach(function(v){ counts[v[0]]=0; });
-                data.forEach(function(r){
-                    FX_VAX.forEach(function(v){
-                        if(fxHasDoseInPeriod(r, v[2], v[3])) counts[v[0]]++;
-                    });
-                });
-                const sumA=FX_VAX.reduce(function(s,v){return s+counts[v[0]];},0);
-                fxSetStats([
-                    {n:data.length.toLocaleString(), l:'Total Entries'},
-                    {n:sumA.toLocaleString(), l:'Doses in '+fxPeriodLabel()}
-                ]);
-                if(extra){
-                    let cards='<div class="emr-summary-grid" style="margin-bottom:12px">';
-                    cards += '<div class="emr-sum-item"><div class="n">'+data.length.toLocaleString()+'</div><div class="l">Total Entries</div></div>';
-                    FX_VAX.forEach(function(v){
-                        cards += '<div class="emr-sum-item"><div class="n">'+counts[v[0]].toLocaleString()+'</div><div class="l">'+v[1]+'</div></div>';
-                    });
-                    cards += '</div>';
-                    extra.innerHTML=cards;
-                    extra.style.display='block';
+            if(status){ status.style.display='block'; status.textContent='Updating report…'; }
+            // yield so UI can paint
+            setTimeout(function(){
+                const t0=performance.now ? performance.now() : 0;
+                const data=fxFiltered();
+                const counts=fxUpdateSummary(data);
+                if(fxMode==='hf'){
+                    const map={};
+                    for(let i=0;i<data.length;i++){
+                        const r=data[i];
+                        const k=r.tehsil+'||'+r.hf;
+                        if(!map[k]) map[k]={t:r.tehsil,h:r.hf,n:0};
+                        map[k].n++;
+                    }
+                    const list=Object.keys(map).map(function(k){return map[k];});
+                    list.sort(function(a,b){return b.n-a.n;});
+                    fxSetStats([
+                        {n:data.length.toLocaleString(), l:'Entries '+fxPeriodLabel()},
+                        {n:list.length, l:'Health facilities'},
+                        {n:new Set(list.map(function(x){return x.t;})).size, l:'Tehsils'}
+                    ]);
+                    const exp=[]; let sum=0; let rowsHtml='';
+                    for(let i=0;i<list.length;i++){
+                        const x=list[i]; sum+=x.n;
+                        exp.push([i+1,x.t,x.h,x.n]);
+                        rowsHtml+='<tr><td>'+(i+1)+'</td><td>'+x.t+'</td><td>'+x.h+'</td><td><strong>'+x.n+'</strong></td></tr>';
+                    }
+                    fxRenderTable(['Sr','Tehsil','Health Facility','No. of Entries'], rowsHtml, ['Sr','Tehsil','HF','Entries'], exp, ['Total','','',sum]);
                 }
-                const exp=FX_VAX.map(function(v){ return [v[1], counts[v[0]]]; });
-                const rowsHtml=FX_VAX.map(function(v){
-                    return '<tr><td><strong>'+v[1]+'</strong></td><td>'+counts[v[0]].toLocaleString()+'</td></tr>';
-                }).join('');
-                fxRenderTable(['Antigen / Vaccine','Doses in period'], rowsHtml, ['Antigen','Count'], exp, ['Total doses', sumA]);
-                const wrap=document.getElementById('fxTableWrap');
-                if(wrap) wrap.style.display='none';
-            }
-            else if(fxMode==='tehsilAg'){
-                const tehsils={};
-                data.forEach(function(r){
-                    const t=fxCell(r,FX_COLS.tehsil)||'—';
-                    if(!tehsils[t]){ tehsils[t]={rows:0}; FX_VAX.forEach(function(v){ tehsils[t][v[0]]=0; }); }
-                    tehsils[t].rows++;
-                    FX_VAX.forEach(function(v){
-                        if(fxHasDoseInPeriod(r, v[2], v[3])) tehsils[t][v[0]]++;
-                    });
-                });
-                const tlist=Object.keys(tehsils).sort();
-                fxSetStats([{n:tlist.length,l:'Tehsils'},{n:data.length.toLocaleString(),l:'Entries'}]);
-                if(extra){
-                    let cards='';
-                    tlist.forEach(function(t){
-                        cards += '<div style="margin-bottom:14px"><div style="font-weight:800;color:#0d5c3d;margin-bottom:8px">'+t+' <span style="font-weight:600;color:#666;font-size:12px">('+tehsils[t].rows+' entries)</span></div>';
-                        cards += '<div class="emr-summary-grid">';
-                        cards += '<div class="emr-sum-item"><div class="n">'+tehsils[t].rows+'</div><div class="l">Total Entries</div></div>';
-                        FX_VAX.forEach(function(v){
-                            cards += '<div class="emr-sum-item"><div class="n">'+tehsils[t][v[0]]+'</div><div class="l">'+v[1]+'</div></div>';
-                        });
-                        cards += '</div></div>';
-                    });
-                    extra.innerHTML=cards;
-                    extra.style.display='block';
+                else if(fxMode==='tehsil'){
+                    const map={};
+                    for(let i=0;i<data.length;i++){
+                        const r=data[i];
+                        if(!map[r.tehsil]) map[r.tehsil]={n:0,hfs:{}};
+                        map[r.tehsil].n++;
+                        map[r.tehsil].hfs[r.hf]=1;
+                    }
+                    const list=Object.keys(map).sort();
+                    fxSetStats([{n:list.length,l:'Tehsils'},{n:data.length.toLocaleString(),l:'Entries'}]);
+                    const exp=[]; let sumN=0,sumH=0, rowsHtml='';
+                    for(let i=0;i<list.length;i++){
+                        const t=list[i], x=map[t], h=Object.keys(x.hfs).length;
+                        sumN+=x.n; sumH+=h;
+                        exp.push([i+1,t,h,x.n]);
+                        rowsHtml+='<tr><td>'+(i+1)+'</td><td>'+t+'</td><td>'+h+'</td><td><strong>'+x.n+'</strong></td></tr>';
+                    }
+                    fxRenderTable(['Sr','Tehsil','Facilities with entries','Total Entries'], rowsHtml, ['Sr','Tehsil','HFs','Entries'], exp, ['Total','',sumH,sumN]);
                 }
-                const labels=['Tehsil','Entries'].concat(FX_VAX.map(function(v){return v[1];}));
-                const exp=[]; const totals=FX_VAX.map(function(){return 0;}); let totalEntries=0;
-                const rowsHtml=tlist.map(function(t){
-                    const row=[t, tehsils[t].rows].concat(FX_VAX.map(function(v){return tehsils[t][v[0]];}));
-                    totalEntries+=tehsils[t].rows;
-                    FX_VAX.forEach(function(v,i){ totals[i]+=tehsils[t][v[0]]; });
-                    exp.push(row);
-                    return '<tr>'+row.map(function(c,i){ return '<td>'+(i===0?'<strong>'+c+'</strong>':(typeof c==='number'?c.toLocaleString():c))+'</td>'; }).join('')+'</tr>';
-                }).join('');
-                fxRenderTable(labels, rowsHtml, labels, exp, ['Total', totalEntries].concat(totals));
-            }
+                else if(fxMode==='antigen'){
+                    fxSetStats([
+                        {n:data.length.toLocaleString(), l:'Total Entries'},
+                        {n: Object.keys(counts).reduce(function(s,k){return s+counts[k];},0).toLocaleString(), l:'Doses in '+fxPeriodLabel()}
+                    ]);
+                    // light card grid
+                    if(extra){
+                        let cards='<div class="emr-summary-grid">';
+                        cards+='<div class="emr-sum-item"><div class="n">'+data.length.toLocaleString()+'</div><div class="l">Total Entries</div></div>';
+                        for(let j=0;j<FX_VAX_DEF.length;j++){
+                            const v=FX_VAX_DEF[j];
+                            cards+='<div class="emr-sum-item"><div class="n">'+counts[v[0]].toLocaleString()+'</div><div class="l">'+v[1]+'</div></div>';
+                        }
+                        cards+='</div>';
+                        extra.innerHTML=cards; extra.style.display='block';
+                    }
+                    const exp=[]; let sumA=0; let rowsHtml='';
+                    for(let j=0;j<FX_VAX_DEF.length;j++){
+                        const v=FX_VAX_DEF[j]; sumA+=counts[v[0]];
+                        exp.push([v[1], counts[v[0]]]);
+                        rowsHtml+='<tr><td><strong>'+v[1]+'</strong></td><td>'+counts[v[0]].toLocaleString()+'</td></tr>';
+                    }
+                    fxRenderTable(['Antigen / Vaccine','Doses in period'], rowsHtml, ['Antigen','Count'], exp, ['Total doses', sumA]);
+                    const wrap=document.getElementById('fxTableWrap');
+                    if(wrap) wrap.style.display='none';
+                }
+                else if(fxMode==='tehsilAg'){
+                    const tehsils={};
+                    for(let i=0;i<data.length;i++){
+                        const r=data[i];
+                        if(!tehsils[r.tehsil]){
+                            tehsils[r.tehsil]={rows:0};
+                            for(let j=0;j<FX_VAX_DEF.length;j++) tehsils[r.tehsil][FX_VAX_DEF[j][0]]=0;
+                        }
+                        tehsils[r.tehsil].rows++;
+                        for(let j=0;j<FX_VAX_DEF.length;j++){
+                            const k=FX_VAX_DEF[j][0];
+                            if(fxDoseInPeriod(r,k)) tehsils[r.tehsil][k]++;
+                        }
+                    }
+                    const tlist=Object.keys(tehsils).sort();
+                    fxSetStats([{n:tlist.length,l:'Tehsils'},{n:data.length.toLocaleString(),l:'Entries'}]);
+                    // Table only (no heavy per-tehsil card DOM)
+                    const labels=['Tehsil','Entries'].concat(FX_VAX_DEF.map(function(v){return v[1];}));
+                    const exp=[]; const totals=FX_VAX_DEF.map(function(){return 0;}); let totalEntries=0;
+                    let rowsHtml='';
+                    for(let i=0;i<tlist.length;i++){
+                        const t=tlist[i], o=tehsils[t];
+                        const row=[t, o.rows];
+                        totalEntries+=o.rows;
+                        for(let j=0;j<FX_VAX_DEF.length;j++){
+                            const k=FX_VAX_DEF[j][0];
+                            row.push(o[k]); totals[j]+=o[k];
+                        }
+                        exp.push(row);
+                        rowsHtml+='<tr>';
+                        for(let c=0;c<row.length;c++){
+                            const val=row[c];
+                            rowsHtml+='<td>'+(c===0?'<strong>'+val+'</strong>':(typeof val==='number'?val.toLocaleString():val))+'</td>';
+                        }
+                        rowsHtml+='</tr>';
+                    }
+                    fxRenderTable(labels, rowsHtml, labels, exp, ['Total', totalEntries].concat(totals));
+                    if(extra){
+                        extra.style.display='block';
+                        extra.innerHTML='<div style="font-size:12.5px;color:#555;padding:6px 0">Tehsil-wise antigen table below (cards skipped for speed).</div>';
+                    }
+                }
+                if(status) status.style.display='none';
+                if(performance.now) console.log('fxApply ms', Math.round(performance.now()-t0));
+            }, 10);
         }
         function fxDownloadExcel(){
-            if(typeof XLSX === 'undefined'){ alert('Excel library not loaded. Please refresh the page.'); return; }
+            if(typeof XLSX==='undefined'){ alert('Excel library not loaded. Please refresh the page.'); return; }
             const aoa=[fxLastExport.headers].concat(fxLastExport.rows||[]);
             const ws=XLSX.utils.aoa_to_sheet(aoa);
             const wb=XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, (fxMode||'Fixed').substring(0,28));
-            const stamp=new Date().toISOString().slice(0,10);
-            XLSX.writeFile(wb, 'EPI_Chakwal_EMR_Fixed_'+fxMode+'_'+stamp+'.xlsx');
+            XLSX.writeFile(wb, 'EPI_Chakwal_EMR_Fixed_'+fxMode+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
         }
         async function loadFixedData(){
             const status=document.getElementById('fxStatus');
@@ -3023,32 +3055,21 @@
                 const text=await res.text();
                 const data=JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
                 const rows=data.table.rows||[];
-                fxRows=rows.map(function(row){
-                    const arr=[];
-                    const cells=row.c||[];
-                    for(let i=0;i<80;i++){
-                        const c=cells[i];
-                        if(!c){ arr[i]=''; continue; }
-                        const raw = (c.f != null && c.f !== '') ? c.f : (c.v != null ? c.v : '');
-                        arr[i]={raw:String(raw), v:c.v};
-                        if(typeof c.v === 'string' && c.v.indexOf('Date(')===0){
-                            const m=c.v.match(/Date\((\d+),(\d+),(\d+)/);
-                            if(m) arr[i].date=new Date(+m[1], +m[2], +m[3]);
-                        }
-                    }
-                    return arr;
-                });
+                fxRecords=new Array(rows.length);
+                for(let i=0;i<rows.length;i++){
+                    fxRecords[i]=fxNormalizeRow(rows[i].c||[]);
+                }
+                fxCacheKey=''; fxCacheRows=null;
+                fxPopulateMonthsAndDays();
                 fxFillFilters();
-                fxPopulateDays();
-                if(meta) meta.textContent=fxRows.length.toLocaleString()+' records · refreshed '+new Date().toLocaleString();
-                fxApply();
+                fxOnPeriodChange();
+                if(meta) meta.textContent=fxRecords.length.toLocaleString()+' records · refreshed '+new Date().toLocaleString();
                 if(status) status.style.display='none';
             }catch(err){
                 console.error(err);
-                if(status) status.innerHTML='Failed to load Fixed Site sheet. Check sharing is public / anyone with link.';
+                if(status) status.innerHTML='Failed to load Fixed Site sheet. Ensure sharing is “Anyone with the link”.';
             }
         }
-
 
         // ===== Child Immunization EMR =====
         const EMR_SHEET_ID = '13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo';
