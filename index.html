@@ -2780,15 +2780,19 @@
         }
         function fxDoseInPeriod(r, key){
             const d=r.doses[key];
-            if(!d) return false;
+            if(!d || !d.yes) return false;
             if(fxPeriodMode()==='day'){
                 const ymd=fxSelectedDay();
-                return ymd && d.ymd === ymd;
+                if(!ymd) return false;
+                // Prefer antigen date on that day; else Yes flag + entry created that day
+                if(d.ymd) return d.ymd === ymd;
+                return r.createdYmd === ymd;
             }
             const mk=fxSelectedMonthKey();
-            // Prefer dose date in selected month; else Yes + created in month
-            if(d.mk && mk) return d.mk === mk;
-            return !!(d.yes && r.createdMk === mk);
+            if(!mk) return false;
+            // Prefer antigen date in selected month; else Yes + created in month
+            if(d.mk) return d.mk === mk;
+            return r.createdMk === mk;
         }
         function fxFillFilters(){
             const tsel=document.getElementById('fxTehsil');
