@@ -4628,7 +4628,7 @@
             const now = new Date();
             return {year: now.getFullYear(), month: now.getMonth()};
         }
-        function emrSameMonthfunction emrSameMonth(dt, ym){
+        function emrSameMonth(dt, ym){
             if(!dt || !ym) return false;
             return dt.getFullYear() === ym.year && dt.getMonth() === ym.month;
         }
