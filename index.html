@@ -589,11 +589,14 @@
                     <label>Period
                         <select id="emrPeriod" onchange="emrOnPeriodChange()">
                             <option value="month">Full Month</option>
-                            <option value="day">Day-wise</option>
+                            <option value="day">Date range</option>
                         </select>
                     </label>
-                    <label id="emrDayLabel" style="display:none">Select Date
-                        <select id="emrDaySelect" onchange="emrApply()"><option value="">—</option></select>
+                    <label id="emrDayLabel" style="display:none">From
+                        <select id="emrDayFrom" onchange="emrOnDayRangeChange()"><option value="">—</option></select>
+                    </label>
+                    <label id="emrDayToLabel" style="display:none">To
+                        <select id="emrDayTo" onchange="emrOnDayRangeChange()"><option value="">—</option></select>
                     </label>
                     <label>Tehsil
                         <select id="emrTehsil" onchange="emrOnFilterChange()"><option value="">All Tehsils</option></select>
@@ -983,6 +986,7 @@
             <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px">
                 <button type="button" class="btn btn-sm" style="background:#1565c0" onclick="emrDownloadSearchPng()">🖼 Download PNG (HD)</button>
                 <button type="button" class="btn btn-sm" style="background:#2e7d32" onclick="emrCopySearchPng()">📋 Copy Image (HD)</button>
+                <button type="button" class="btn btn-sm" style="background:#6a1b9a" onclick="emrDownloadSearchPdf()">📄 Download PDF</button>
             </div>
             <div id="emrChildModalStatus" style="text-align:center;font-size:12px;color:#666;margin-bottom:8px"></div>
             <div id="emrChildModalBody" style="background:#f0f7f4;border-radius:12px;padding:12px"></div>
@@ -3448,44 +3452,82 @@
             return (el && el.value === 'day') ? 'day' : 'month';
         }
         function emrSelectedDayYmd(){
-            const el = document.getElementById('emrDaySelect');
+            // backward compat: use From date
+            return emrDayFromYmd();
+        }
+        function emrDayFromYmd(){
+            const el = document.getElementById('emrDayFrom');
+            return (el && el.value) ? el.value : '';
+        }
+        function emrDayToYmd(){
+            const el = document.getElementById('emrDayTo');
             return (el && el.value) ? el.value : '';
         }
         function emrPeriodLabel(){
             if(emrPeriodMode() === 'day'){
-                const ymd = emrSelectedDayYmd();
-                if(!ymd) return 'Day-wise (select date)';
-                return formatYmdLong(ymd);
+                const a = emrDayFromYmd(), b = emrDayToYmd();
+                if(!a && !b) return 'Date range (select dates)';
+                if(a && b && a === b) return formatYmdLong(a);
+                if(a && b) return formatYmdLong(a)+' to '+formatYmdLong(b);
+                return formatYmdLong(a || b);
             }
             return emrMonthLabel(emrGetReportMonth());
         }
         function emrOnPeriodChange(){
             const mode = emrPeriodMode();
             const lab = document.getElementById('emrDayLabel');
+            const lab2 = document.getElementById('emrDayToLabel');
             if(lab) lab.style.display = (mode === 'day') ? '' : 'none';
+            if(lab2) lab2.style.display = (mode === 'day') ? '' : 'none';
             if(mode === 'day') emrPopulateDaySelect();
             emrApply();
         }
         function emrPopulateDaySelect(){
-            const sel = document.getElementById('emrDaySelect');
-            if(!sel) return;
             const set = {};
             (emrRows||[]).forEach(function(r){
                 const u = emrUpdatedObj(r);
                 if(u.date) set[emrYmdFromDate(u.date)] = true;
             });
-            const days = Object.keys(set).sort().reverse();
-            const cur = sel.value;
-            sel.innerHTML = '';
-            if(!days.length){
-                sel.innerHTML = '<option value="">No dates</option>';
-                return;
+            const days = Object.keys(set).sort().reverse(); // newest first for UX
+            const daysAsc = Object.keys(set).sort();
+            function fill(sel, preferFirst, preferLast){
+                if(!sel) return;
+                const cur = sel.value;
+                sel.innerHTML = '';
+                if(!days.length){
+                    sel.innerHTML = '<option value="">No dates</option>';
+                    return;
+                }
+                days.forEach(function(ymd){
+                    sel.innerHTML += '<option value="'+ymd+'">'+formatYmdLong(ymd)+'</option>';
+                });
+                if(cur && set[cur]) sel.value = cur;
+                else if(preferLast && daysAsc.length) sel.value = daysAsc[daysAsc.length-1];
+                else if(preferFirst && daysAsc.length) sel.value = daysAsc[0];
+                else sel.value = days[0];
             }
-            days.forEach(function(ymd){
-                sel.innerHTML += '<option value="'+ymd+'">'+formatYmdLong(ymd)+'</option>';
-            });
-            if(cur && set[cur]) sel.value = cur;
-            else sel.value = days[0];
+            const from = document.getElementById('emrDayFrom');
+            const to = document.getElementById('emrDayTo');
+            fill(from, true, false);  // default earliest
+            fill(to, false, true);    // default latest
+            // If only one wave of data, from=min to=max of available
+            if(daysAsc.length){
+                if(from && !from.value) from.value = daysAsc[0];
+                if(to && !to.value) to.value = daysAsc[daysAsc.length-1];
+                // Prefer full span on first load
+                if(from) from.value = daysAsc[0];
+                if(to) to.value = daysAsc[daysAsc.length-1];
+            }
+        }
+        function emrOnDayRangeChange(){
+            const a = emrDayFromYmd(), b = emrDayToYmd();
+            if(a && b && a > b){
+                // swap if user picks inverted range
+                const f = document.getElementById('emrDayFrom');
+                const t = document.getElementById('emrDayTo');
+                if(f && t){ const x=f.value; f.value=t.value; t.value=x; }
+            }
+            emrApply();
         }
         function emrRowInReportMonth(row, ym){
             ym = ym || emrGetReportMonth();
@@ -3494,11 +3536,17 @@
             return false;
         }
         function emrRowOnSelectedDay(row){
-            const ymd = emrSelectedDayYmd();
-            if(!ymd) return false;
+            // date range inclusive
+            let from = emrDayFromYmd();
+            let to = emrDayToYmd();
+            if(!from && !to) return false;
+            if(from && to && from > to){ const x=from; from=to; to=x; }
             const u = emrUpdatedObj(row);
             if(!u.date) return false;
-            return emrYmdFromDate(u.date) === ymd;
+            const ymd = emrYmdFromDate(u.date);
+            if(from && ymd < from) return false;
+            if(to && ymd > to) return false;
+            return true;
         }
         /** Tehsil/UC/search + month OR day on LastUpdatedDate */
         function emrFiltered(monthOnly){
@@ -3881,11 +3929,21 @@
         /** e.g. 1-15 Aug 2026 or 13 Aug 2026 */
         function emrExportRangeLabel(){
             if(emrPeriodMode() === 'day'){
-                const ymd = emrSelectedDayYmd();
-                if(ymd){
-                    const p = ymd.split('-');
-                    const dt = new Date(+p[0], +p[1]-1, +p[2]);
-                    return emrFormatDayMonYear(dt);
+                const a = emrDayFromYmd(), b = emrDayToYmd();
+                if(a || b){
+                    function ymdToDt(ymd){
+                        const p = ymd.split('-');
+                        return new Date(+p[0], +p[1]-1, +p[2]);
+                    }
+                    if(a && b && a === b) return emrFormatDayMonYear(ymdToDt(a));
+                    if(a && b){
+                        const da = ymdToDt(a), db = ymdToDt(b);
+                        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                        if(da.getFullYear()===db.getFullYear() && da.getMonth()===db.getMonth())
+                            return da.getDate()+'-'+db.getDate()+' '+months[da.getMonth()]+' '+da.getFullYear();
+                        return emrFormatDayMonYear(da)+' - '+emrFormatDayMonYear(db);
+                    }
+                    return emrFormatDayMonYear(ymdToDt(a||b));
                 }
             }
             // From filtered rows' LastUpdatedDate min–max
@@ -4103,7 +4161,9 @@
             const period = document.getElementById('emrPeriod');
             if(period) period.value = 'month';
             const dayLab = document.getElementById('emrDayLabel');
+            const dayLab2 = document.getElementById('emrDayToLabel');
             if(dayLab) dayLab.style.display = 'none';
+            if(dayLab2) dayLab2.style.display = 'none';
             const daySel = document.getElementById('emrDaySelect');
             if(daySel) daySel.value = '';
             const tehsil = document.getElementById('emrTehsil');
@@ -4221,6 +4281,137 @@
                 logging: false
             });
         }
+        
+        async function emrDownloadSearchPdf(){
+            if(typeof window.jspdf === 'undefined'){
+                alert('jsPDF library missing. Please refresh the page.');
+                return;
+            }
+            const st = document.getElementById('emrChildModalStatus');
+            const body = document.getElementById('emrChildModalBody');
+            if(!body) return;
+            try{
+                if(st) st.textContent = 'Preparing PDF…';
+                const { jsPDF } = window.jspdf;
+                const card = body.querySelector('.emr-child-card');
+                const table = body.querySelector('table.emr-table');
+                const range = (typeof emrExportRangeLabel === 'function') ? emrExportRangeLabel() : emrPeriodLabel();
+                const titleHint = (st && st.textContent) ? st.textContent.split('·')[0].trim() : 'Search Results';
+
+                if(table){
+                    // List export — aligned columns
+                    const heads = Array.from(table.querySelectorAll('thead th')).map(function(th){ return th.textContent.trim(); });
+                    const rows = [];
+                    table.querySelectorAll('tbody tr').forEach(function(tr){
+                        const cells = Array.from(tr.querySelectorAll('td')).map(function(td){ return td.textContent.trim(); });
+                        if(cells.length) rows.push(cells);
+                    });
+                    const ncols = heads.length || (rows[0] && rows[0].length) || 1;
+                    const landscape = ncols > 6;
+                    const pdf = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit:'mm', format:'a4' });
+                    const pageW = pdf.internal.pageSize.getWidth();
+                    const pageH = pdf.internal.pageSize.getHeight();
+                    const margin = 10;
+                    const usable = pageW - margin*2;
+                    const maxLens = heads.map(function(h,ci){
+                        let m = String(h||'').length;
+                        rows.forEach(function(r){ const t=String(r[ci]||''); if(t.length>m) m=t.length; });
+                        return Math.max(4, Math.min(m, 40));
+                    });
+                    const sumL = maxLens.reduce(function(a,b){return a+b;},0)||1;
+                    let colW = maxLens.map(function(l){ return usable*(l/sumL); });
+                    const minW = Math.min(14, usable/ncols);
+                    colW = colW.map(function(w){ return Math.max(minW,w); });
+                    let sumW = colW.reduce(function(a,b){return a+b;},0);
+                    colW = colW.map(function(w){ return w*usable/sumW; });
+
+                    let y = margin;
+                    pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
+                    pdf.text('EPI District Chakwal — Outreach', margin, y); y += 6;
+                    pdf.setFontSize(10); pdf.text(titleHint+' · '+range, margin, y); y += 5;
+                    pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(100,100,100);
+                    pdf.text('Generated: '+new Date().toLocaleString()+'  |  Rows: '+rows.length, margin, y); y += 6;
+
+                    function drawHead(){
+                        pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
+                        pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
+                        let x=margin;
+                        heads.forEach(function(h,i){
+                            pdf.text(String(h).substring(0, Math.floor(colW[i]/1.7)), x+1.2, y+4.8);
+                            x+=colW[i];
+                        });
+                        y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
+                    }
+                    drawHead();
+                    rows.forEach(function(row,ri){
+                        if(y+6 > pageH-margin){ pdf.addPage(); y=margin; drawHead(); }
+                        if(ri%2){ pdf.setFillColor(232,245,233); pdf.rect(margin,y,usable,6,'F'); }
+                        pdf.setDrawColor(200,200,200); pdf.setLineWidth(0.1);
+                        let x=margin;
+                        for(let i=0;i<ncols;i++){
+                            pdf.rect(x,y,colW[i],6);
+                            const cell=String(row[i]==null?'':row[i]);
+                            pdf.setFontSize(7);
+                            pdf.text(cell.substring(0, Math.max(3, Math.floor(colW[i]/1.75))), x+1.2, y+4.1);
+                            x+=colW[i];
+                        }
+                        y+=6;
+                    });
+                    const fname = (titleHint.replace(/[\\/:*?"<>|]/g,'').trim() || 'Search Results')+' '+range+'.pdf';
+                    pdf.save(fname);
+                    if(st) st.textContent = 'PDF downloaded';
+                    return;
+                }
+
+                // Single child card — multipage text layout
+                if(card){
+                    const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+                    const margin = 14;
+                    let y = margin;
+                    const pageW = pdf.internal.pageSize.getWidth();
+                    pdf.setFont('helvetica','bold'); pdf.setFontSize(14); pdf.setTextColor(13,92,61);
+                    pdf.text('EPI District Chakwal — Child Detail', margin, y); y+=8;
+                    pdf.setFontSize(9); pdf.setFont('helvetica','normal'); pdf.setTextColor(100,100,100);
+                    pdf.text('Period: '+range+'  |  '+new Date().toLocaleString(), margin, y); y+=8;
+
+                    const h4 = card.querySelector('h4');
+                    pdf.setFont('helvetica','bold'); pdf.setFontSize(13); pdf.setTextColor(13,92,61);
+                    pdf.text((h4 && h4.textContent) || 'Child', margin, y); y+=7;
+
+                    pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(30,30,30);
+                    card.querySelectorAll('.emr-child-meta > div').forEach(function(div){
+                        const t = div.textContent.replace(/\s+/g,' ').trim();
+                        if(t){ pdf.text(t, margin, y); y+=5.5; }
+                    });
+                    y+=4;
+                    pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(13,92,61);
+                    pdf.text('Vaccination Dates', margin, y); y+=6;
+                    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(30,30,30);
+                    const items = card.querySelectorAll('.emr-vax-item');
+                    let col = 0; const colW = (pageW - margin*2)/2; let y0 = y;
+                    items.forEach(function(it){
+                        const name = (it.querySelector('.emr-vax-name')||{}).textContent || '';
+                        const date = (it.querySelector('.emr-vax-date')||{}).textContent || '';
+                        const line = name+': '+date;
+                        const x = margin + col*colW;
+                        if(y > 280){ pdf.addPage(); y = margin; y0 = y; }
+                        pdf.text(line, x, y);
+                        col++;
+                        if(col>=2){ col=0; y+=5.5; }
+                    });
+                    const childName = ((h4 && h4.textContent) || 'Child').replace(/[\\/:*?"<>|]/g,'').trim();
+                    pdf.save(childName+"'s Vaccination Detail "+range+'.pdf');
+                    if(st) st.textContent = 'PDF downloaded';
+                    return;
+                }
+
+                alert('Nothing to export in this popup.');
+            }catch(e){
+                console.error(e);
+                alert('PDF failed: '+(e.message||e));
+            }
+        }
+
         async function emrDownloadSearchPng(){
             const st = document.getElementById('emrChildModalStatus');
             try{
@@ -4366,9 +4557,14 @@
             const dt = emrParseDoseDate(raw);
             if(!dt) return false;
             if(emrPeriodMode() === 'day'){
-                const ymd = emrSelectedDayYmd();
-                if(!ymd) return false;
-                return emrYmdFromDate(dt) === ymd;
+                let from = emrDayFromYmd();
+                let to = emrDayToYmd();
+                if(!from && !to) return false;
+                if(from && to && from > to){ const x=from; from=to; to=x; }
+                const ymd = emrYmdFromDate(dt);
+                if(from && ymd < from) return false;
+                if(to && ymd > to) return false;
+                return true;
             }
             ym = ym || emrGetReportMonth();
             return emrSameMonth(dt, ym);
