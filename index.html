@@ -641,8 +641,9 @@
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
                     <button type="button" class="btn btn-sm" id="emrDownloadBtn" onclick="emrDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" id="emrTabPdfBtn" onclick="emrExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
                     <button type="button" class="btn btn-sm" id="emrPdfBtn" onclick="emrExportFullPdf()" style="background:#c62828">📄 Full EMR PDF (All Tabs)</button>
-                    <span style="font-size:12px;color:#666" id="emrDownloadHint">Excel = current tab · PDF = all sections</span>
+                    <span style="font-size:12px;color:#666" id="emrDownloadHint">Excel / PDF (This Tab) = open tab · Full PDF = all sections</span>
                 </div>
 
                 <div class="emr-stats" id="emrStats"></div>
@@ -3842,6 +3843,139 @@
             }
         }
 
+
+        
+        function emrTabTitle(){
+            const map = {
+                uc:'1. UC-wise Entries', tehsil:'2. Tehsil Summary', antigen:'3. Antigen Summary',
+                tehsilAg:'4. Tehsil-wise Antigen', phone:'5. Missing Phone', father:'6. Missing Father',
+                map:'7. Geo Map Links', late:'8. Late Entry', dropout:'9. Drop-out',
+                targets:'10. Targets vs Coverage', defaulter:'11. Defaulter Children Vaccinated',
+                overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children'
+            };
+            return map[emrMode] || ('Tab: '+emrMode);
+        }
+        function emrExportTabPdf(){
+            if(typeof window.jspdf === 'undefined'){
+                alert('jsPDF library missing. Please refresh the page.');
+                return;
+            }
+            const headers = (emrLastExport && emrLastExport.headers) ? emrLastExport.headers.slice() : [];
+            const rows = (emrLastExport && emrLastExport.rows) ? emrLastExport.rows.slice() : [];
+            if(!headers.length){
+                alert('No table data on this tab to export. Open a tab with a data table first.');
+                return;
+            }
+            const btn = document.getElementById('emrTabPdfBtn');
+            const old = btn ? btn.textContent : '';
+            if(btn) btn.textContent = 'Preparing PDF…';
+            try{
+                const { jsPDF } = window.jspdf;
+                const ncols = headers.length;
+                // Landscape for wide tables
+                const landscape = ncols > 6;
+                const pdf = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 10;
+                const usable = pageW - margin*2;
+
+                // Column widths proportional to content
+                const all = [headers].concat(rows);
+                const maxLens = headers.map(function(_,ci){
+                    let m = String(headers[ci]==null?'':headers[ci]).length;
+                    rows.forEach(function(r){
+                        const t = String((r && r[ci] != null) ? r[ci] : '');
+                        if(t.length > m) m = t.length;
+                    });
+                    return Math.max(4, Math.min(m, 42));
+                });
+                const sumL = maxLens.reduce(function(a,b){ return a+b; }, 0) || 1;
+                let colW = maxLens.map(function(l){ return usable * (l / sumL); });
+                // Minimum width per column
+                const minW = Math.min(16, usable / ncols);
+                colW = colW.map(function(w){ return Math.max(minW, w); });
+                let sumW = colW.reduce(function(a,b){ return a+b; }, 0);
+                colW = colW.map(function(w){ return w * usable / sumW; });
+
+                let y = margin;
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(13);
+                pdf.setTextColor(13, 92, 61);
+                pdf.text('EPI District Chakwal — Outreach', margin, y);
+                y += 6;
+                pdf.setFontSize(11);
+                pdf.text(emrTabTitle(), margin, y);
+                y += 5;
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(9);
+                pdf.setTextColor(80, 80, 80);
+                pdf.text('Period: '+emrPeriodLabel()+'  |  Generated: '+new Date().toLocaleString()+'  |  Rows: '+rows.length, margin, y);
+                y += 6;
+
+                function drawHeader(){
+                    pdf.setFillColor(13, 92, 61);
+                    pdf.rect(margin, y, usable, 7, 'F');
+                    pdf.setTextColor(255,255,255);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(8);
+                    let x = margin;
+                    headers.forEach(function(h,i){
+                        const t = String(h==null?'':h);
+                        pdf.text(t.substring(0, Math.floor(colW[i]/1.7)), x + 1.2, y + 4.8);
+                        x += colW[i];
+                    });
+                    y += 7;
+                    pdf.setTextColor(30,30,30);
+                    pdf.setFont('helvetica', 'normal');
+                }
+                drawHeader();
+
+                const rowH = 6;
+                rows.forEach(function(row, ri){
+                    if(y + rowH > pageH - margin){
+                        pdf.addPage();
+                        y = margin;
+                        drawHeader();
+                    }
+                    // zebra
+                    if(ri % 2 === 1){
+                        pdf.setFillColor(232, 245, 233);
+                        pdf.rect(margin, y, usable, rowH, 'F');
+                    }
+                    // grid lines light
+                    pdf.setDrawColor(200, 200, 200);
+                    pdf.setLineWidth(0.1);
+                    let x = margin;
+                    for(let i=0;i<ncols;i++){
+                        pdf.rect(x, y, colW[i], rowH);
+                        const cell = String((row && row[i] != null) ? row[i] : '');
+                        const maxChars = Math.max(3, Math.floor(colW[i] / 1.75));
+                        pdf.setFontSize(7.5);
+                        pdf.setTextColor(20,20,20);
+                        pdf.text(cell.substring(0, maxChars), x + 1.2, y + 4.2);
+                        x += colW[i];
+                    }
+                    y += rowH;
+                });
+
+                // footer page numbers
+                const total = pdf.internal.getNumberOfPages();
+                for(let p=1;p<=total;p++){
+                    pdf.setPage(p);
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(120,120,120);
+                    pdf.text('Page '+p+' / '+total, pageW - margin - 20, pageH - 5);
+                }
+
+                const stamp = new Date().toISOString().slice(0,10);
+                pdf.save('EPI_Chakwal_Outreach_'+(emrMode||'tab')+'_'+stamp+'.pdf');
+            }catch(e){
+                console.error(e);
+                alert('PDF failed: '+(e.message||e));
+            }
+            if(btn) btn.textContent = old || '📄 PDF (This Tab)';
+        }
 
         function emrDownloadExcel(){
             if(typeof XLSX === 'undefined'){
