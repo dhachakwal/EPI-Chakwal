@@ -580,7 +580,10 @@
             </div><!-- /sweepExportArea -->
 
             
-            <div class="section-title" id="section-emr">Child Immunization (EMR) — Outreach</div>
+            <div class="section-title" id="section-emr" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                <span>Child Immunization (EMR) — Outreach</span>
+                <span id="emrSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
+            </div>
             <div class="emr-card" id="emrCard">
                 <p class="emr-note"><strong>Source:</strong> EMR Outreach Immunization Report. Filters and reports in PHMIS style. Data is appended daily in one sheet.</p>
                 <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
@@ -3397,6 +3400,7 @@
                 emrPopulateDaySelect();
                 emrApply();
                 if(meta) meta.textContent = emrRows.length.toLocaleString() + ' records · refreshed ' + new Date().toLocaleString();
+                if(typeof emrUpdateSectionAsOf === 'function') emrUpdateSectionAsOf();
                 if(status) status.style.display='none';
             }catch(err){
                 console.error(err);
@@ -4499,6 +4503,19 @@
         }
 
         
+        
+        function emrUpdateSectionAsOf(){
+            const el = document.getElementById('emrSectionAsOf');
+            if(!el) return;
+            const raw = emrLatestUpdated(emrRows);
+            if(!raw || raw === '—'){
+                el.textContent = 'Data not loaded yet';
+                return;
+            }
+            // raw like 8/15/2026 6:48 PM
+            el.textContent = 'Data in this section is current as of '+ raw;
+        }
+
         function emrLatestUpdated(rows){
             let best = null;
             (rows||[]).forEach(function(r){
@@ -4669,6 +4686,7 @@
             const grid = document.getElementById('emrSummaryGrid');
             const upto = document.getElementById('emrDataUpto');
             if(upto) upto.textContent = emrLatestUpdated(emrRows);
+            if(typeof emrUpdateSectionAsOf === 'function') emrUpdateSectionAsOf();
             const t = (document.getElementById('emrTehsil')||{}).value || '';
             const u = (document.getElementById('emrUC')||{}).value || '';
             let scope = 'Scope: District Chakwal (All)';
