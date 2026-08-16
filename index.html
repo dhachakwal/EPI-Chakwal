@@ -4263,7 +4263,15 @@
                 const key = pair[0], label = pair[1];
                 const raw = emrCell(r, EMR_COLS[key]);
                 const has = emrHasDose(raw);
-                vax += '<div class="emr-vax-item'+(has?'':' no-dose')+'"><div class="emr-vax-name">'+label+'</div><div class="emr-vax-date">'+(has?raw:'No')+'</div></div>';
+                let shown = 'No';
+                if(has){
+                    if(r._dose && r._dose[key] && r._dose[key].ymd) shown = formatYmdLong(r._dose[key].ymd);
+                    else {
+                        const dt = emrParseDoseDate(raw);
+                        shown = dt ? formatYmdLong(emrYmdFromDate(dt)) : String(raw).split(/\s+/)[0];
+                    }
+                }
+                vax += '<div class="emr-vax-item'+(has?'':' no-dose')+'"><div class="emr-vax-name">'+label+'</div><div class="emr-vax-date">'+shown+'</div></div>';
             });
             const addr = emrCell(r, EMR_COLS.address) || '—';
             const lat = parseFloat(emrCell(r, EMR_COLS.lat));
@@ -4819,6 +4827,31 @@
         }
 
         
+        
+        function emrFormatDoseDisplay(row, antigenKey){
+            // antigenKey === '__all__' → show LastUpdatedDate
+            if(!row) return '—';
+            if(!antigenKey || antigenKey === '__all__'){
+                const u = emrUpdatedObj(row);
+                if(u && u.date) return formatYmdLong(emrYmdFromDate(u.date));
+                if(u && u.raw) return String(u.raw).split(' ')[0] || '—';
+                if(row._uymd) return formatYmdLong(row._uymd);
+                return '—';
+            }
+            // Prefer index cache
+            if(row._dose && row._dose[antigenKey] && row._dose[antigenKey].ymd){
+                return formatYmdLong(row._dose[antigenKey].ymd);
+            }
+            const raw = emrCell(row, EMR_COLS[antigenKey]);
+            if(!raw || !emrHasDose(raw)) return '—';
+            const dt = emrParseDoseDate(raw);
+            if(dt) return formatYmdLong(emrYmdFromDate(dt));
+            // already a readable date string
+            const s = String(raw).trim();
+            if(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(s)) return s.split(/\s+/)[0];
+            return s;
+        }
+
         function emrShowAntigenEntries(key, label){
             if(!emrRows.length){
                 alert('Please click Refresh Data first.');
@@ -4850,16 +4883,14 @@
             let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px"><strong>'+(label||key)+'</strong> — '+matched.length+' entr'+(matched.length===1?'y':'ies')+' · '+emrPeriodLabel()+'. Click <strong>Name</strong> for full detail.</div>';
             table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
             table += '<table class="emr-table" style="min-width:900px"><thead><tr>';
-            const headers = ['Sr','Tehsil','UC','MR Number','Name','Father','Age','Gender','Phone','Dose date'];
+            const doseCol = (key === '__all__') ? 'Entry date' : 'Dose date';
+            const headers = ['Sr','Tehsil','UC','MR Number','Name','Father','Age','Gender','Phone', doseCol];
             headers.forEach(function(h){ table += '<th>'+h+'</th>'; });
             table += '</tr></thead><tbody>';
             for(let i=0;i<max;i++){
                 const r = matched[i];
                 const name = emrCell(r, EMR_COLS.name) || '—';
-                let dose = '—';
-                if(key !== '__all__' && EMR_COLS[key] != null){
-                    dose = emrCell(r, EMR_COLS[key]) || '—';
-                }
+                let dose = emrFormatDoseDisplay(r, key);
                 table += '<tr>';
                 table += '<td>'+(i+1)+'</td>';
                 table += '<td>'+emrCell(r,EMR_COLS.tehsil)+'</td>';
