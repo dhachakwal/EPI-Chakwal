@@ -3855,6 +3855,68 @@
             };
             return map[emrMode] || ('Tab: '+emrMode);
         }
+        function emrFileTabName(){
+            const map = {
+                uc:"UC-wise Entries Data",
+                tehsil:"Tehsil Summary Data",
+                antigen:"Antigen Summary Data",
+                tehsilAg:"Tehsil-wise Antigen Data",
+                phone:"Missing Phone Data",
+                father:"Missing Father Data",
+                map:"Geo Map Links Data",
+                late:"Late Entry Data",
+                dropout:"Drop-out Data",
+                targets:"Targets vs Coverage Data",
+                defaulter:"Defaulter Children Vaccinated Data",
+                overdue:"Overdue Children Data",
+                duplicate:"Duplicate Children's Data"
+            };
+            return map[emrMode] || ((emrMode||'EMR')+' Data');
+        }
+        function emrFormatDayMonYear(dt){
+            if(!dt) return '';
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return dt.getDate()+' '+months[dt.getMonth()]+' '+dt.getFullYear();
+        }
+        /** e.g. 1-15 Aug 2026 or 13 Aug 2026 */
+        function emrExportRangeLabel(){
+            if(emrPeriodMode() === 'day'){
+                const ymd = emrSelectedDayYmd();
+                if(ymd){
+                    const p = ymd.split('-');
+                    const dt = new Date(+p[0], +p[1]-1, +p[2]);
+                    return emrFormatDayMonYear(dt);
+                }
+            }
+            // From filtered rows' LastUpdatedDate min–max
+            let min = null, max = null;
+            try{
+                (emrFiltered()||[]).forEach(function(r){
+                    const u = emrUpdatedObj(r);
+                    if(u && u.date){
+                        if(!min || u.date < min) min = u.date;
+                        if(!max || u.date > max) max = u.date;
+                    }
+                });
+            }catch(e){}
+            if(min && max){
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                if(min.getFullYear()===max.getFullYear() && min.getMonth()===max.getMonth()){
+                    if(min.getDate()===max.getDate()) return emrFormatDayMonYear(min);
+                    return min.getDate()+'-'+max.getDate()+' '+months[min.getMonth()]+' '+min.getFullYear();
+                }
+                return emrFormatDayMonYear(min)+' - '+emrFormatDayMonYear(max);
+            }
+            // fallback full month
+            const ym = emrGetReportMonth();
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const lastDay = new Date(ym.year, ym.month+1, 0).getDate();
+            return '1-'+lastDay+' '+months[ym.month]+' '+ym.year;
+        }
+        function emrExportFileBase(){
+            // "Duplicate Children's Data 1-15 Aug 2026"
+            return emrFileTabName()+' '+emrExportRangeLabel();
+        }
         function emrExportTabPdf(){
             if(typeof window.jspdf === 'undefined'){
                 alert('jsPDF library missing. Please refresh the page.');
@@ -3969,7 +4031,7 @@
                 }
 
                 const stamp = new Date().toISOString().slice(0,10);
-                pdf.save('EPI_Chakwal_Outreach_'+(emrMode||'tab')+'_'+stamp+'.pdf');
+                pdf.save(emrExportFileBase()+'.pdf');
             }catch(e){
                 console.error(e);
                 alert('PDF failed: '+(e.message||e));
@@ -3992,8 +4054,7 @@
             const ws = XLSX.utils.aoa_to_sheet(aoa);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, (emrMode||'EMR').substring(0,28));
-            const stamp = new Date().toISOString().slice(0,10);
-            XLSX.writeFile(wb, 'EPI_Chakwal_EMR_'+emrMode+'_'+stamp+'.xlsx');
+            XLSX.writeFile(wb, emrExportFileBase()+'.xlsx');
         }
 
         
