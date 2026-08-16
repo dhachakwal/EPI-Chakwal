@@ -591,10 +591,16 @@
                 <div class="emr-filter">
                     <label>Period
                         <select id="emrPeriod" onchange="emrOnPeriodChange()">
-                            <option value="month:2026-08">August 2026</option>
-                            <option value="month:2026-07">July 2026</option>
                             <option value="cumulative">Cumulative (year to date)</option>
                             <option value="day">Date range</option>
+                            <option value="month:2026-08">August 2026</option>
+                            <option value="month:2026-07">July 2026</option>
+                            <option value="month:2026-06">June 2026</option>
+                            <option value="month:2026-05">May 2026</option>
+                            <option value="month:2026-04">April 2026</option>
+                            <option value="month:2026-03">March 2026</option>
+                            <option value="month:2026-02">February 2026</option>
+                            <option value="month:2026-01">January 2026</option>
                         </select>
                     </label>
                     <label id="emrDayLabel" style="display:none">From
@@ -3330,7 +3336,7 @@
         async function loadEmrData(){
             const status = document.getElementById('emrStatus');
             const meta = document.getElementById('emrMeta');
-            if(status){ status.style.display='block'; status.textContent='Loading EMR month sheets…'; }
+            if(status){ status.style.display='block'; status.textContent='Loading EMR sheets (parallel)…'; }
             if(meta) meta.textContent = 'Loading…';
             try{
                 function mapSheetRows(rows){
@@ -3349,55 +3355,62 @@
                     }).filter(function(r){ return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.uc) || emrCell(r, EMR_COLS.name); });
                 }
                 async function fetchGviz(params){
-                    const url = 'https://docs.google.com/spreadsheets/d/'+EMR_SHEET_ID+'/gviz/tq?tqx=out:json&'+params+'&headers=1';
+                    const url = 'https://docs.google.com/spreadsheets/d/'+EMR_SHEET_ID+'/gviz/tq?tqx=out:json&'+params;
                     const res = await fetch(url);
                     if(!res.ok) throw new Error('HTTP '+res.status);
                     const text = await res.text();
-                    const start = text.indexOf('{');
-                    const end = text.lastIndexOf('}');
-                    if(start<0||end<0) throw new Error('Invalid sheet response');
-                    return JSON.parse(text.substring(start, end+1));
+                    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+                    if(a<0||b<0) throw new Error('Bad response');
+                    return JSON.parse(text.substring(a,b+1));
                 }
-                async function loadOneSheet(label, paramsList){
-                    for(let i=0;i<paramsList.length;i++){
+                async function tryLoadSheet(namesOrGids){
+                    // namesOrGids: [{sheet:'Aug-2026'},{gid:'0'}]
+                    for(let i=0;i<namesOrGids.length;i++){
+                        const item = namesOrGids[i];
                         try{
-                            const data = await fetchGviz(paramsList[i]);
+                            const params = item.sheet != null ? ('sheet='+encodeURIComponent(item.sheet)) : ('gid='+item.gid);
+                            const data = await fetchGviz(params);
                             const rows = (data.table && data.table.rows) || [];
                             const cols = (data.table && data.table.cols) || [];
                             if(rows.length < 30 || cols.length < 30) continue;
                             const mapped = mapSheetRows(rows);
                             if(mapped.length < 30) continue;
-                            return {label: label, rows: mapped};
-                        }catch(e){ console.warn('sheet try', label, paramsList[i], e); }
+                            return mapped;
+                        }catch(e){}
                     }
                     return null;
                 }
 
-                // Known month tabs (add more names here as you create sheets)
-                const monthJobs = [
-                    {label:'Aug-2026', params:['sheet='+encodeURIComponent('Aug-2026'), 'gid=0']},
-                    {label:'July-2026', params:['sheet='+encodeURIComponent('July-2026'), 'gid=141905794']}
+                // Jan–Aug 2026 (+ optional 2025) — all in parallel
+                const jobs = [
+                    {key:'2026-08', label:'Aug-2026', tries:[{sheet:'Aug-2026'},{gid:'0'}]},
+                    {key:'2026-07', label:'July-2026', tries:[{sheet:'July-2026'}]},
+                    {key:'2026-06', label:'June-2026', tries:[{sheet:'June-2026'}]},
+                    {key:'2026-05', label:'May-2026', tries:[{sheet:'May-2026'}]},
+                    {key:'2026-04', label:'April-2026', tries:[{sheet:'April-2026'}]},
+                    {key:'2026-03', label:'March-2026', tries:[{sheet:'March-2026'}]},
+                    {key:'2026-02', label:'Feb-2026', tries:[{sheet:'Feb-2026'},{sheet:'February-2026'}]},
+                    {key:'2026-01', label:'Jan-2026', tries:[{sheet:'Jan-2026'},{sheet:'January-2026'}]}
                 ];
-                // Future months you may add — tried if present
-                const future = ['June-2026','May-2026','April-2026','March-2026','February-2026','January-2026',
-                    'Sep-2026','Sept-2026','September-2026','Oct-2026','October-2026','Nov-2026','November-2026','Dec-2026','December-2026'];
-                future.forEach(function(n){ monthJobs.push({label:n, params:['sheet='+encodeURIComponent(n)]}); });
+
+                if(status) status.textContent = 'Loading '+jobs.length+' month sheets in parallel…';
+                const results = await Promise.all(jobs.map(async function(job){
+                    const rows = await tryLoadSheet(job.tries);
+                    if(rows && rows.length) return {key:job.key, label:job.label, rows:rows};
+                    return null;
+                }));
 
                 let all = [];
                 let loadedNames = [];
-                for(let j=0;j<monthJobs.length;j++){
-                    const job = monthJobs[j];
-                    if(status) status.textContent = 'Loading '+job.label+'…';
-                    const got = await loadOneSheet(job.label, job.params);
-                    if(got){
-                        all = all.concat(got.rows);
-                        loadedNames.push(got.label+' ('+got.rows.length.toLocaleString()+')');
-                    }
-                }
+                results.forEach(function(r){
+                    if(!r) return;
+                    all = all.concat(r.rows);
+                    loadedNames.push(r.label+' ('+r.rows.length.toLocaleString()+')');
+                });
+
                 if(!all.length){
-                    // last resort
                     const data = await fetchGviz('gid=0');
-                    all = mapSheetRows((data.table && data.table.rows)||[]);
+                    all = mapSheetRows((data.table&&data.table.rows)||[]);
                     loadedNames.push('gid:0 ('+all.length.toLocaleString()+')');
                 }
                 emrRows = all;
@@ -3407,17 +3420,18 @@
                 const warn = document.getElementById('emrDateWarn');
                 if(warn) warn.style.display = (emrRows.length && badDates > emrRows.length * 0.5) ? 'block' : 'none';
 
-                // Pop. & Target
+                // Pop. & Target (parallel with nothing left — quick)
                 try{
-                    let tdata = null;
-                    const tTries = ['sheet='+encodeURIComponent('Pop. & Target'), 'gid=774994407', 'gid=1'];
+                    let trows = [];
+                    const tTries = [{sheet:'Pop. & Target'},{gid:'774994407'},{gid:'1'}];
                     for(let i=0;i<tTries.length;i++){
                         try{
-                            tdata = await fetchGviz(tTries[i]);
-                            if(tdata && tdata.table && tdata.table.rows && tdata.table.rows.length) break;
+                            const params = tTries[i].sheet != null ? ('sheet='+encodeURIComponent(tTries[i].sheet)) : ('gid='+tTries[i].gid);
+                            const tdata = await fetchGviz(params);
+                            trows = (tdata.table && tdata.table.rows) || [];
+                            if(trows.length) break;
                         }catch(e){}
                     }
-                    const trows = (tdata && tdata.table && tdata.table.rows) || [];
                     emrTargets = trows.map(function(r){
                         const cells = r.c || [];
                         const val = function(i){
@@ -3444,7 +3458,7 @@
                             monthlyDTP: emrNum(val(13))
                         };
                     }).filter(Boolean);
-                }catch(te){ console.warn('targets', te); emrTargets = []; }
+                }catch(te){ emrTargets = []; }
 
                 if(typeof emrRebuildPeriodOptions === 'function') emrRebuildPeriodOptions();
                 emrFillTehsilUC();
@@ -3455,7 +3469,7 @@
                 if(status){ status.style.display='none'; status.textContent=''; }
             }catch(err){
                 console.error(err);
-                if(status){ status.style.display='block'; status.textContent='EMR load failed: '+(err.message||err)+'. Check sheet sharing (Anyone with the link).'; }
+                if(status){ status.style.display='block'; status.textContent='EMR load failed: '+(err.message||err); }
                 if(meta) meta.textContent = 'Load failed';
             }
         }
@@ -3565,22 +3579,23 @@
                     set[y+'-'+(m<10?'0':'')+m]=true;
                 }
             });
-            // ensure July + Aug at least if we have those sheets loaded
             if(!Object.keys(set).length){
                 set['2026-08']=true; set['2026-07']=true;
             }
+            // newest month first (Aug → Jan)
             const keys = Object.keys(set).sort().reverse();
             const prev = sel.value;
+            // Order: Cumulative, Date range, then months (Aug top … Jan bottom)
             let opts = '';
+            opts += '<option value="cumulative">Cumulative (year to date)</option>';
+            opts += '<option value="day">Date range</option>';
             keys.forEach(function(k){
                 const p=k.split('-');
                 opts += '<option value="month:'+k+'">'+emrMonthLabel({year:+p[0], month:(+p[1])-1})+'</option>';
             });
-            opts += '<option value="cumulative">Cumulative (year to date)</option>';
-            opts += '<option value="day">Date range</option>';
             sel.innerHTML = opts;
             if(prev && Array.from(sel.options).some(function(o){return o.value===prev;})) sel.value = prev;
-            else if(keys.length) sel.value = 'month:'+keys[0];
+            else if(keys.length) sel.value = 'month:'+keys[0]; // default latest month
         }
         function emrOnPeriodChange(){
             const mode = emrPeriodMode();
