@@ -4108,9 +4108,33 @@
             const lastDay = new Date(ym.year, ym.month+1, 0).getDate();
             return '1-'+lastDay+' '+months[ym.month]+' '+ym.year;
         }
+        function emrScopeFilePart(){
+            const t = ((document.getElementById('emrTehsil')||{}).value || '').trim();
+            const u = ((document.getElementById('emrUC')||{}).value || '').trim();
+            const parts = [];
+            if(t) parts.push('Tehsil '+t);
+            if(u) parts.push('UC '+u);
+            return parts.join(' ');
+        }
+        function emrSafeFileName(s){
+            return String(s||'')
+                .replace(/[\\/:*?"<>|]/g,'')
+                .replace(/\s+/g,' ')
+                .trim()
+                .substring(0, 180) || 'EPI_Report';
+        }
         function emrExportFileBase(){
-            // "Duplicate Children's Data 1-15 Aug 2026"
-            return emrFileTabName()+' '+emrExportRangeLabel();
+            // "UC Bheen Duplicate Children's Data 1-15 Aug 2026"
+            const scope = emrScopeFilePart();
+            const core = emrFileTabName()+' '+emrExportRangeLabel();
+            return emrSafeFileName(scope ? (scope+' '+core) : core);
+        }
+        function emrPopupFileBase(label){
+            // "UC Bheen Total Entries 1-15 Aug 2026"
+            const scope = emrScopeFilePart();
+            const lab = (label || window._emrLastListLabel || 'Entries').replace(/\s+/g,' ').trim();
+            const range = (typeof emrExportRangeLabel === 'function') ? emrExportRangeLabel() : emrPeriodLabel();
+            return emrSafeFileName([scope, lab, range].filter(Boolean).join(' '));
         }
         function emrExportTabPdf(){
             if(typeof window.jspdf === 'undefined'){
@@ -4359,6 +4383,7 @@
             }
             // Store for detail click
             window._emrSearchMatches = matched;
+            window._emrLastListLabel = qn.length ? ('Search '+q) : 'Search Results';
 
             const body = document.getElementById('emrChildModalBody');
             const status = document.getElementById('emrChildModalStatus');
@@ -4442,12 +4467,19 @@
             const body = document.getElementById('emrChildModalBody');
             if(!body) return;
             try{
+                // Capture title BEFORE overwriting status with "Preparing PDF…"
+                const prevStatus = st ? String(st.textContent||'') : '';
+                let titleHint = window._emrLastListLabel || '';
+                if(!titleHint && prevStatus && prevStatus.indexOf('Preparing')<0){
+                    titleHint = prevStatus.split('·')[0].trim();
+                }
+                if(!titleHint) titleHint = 'Entries';
                 if(st) st.textContent = 'Preparing PDF…';
                 const { jsPDF } = window.jspdf;
                 const card = body.querySelector('.emr-child-card');
                 const table = body.querySelector('table.emr-table');
                 const range = (typeof emrExportRangeLabel === 'function') ? emrExportRangeLabel() : emrPeriodLabel();
-                const titleHint = (st && st.textContent) ? st.textContent.split('·')[0].trim() : 'Search Results';
+                const fileBase = emrPopupFileBase(titleHint);
 
                 if(table){
                     // List export — aligned columns
@@ -4508,8 +4540,7 @@
                         }
                         y+=6;
                     });
-                    const fname = (titleHint.replace(/[\\/:*?"<>|]/g,'').trim() || 'Search Results')+' '+range+'.pdf';
-                    pdf.save(fname);
+                    pdf.save(fileBase+'.pdf');
                     if(st) st.textContent = 'PDF downloaded';
                     return;
                 }
@@ -4551,7 +4582,7 @@
                         if(col>=2){ col=0; y+=5.5; }
                     });
                     const childName = ((h4 && h4.textContent) || 'Child').replace(/[\\/:*?"<>|]/g,'').trim();
-                    pdf.save(childName+"'s Vaccination Detail "+range+'.pdf');
+                    pdf.save(emrSafeFileName(emrScopeFilePart()+' '+childName+" Vaccination Detail "+range)+'.pdf');
                     if(st) st.textContent = 'PDF downloaded';
                     return;
                 }
@@ -4570,7 +4601,7 @@
                 const canvas = await emrCaptureSearchCanvas();
                 const a = document.createElement('a');
                 a.href = canvas.toDataURL('image/png');
-                a.download = 'EPI_Child_Search_'+Date.now()+'.png';
+                a.download = emrPopupFileBase(window._emrLastListLabel||'Child Search')+'.png';
                 a.click();
                 if(st) st.textContent = 'PNG downloaded (HD)';
             }catch(e){
@@ -4866,6 +4897,8 @@
                 matched = base.filter(function(r){ return emrHasDoseThisMonth(r, key, ym); });
             }
             window._emrSearchMatches = matched;
+            window._emrLastListLabel = (key === '__all__') ? 'Total Entries' : (label || key || 'Entries');
+            window._emrLastListKey = key;
 
             const body = document.getElementById('emrChildModalBody');
             const status = document.getElementById('emrChildModalStatus');
