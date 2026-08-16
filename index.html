@@ -3414,6 +3414,8 @@
                     loadedNames.push('gid:0 ('+all.length.toLocaleString()+')');
                 }
                 emrRows = all;
+                if(status) status.textContent = 'Indexing '+emrRows.length.toLocaleString()+' rows for fast reports…';
+                emrIndexAllRows();
 
                 let badDates = 0;
                 emrRows.forEach(function(r){ if(emrUpdatedObj(r).hour == null) badDates++; });
@@ -3678,21 +3680,27 @@
             const u = (document.getElementById('emrUC')||{}).value || '';
             const ym = emrGetReportMonth();
             const mode = emrPeriodMode();
-            return emrRows.filter(function(r){
+            const yearC = (mode === 'cumulative') ? emrCumulativeYear() : 0;
+            const out = [];
+            const rows = emrRows || [];
+            for(let i=0;i<rows.length;i++){
+                const r = rows[i];
                 if(monthOnly !== false){
                     if(mode === 'day'){
-                        if(!emrRowOnSelectedDay(r)) return false;
+                        if(!emrRowOnSelectedDay(r)) continue;
                     } else if(mode === 'cumulative'){
-                        const u = emrUpdatedObj(r);
-                        if(!u.date || u.date.getFullYear() !== emrCumulativeYear()) return false;
+                        if((r._uy || 0) !== yearC) continue;
                     } else {
-                        if(!emrRowInReportMonth(r, ym)) return false;
+                        if(r._uy != null && r._um != null && r._uy > 0){
+                            if(r._uy !== ym.year || r._um !== ym.month) continue;
+                        } else if(!emrRowInReportMonth(r, ym)) continue;
                     }
                 }
-                if(t && emrCell(r, EMR_COLS.tehsil) !== t) return false;
-                if(u && emrCell(r, EMR_COLS.uc) !== u) return false;
-                return true;
-            });
+                if(t && emrCell(r, EMR_COLS.tehsil) !== t) continue;
+                if(u && emrCell(r, EMR_COLS.uc) !== u) continue;
+                out.push(r);
+            }
+            return out;
         }
 
 
@@ -4665,6 +4673,33 @@
 
         
         /** Parse antigen cell date: DD-MM-YYYY, D-M-YYYY, MM/DD/YYYY, etc. */
+        
+        function emrIndexAllRows(){
+            const keys = (EMR_VAX_ORDER||[]).map(function(p){ return p[0]; });
+            const n = (emrRows||[]).length;
+            for(let i=0;i<n;i++){
+                const r = emrRows[i];
+                if(!r || r._ix) continue;
+                r._ix = 1;
+                const u = emrUpdatedObj(r);
+                if(u.date){
+                    r._uy = u.date.getFullYear();
+                    r._um = u.date.getMonth();
+                    r._uymd = emrYmdFromDate(u.date);
+                } else {
+                    r._uy = 0; r._um = -1; r._uymd = '';
+                }
+                r._dose = {};
+                for(let k=0;k<keys.length;k++){
+                    const key = keys[k];
+                    const dt = emrParseDoseDate(emrCell(r, EMR_COLS[key]));
+                    if(dt){
+                        r._dose[key] = {y:dt.getFullYear(), m:dt.getMonth(), ymd:emrYmdFromDate(dt)};
+                    }
+                }
+            }
+        }
+
         function emrParseDoseDate(val){
             if(val == null) return null;
             if(typeof val === 'object' && val.date) return val.date;
@@ -4707,10 +4742,29 @@
         }
         /** Count dose if antigen date matches period (month or selected day) */
         function emrHasDoseThisMonth(row, colKey, ym){
+            // Use pre-index cache when available (fast path for cumulative / large data)
+            const d = row && row._dose ? row._dose[colKey] : null;
+            const mode = emrPeriodMode();
+            if(d){
+                if(mode === 'day'){
+                    let from = emrDayFromYmd();
+                    let to = emrDayToYmd();
+                    if(!from && !to) return false;
+                    if(from && to && from > to){ const x=from; from=to; to=x; }
+                    if(from && d.ymd < from) return false;
+                    if(to && d.ymd > to) return false;
+                    return true;
+                }
+                if(mode === 'cumulative'){
+                    return d.y === emrCumulativeYear();
+                }
+                ym = ym || emrGetReportMonth();
+                return d.y === ym.year && d.m === ym.month;
+            }
+            // fallback parse
             const raw = emrCell(row, EMR_COLS[colKey]);
             const dt = emrParseDoseDate(raw);
             if(!dt) return false;
-            const mode = emrPeriodMode();
             if(mode === 'day'){
                 let from = emrDayFromYmd();
                 let to = emrDayToYmd();
@@ -4721,10 +4775,7 @@
                 if(to && ymd > to) return false;
                 return true;
             }
-            if(mode === 'cumulative'){
-                const y = emrCumulativeYear();
-                return dt.getFullYear() === y;
-            }
+            if(mode === 'cumulative') return dt.getFullYear() === emrCumulativeYear();
             ym = ym || emrGetReportMonth();
             return emrSameMonth(dt, ym);
         }
@@ -4850,13 +4901,18 @@
             const rows = data || emrFiltered();
             if(!grid) return;
             const ym = emrGetReportMonth();
-            // Total entries still = rows in filter; antigens = doses dated in report month
+            const counts = {};
+            EMR_VAX_ORDER.forEach(function(pair){ counts[pair[0]] = 0; });
+            for(let i=0;i<rows.length;i++){
+                const r = rows[i];
+                for(let j=0;j<EMR_VAX_ORDER.length;j++){
+                    const key = EMR_VAX_ORDER[j][0];
+                    if(emrHasDoseThisMonth(r, key, ym)) counts[key]++;
+                }
+            }
             let items = [{n: rows.length.toLocaleString(), l:'Total Entries ('+emrPeriodLabel()+')'}];
             EMR_VAX_ORDER.forEach(function(pair){
-                const key = pair[0], label = pair[1];
-                let c = 0;
-                rows.forEach(function(r){ if(emrHasDoseThisMonth(r, key, ym)) c++; });
-                items.push({n: c.toLocaleString(), l: label});
+                items.push({n: counts[pair[0]].toLocaleString(), l: pair[1]});
             });
             // show month on scope line suffix via data-upto area note
             const scopeEl2 = document.getElementById('emrSummaryScope');
@@ -5135,12 +5191,25 @@
                 if(status){ status.style.display='block'; status.textContent='No data loaded. Click Refresh Data.'; }
                 return;
             }
+            const st = document.getElementById('emrStatus');
+            const mode = emrPeriodMode();
+            if(st && (mode === 'cumulative' || emrRows.length > 20000)){
+                st.style.display = 'block';
+                st.textContent = 'Computing '+mode+' report on '+emrRows.length.toLocaleString()+' rows…';
+            }
+            // Yield to UI so page does not freeze
+            if(window._emrApplyTimer) clearTimeout(window._emrApplyTimer);
+            window._emrApplyTimer = setTimeout(function(){ emrApplyNow(); }, 30);
+        }
+        function emrApplyNow(){
             const data = emrFiltered();
+            const st = document.getElementById('emrStatus');
             const status = document.getElementById('emrStatus');
             if(status) status.style.display='none';
 
             // Summary panel (district / tehsil / UC)
             emrUpdateSummaryPanel(data);
+            if(st){ st.style.display='none'; st.textContent=''; }
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
             const extra = document.getElementById('emrExtraVisual');
