@@ -591,7 +591,6 @@
                 <div class="emr-filter">
                     <label>Period
                         <select id="emrPeriod" onchange="emrOnPeriodChange()">
-                            <option value="cumulative">Cumulative (year to date)</option>
                             <option value="day">Date range</option>
                             <option value="month:2026-08">August 2026</option>
                             <option value="month:2026-07">July 2026</option>
@@ -3589,13 +3588,13 @@
             const prev = sel.value;
             // Order: Cumulative, Date range, then months (Aug top … Jan bottom)
             let opts = '';
-            opts += '<option value="cumulative">Cumulative (year to date)</option>';
             opts += '<option value="day">Date range</option>';
             keys.forEach(function(k){
                 const p=k.split('-');
                 opts += '<option value="month:'+k+'">'+emrMonthLabel({year:+p[0], month:(+p[1])-1})+'</option>';
             });
             sel.innerHTML = opts;
+            if(prev === 'cumulative') prev = keys.length ? ('month:'+keys[0]) : 'day';
             if(prev && Array.from(sel.options).some(function(o){return o.value===prev;})) sel.value = prev;
             else if(keys.length) sel.value = 'month:'+keys[0]; // default latest month
         }
