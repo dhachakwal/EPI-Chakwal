@@ -585,7 +585,7 @@
                 <span id="emrSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
             </div>
             <div class="emr-card" id="emrCard">
-                <p class="emr-note"><strong>Source:</strong> EMR Outreach Immunization Report. Filters and reports in PHMIS style. Data is appended daily in one sheet.</p>
+                <p class="emr-note"><strong>Source:</strong> EMR Outreach Immunization Report. Filters and reports in PHMIS style. Each month is a separate sheet (e.g. July-2026, Aug-2026). Search covers all months; Period filters reports.</p>
                 <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
 
                 <div class="emr-filter">
@@ -3328,46 +3328,91 @@
         async function loadEmrData(){
             const status = document.getElementById('emrStatus');
             const meta = document.getElementById('emrMeta');
-            if(status){ status.style.display='block'; status.textContent='Loading EMR data from Google Sheet…'; }
+            if(status){ status.style.display='block'; status.textContent='Loading all month sheets from Google Sheet…'; }
             try{
-                const url = 'https://docs.google.com/spreadsheets/d/'+EMR_SHEET_ID+'/gviz/tq?tqx=out:json&gid=0';
-                const res = await fetch(url);
-                const text = await res.text();
-                const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
-                if(data.status !== 'ok') throw new Error('Sheet status not ok');
-                const rows = (data.table && data.table.rows) || [];
-                emrRows = rows.map(function(r){
-                    const cells = r.c || [];
-                    const out = [];
-                    for(let i=0;i<35;i++){
-                        const c = cells[i];
-                        if(!c){ out.push(''); continue; }
-                        if(i === EMR_COLS.updated){
-                            out.push(emrParseUpdated(c));
-                            continue;
+                function mapSheetRows(rows){
+                    return rows.map(function(r){
+                        const cells = r.c || [];
+                        const out = [];
+                        for(let i=0;i<35;i++){
+                            const c = cells[i];
+                            if(!c){ out.push(''); continue; }
+                            if(i === EMR_COLS.updated){
+                                out.push(emrParseUpdated(c));
+                                continue;
+                            }
+                            let v = (c.f != null && c.f !== '') ? c.f : c.v;
+                            if(v == null) v = '';
+                            out.push(v);
                         }
-                        let v = (c.f != null && c.f !== '') ? c.f : c.v;
-                        if(v == null) v = '';
-                        out.push(v);
+                        return out;
+                    }).filter(function(r){ return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.uc) || emrCell(r, EMR_COLS.name); });
+                }
+                async function fetchGviz(params){
+                    const url = 'https://docs.google.com/spreadsheets/d/'+EMR_SHEET_ID+'/gviz/tq?tqx=out:json&'+params;
+                    const res = await fetch(url);
+                    const text = await res.text();
+                    return JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
+                }
+                const fullM = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                const abbrM = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const priority = ['Aug-2026','July-2026','June-2026','May-2026','April-2026','March-2026','February-2026','January-2026',
+                    'September-2026','October-2026','November-2026','December-2026',
+                    'Aug-2025','July-2025','June-2025','May-2025'];
+                const extra = [];
+                for(let y=2025;y<=2027;y++){
+                    for(let m=0;m<12;m++){
+                        extra.push(abbrM[m]+'-'+y, fullM[m]+'-'+y);
                     }
-                    return out;
-                }).filter(function(r){ return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.uc) || emrCell(r, EMR_COLS.name); });
+                }
+                const tryNames = priority.concat(extra.filter(function(n){ return priority.indexOf(n)<0; }));
+                const seen = {};
+                let all = [];
+                let loadedNames = [];
+                for(let i=0;i<tryNames.length;i+=8){
+                    const batch = tryNames.slice(i, i+8);
+                    const results = await Promise.all(batch.map(async function(name){
+                        try{
+                            const data = await fetchGviz('sheet='+encodeURIComponent(name));
+                            const rows = (data.table && data.table.rows) || [];
+                            const cols = (data.table && data.table.cols) || [];
+                            if(rows.length < 50 || cols.length < 30) return null;
+                            const lab = String((cols[0] && (cols[0].label||cols[0].id))||'').toLowerCase();
+                            if(lab.indexOf('division')<0 && lab.indexOf('tehsil')<0 && cols.length < 33) return null;
+                            return {name:name, rows: mapSheetRows(rows)};
+                        }catch(e){ return null; }
+                    }));
+                    results.forEach(function(r){
+                        if(!r || !r.rows.length) return;
+                        const key = r.name.toLowerCase();
+                        if(seen[key]) return;
+                        seen[key]=true;
+                        all = all.concat(r.rows);
+                        loadedNames.push(r.name+' ('+r.rows.length.toLocaleString()+')');
+                    });
+                    if(status) status.textContent = 'Loading… '+all.length.toLocaleString()+' rows · sheets: '+loadedNames.join(', ');
+                    // stop early if we already have July+Aug style data and scanned priority
+                    if(i>=24 && loadedNames.length>=2) break;
+                }
+                if(!all.length){
+                    const data = await fetchGviz('gid=0');
+                    all = mapSheetRows((data.table && data.table.rows)||[]);
+                    loadedNames.push('gid:0 ('+all.length+')');
+                }
+                emrRows = all;
 
                 let badDates = 0;
-                emrRows.forEach(function(r){
-                    const u = emrUpdatedObj(r);
-                    if(u.hour == null) badDates++;
-                });
+                emrRows.forEach(function(r){ if(emrUpdatedObj(r).hour == null) badDates++; });
                 const warn = document.getElementById('emrDateWarn');
                 if(warn) warn.style.display = (badDates > emrRows.length * 0.5) ? 'block' : 'none';
 
-                // targets sheet gid=1
                 try{
-                    const turl = 'https://docs.google.com/spreadsheets/d/'+EMR_SHEET_ID+'/gviz/tq?tqx=out:json&gid=1';
-                    const tres = await fetch(turl);
-                    const ttext = await tres.text();
-                    const tdata = JSON.parse(ttext.substring(ttext.indexOf('{'), ttext.lastIndexOf('}')+1));
-                    const trows = (tdata.table && tdata.table.rows) || [];
+                    let tdata = null;
+                    try{ tdata = await fetchGviz('sheet='+encodeURIComponent('Pop. & Target')); }catch(e1){}
+                    if(!tdata || !((tdata.table&&tdata.table.rows)||[]).length){
+                        try{ tdata = await fetchGviz('gid=774994407'); }catch(e2){}
+                    }
+                    const trows = (tdata && tdata.table && tdata.table.rows) || [];
                     emrTargets = trows.map(function(r){
                         const cells = r.c || [];
                         const val = function(i){
@@ -3394,12 +3439,14 @@
                             monthlyDTP: emrNum(val(13))
                         };
                     }).filter(Boolean);
-                }catch(te){ console.warn('targets load', te); emrTargets = []; }
+                }catch(te){ console.warn('targets', te); emrTargets = []; }
 
+                if(typeof emrRebuildPeriodOptions === 'function') emrRebuildPeriodOptions();
+                else { emrFillTehsilUC(); emrPopulateDaySelect(); emrApply(); }
                 emrFillTehsilUC();
                 emrPopulateDaySelect();
                 emrApply();
-                if(meta) meta.textContent = emrRows.length.toLocaleString() + ' records · refreshed ' + new Date().toLocaleString();
+                if(meta) meta.textContent = emrRows.length.toLocaleString()+' records · '+loadedNames.length+' sheet(s): '+loadedNames.join(', ')+' · '+new Date().toLocaleString();
                 if(typeof emrUpdateSectionAsOf === 'function') emrUpdateSectionAsOf();
                 if(status) status.style.display='none';
             }catch(err){
@@ -3557,11 +3604,14 @@
             const t = (document.getElementById('emrTehsil')||{}).value || '';
             const u = (document.getElementById('emrUC')||{}).value || '';
             const ym = emrGetReportMonth();
-            const dayMode = emrPeriodMode() === 'day';
+            const mode = emrPeriodMode();
             return emrRows.filter(function(r){
                 if(monthOnly !== false){
-                    if(dayMode){
+                    if(mode === 'day'){
                         if(!emrRowOnSelectedDay(r)) return false;
+                    } else if(mode === 'cumulative'){
+                        const u = emrUpdatedObj(r);
+                        if(!u.date || u.date.getFullYear() !== emrCumulativeYear()) return false;
                     } else {
                         if(!emrRowInReportMonth(r, ym)) return false;
                     }
@@ -3932,6 +3982,9 @@
         }
         /** e.g. 1-15 Aug 2026 or 13 Aug 2026 */
         function emrExportRangeLabel(){
+            if(emrPeriodMode() === 'cumulative'){
+                return 'Cumulative '+emrCumulativeYear();
+            }
             if(emrPeriodMode() === 'day'){
                 const a = emrDayFromYmd(), b = emrDayToYmd();
                 if(a || b){
@@ -4202,8 +4255,14 @@
             }
             const q = ((document.getElementById('emrSearch')||{}).value || '').trim();
             const qn = q.toLowerCase();
-            // Current period + tehsil + UC
-            let matched = emrFiltered();
+            // Search ALL month sheets (entire workbook data). Optional Tehsil/UC still apply.
+            const t = (document.getElementById('emrTehsil')||{}).value || '';
+            const u = (document.getElementById('emrUC')||{}).value || '';
+            let matched = (emrRows||[]).filter(function(r){
+                if(t && emrCell(r, EMR_COLS.tehsil) !== t) return false;
+                if(u && emrCell(r, EMR_COLS.uc) !== u) return false;
+                return true;
+            });
             if(qn.length >= 1){
                 matched = matched.filter(function(r){
                     const blob = [emrCell(r,EMR_COLS.name),emrCell(r,EMR_COLS.mr),emrCell(r,EMR_COLS.phone),emrCell(r,EMR_COLS.father),emrCell(r,EMR_COLS.address)].join(' ').toLowerCase();
@@ -4554,17 +4613,22 @@
             return null;
         }
         function emrGetReportMonth(){
+            const mk = emrSelectedMonthKey();
+            if(mk && mk.indexOf('-')>0){
+                const p = mk.split('-');
+                return {year:+p[0], month:(+p[1])-1};
+            }
             // Prefer latest LastUpdatedDate month; else today
             let best = null;
             (emrRows||[]).forEach(function(r){
                 const u = emrUpdatedObj(r);
                 if(u.date && (!best || u.date > best)) best = u.date;
             });
-            if(best) return {year: best.getFullYear(), month: best.getMonth()}; // 0-based month
+            if(best) return {year: best.getFullYear(), month: best.getMonth()};
             const now = new Date();
             return {year: now.getFullYear(), month: now.getMonth()};
         }
-        function emrSameMonth(dt, ym){
+        function emrSameMonthfunction emrSameMonth(dt, ym){
             if(!dt || !ym) return false;
             return dt.getFullYear() === ym.year && dt.getMonth() === ym.month;
         }
@@ -4573,7 +4637,8 @@
             const raw = emrCell(row, EMR_COLS[colKey]);
             const dt = emrParseDoseDate(raw);
             if(!dt) return false;
-            if(emrPeriodMode() === 'day'){
+            const mode = emrPeriodMode();
+            if(mode === 'day'){
                 let from = emrDayFromYmd();
                 let to = emrDayToYmd();
                 if(!from && !to) return false;
@@ -4582,6 +4647,10 @@
                 if(from && ymd < from) return false;
                 if(to && ymd > to) return false;
                 return true;
+            }
+            if(mode === 'cumulative'){
+                const y = emrCumulativeYear();
+                return dt.getFullYear() === y;
             }
             ym = ym || emrGetReportMonth();
             return emrSameMonth(dt, ym);
@@ -4593,18 +4662,27 @@
 
 
         
+        function emrUseYearlyTargets(){
+            return emrPeriodMode() === 'cumulative';
+        }
         function emrTargetFor(tehsilName, kind){
             // kind: newborn | surviving
             const list = emrTargets || [];
             const t = list.find(function(x){ return String(x.tehsil||'').trim().toLowerCase() === String(tehsilName||'').trim().toLowerCase(); });
             if(!t) return 0;
+            if(emrUseYearlyTargets()){
+                return kind === 'newborn' ? (t.yearlyNewborn||0) : (t.yearlySurviving||0);
+            }
             return kind === 'newborn' ? (t.monthlyNewborn||0) : (t.monthlySurviving||0);
         }
         function emrDistrictTarget(kind){
             const list = (emrTargets||[]).filter(function(x){ return x.tehsil && String(x.tehsil).trim(); });
-            // prefer explicit total row if empty name was skipped — sum tehsils
             let s = 0;
-            list.forEach(function(t){ s += kind==='newborn' ? (t.monthlyNewborn||0) : (t.monthlySurviving||0); });
+            const yearly = emrUseYearlyTargets();
+            list.forEach(function(t){
+                if(yearly) s += kind==='newborn' ? (t.yearlyNewborn||0) : (t.yearlySurviving||0);
+                else s += kind==='newborn' ? (t.monthlyNewborn||0) : (t.monthlySurviving||0);
+            });
             return s;
         }
         function emrCountAntigenMonth(rows, key, ym){
