@@ -3218,7 +3218,7 @@
                 alert('jsPDF library missing. Please refresh the page.');
                 return;
             }
-            const headers = (fxLastExport && fxLastExport.headers) ? fxLastExport.headers.slice() : [];
+            let headers = (fxLastExport && fxLastExport.headers) ? fxLastExport.headers.slice() : [];
             const rows = (fxLastExport && fxLastExport.rows) ? fxLastExport.rows.slice() : [];
             if(!headers.length){
                 // fallback: read visible table
@@ -3247,17 +3247,8 @@
                 const pageH = pdf.internal.pageSize.getHeight();
                 const margin = 10;
                 const usable = pageW - margin*2;
-                const maxLens = headers.map(function(_,ci){
-                    let m = String(headers[ci]==null?'':headers[ci]).length;
-                    rows.forEach(function(r){ const t=String((r&&r[ci]!=null)?r[ci]:''); if(t.length>m) m=t.length; });
-                    return Math.max(4, Math.min(m, 36));
-                });
-                const sumL = maxLens.reduce(function(a,b){return a+b;},0)||1;
-                let colW = maxLens.map(function(l){ return usable*(l/sumL); });
-                const minW = Math.min(14, usable/ncols);
-                colW = colW.map(function(w){ return Math.max(minW,w); });
-                let sumW = colW.reduce(function(a,b){return a+b;},0);
-                colW = colW.map(function(w){ return w*usable/sumW; });
+                headers = pdfNormalizeHeaders(headers);
+                const colW = pdfBuildColWidths(headers, rows, usable);
                 let y = margin;
                 pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
                 pdf.text('EPI District Chakwal — Fixed Site', margin, y); y += 6;
@@ -3268,7 +3259,7 @@
                     pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
                     pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
                     let x=margin;
-                    headers.forEach(function(h,i){ pdf.text(String(h).substring(0, Math.floor(colW[i]/1.7)), x+1.2, y+4.8); x+=colW[i]; });
+                    headers.forEach(function(h,i){ pdf.text(pdfFitText(pdf,h,colW[i]-2), x+1.2, y+4.8); x+=colW[i]; });
                     y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
                 }
                 drawHead();
@@ -3281,7 +3272,7 @@
                         pdf.rect(x,y,colW[i],6);
                         const cell=String(row[i]==null?'':row[i]);
                         pdf.setFontSize(7);
-                        pdf.text(cell.substring(0, Math.max(3, Math.floor(colW[i]/1.75))), x+1.2, y+4.1);
+                        pdf.text(pdfFitText(pdf, cell, colW[i]-2), x+1.2, y+4.1);
                         x+=colW[i];
                     }
                     y+=6;
@@ -3918,7 +3909,8 @@
                     const rowH = 5;
                     const usable = pageW - margin*2;
                     if(!colW){
-                        colW = headers.map(function(){ return usable/headers.length; });
+                        headers = pdfNormalizeHeaders(headers);
+                        colW = pdfBuildColWidths(headers, rows, usable);
                     }
                     function headerRow(){
                         ensure(rowH+2);
@@ -4257,12 +4249,74 @@
             const range = (typeof emrExportRangeLabel === 'function') ? emrExportRangeLabel() : emrPeriodLabel();
             return emrSafeFileName([scope, lab, range].filter(Boolean).join(' '));
         }
+
+        /** Shared PDF column sizing + short labels (site-wide) */
+        function pdfShortHeader(h){
+            let s = String(h==null?'':h).trim();
+            if(/^Hep Birth Dose$/i.test(s) || /^Hep Birth$/i.test(s)) return 'Hep-B';
+            if(/^Union Council \(UC\)$/i.test(s) || /^Union Council$/i.test(s)) return 'Union Council (UC)';
+            return s;
+        }
+        function pdfColWeight(header){
+            const h = String(header||'').toLowerCase();
+            if(h === 'sr' || h === '#') return 0.35;
+            if(h.indexOf('union council')>=0 || h === 'uc' || h.indexOf('health facility')>=0 || h.indexOf('facility')>=0) return 2.6;
+            if(h === 'entries' || h.indexOf('no. of entries')>=0 || h === 'total entries') return 1.35;
+            if(h === 'tehsil') return 1.4;
+            if(h === 'name' || h.indexOf('father')>=0 || h === 'address') return 1.8;
+            if(h === 'hep-b' || h === 'hepb') return 0.55;
+            if(h === 'bcg' || h.indexOf('opv')>=0 || h.indexOf('penta')>=0 || h.indexOf('pcv')>=0 || h.indexOf('rota')>=0 || h.indexOf('ipv')>=0 || h.indexOf('mr')>=0 || h === 'dtp' || h === 'tcv') return 0.7;
+            if(h === 'phone' || h === 'mr number' || h === 'mr') return 1.15;
+            return 1.0;
+        }
+        function pdfBuildColWidths(headers, rows, usable){
+            const n = headers.length || 1;
+            const weights = headers.map(function(h,ci){
+                let w = pdfColWeight(h);
+                // boost if data cells longer than header suggests
+                let maxLen = String(h||'').length;
+                (rows||[]).forEach(function(r){
+                    const t = String((r && r[ci] != null) ? r[ci] : '');
+                    if(t.length > maxLen) maxLen = t.length;
+                });
+                // UC/name columns: respect long names
+                if(pdfColWeight(h) >= 1.8) w *= Math.min(1.8, Math.max(1, maxLen/12));
+                return Math.max(0.3, w);
+            });
+            let sum = weights.reduce(function(a,b){ return a+b; },0) || 1;
+            let colW = weights.map(function(w){ return usable * (w/sum); });
+            // floors
+            colW = colW.map(function(w,i){
+                const h = String(headers[i]||'').toLowerCase();
+                let min = 8;
+                if(h.indexOf('union council')>=0 || h === 'uc') min = 28;
+                else if(h === 'entries' || h.indexOf('no. of entries')>=0) min = 14;
+                else if(h === 'hep-b') min = 9;
+                else if(h === 'sr') min = 7;
+                else if(h === 'tehsil') min = 16;
+                return Math.max(min, w);
+            });
+            sum = colW.reduce(function(a,b){ return a+b; },0) || 1;
+            colW = colW.map(function(w){ return w * usable / sum; });
+            return colW;
+        }
+        function pdfFitText(pdf, text, colWidthMm){
+            const s = String(text==null?'':text);
+            // ~0.35mm per char at 7–8pt is too tight; use wider estimate so UC names show
+            const maxChars = Math.max(2, Math.floor(colWidthMm / 1.35));
+            if(s.length <= maxChars) return s;
+            return s.substring(0, Math.max(1, maxChars-1)) + '…';
+        }
+        function pdfNormalizeHeaders(headers){
+            return (headers||[]).map(pdfShortHeader);
+        }
+
         function emrExportTabPdf(){
             if(typeof window.jspdf === 'undefined'){
                 alert('jsPDF library missing. Please refresh the page.');
                 return;
             }
-            const headers = (emrLastExport && emrLastExport.headers) ? emrLastExport.headers.slice() : [];
+            let headers = (emrLastExport && emrLastExport.headers) ? emrLastExport.headers.slice() : [];
             const rows = (emrLastExport && emrLastExport.rows) ? emrLastExport.rows.slice() : [];
             if(!headers.length){
                 alert('No table data on this tab to export. Open a tab with a data table first.');
@@ -4284,21 +4338,8 @@
 
                 // Column widths proportional to content
                 const all = [headers].concat(rows);
-                const maxLens = headers.map(function(_,ci){
-                    let m = String(headers[ci]==null?'':headers[ci]).length;
-                    rows.forEach(function(r){
-                        const t = String((r && r[ci] != null) ? r[ci] : '');
-                        if(t.length > m) m = t.length;
-                    });
-                    return Math.max(4, Math.min(m, 42));
-                });
-                const sumL = maxLens.reduce(function(a,b){ return a+b; }, 0) || 1;
-                let colW = maxLens.map(function(l){ return usable * (l / sumL); });
-                // Minimum width per column
-                const minW = Math.min(16, usable / ncols);
-                colW = colW.map(function(w){ return Math.max(minW, w); });
-                let sumW = colW.reduce(function(a,b){ return a+b; }, 0);
-                colW = colW.map(function(w){ return w * usable / sumW; });
+                headers = pdfNormalizeHeaders(headers);
+                const colW = pdfBuildColWidths(headers, rows, usable);
 
                 let y = margin;
                 pdf.setFont('helvetica', 'bold');
@@ -4323,8 +4364,7 @@
                     pdf.setFontSize(8);
                     let x = margin;
                     headers.forEach(function(h,i){
-                        const t = String(h==null?'':h);
-                        pdf.text(t.substring(0, Math.floor(colW[i]/1.7)), x + 1.2, y + 4.8);
+                        pdf.text(pdfFitText(pdf, h, colW[i]-2), x + 1.2, y + 4.8);
                         x += colW[i];
                     });
                     y += 7;
@@ -4352,10 +4392,9 @@
                     for(let i=0;i<ncols;i++){
                         pdf.rect(x, y, colW[i], rowH);
                         const cell = String((row && row[i] != null) ? row[i] : '');
-                        const maxChars = Math.max(3, Math.floor(colW[i] / 1.75));
                         pdf.setFontSize(7.5);
                         pdf.setTextColor(20,20,20);
-                        pdf.text(cell.substring(0, maxChars), x + 1.2, y + 4.2);
+                        pdf.text(pdfFitText(pdf, cell, colW[i]-2), x + 1.2, y + 4.2);
                         x += colW[i];
                     }
                     y += rowH;
@@ -4604,7 +4643,7 @@
 
                 if(table){
                     // List export — aligned columns
-                    const heads = Array.from(table.querySelectorAll('thead th')).map(function(th){ return th.textContent.trim(); });
+                    let heads = Array.from(table.querySelectorAll('thead th')).map(function(th){ return th.textContent.trim(); });
                     const rows = [];
                     table.querySelectorAll('tbody tr').forEach(function(tr){
                         const cells = Array.from(tr.querySelectorAll('td')).map(function(td){ return td.textContent.trim(); });
@@ -4617,19 +4656,11 @@
                     const pageH = pdf.internal.pageSize.getHeight();
                     const margin = 10;
                     const usable = pageW - margin*2;
-                    const maxLens = heads.map(function(h,ci){
-                        let m = String(h||'').length;
-                        rows.forEach(function(r){ const t=String(r[ci]||''); if(t.length>m) m=t.length; });
-                        return Math.max(4, Math.min(m, 40));
-                    });
-                    const sumL = maxLens.reduce(function(a,b){return a+b;},0)||1;
-                    let colW = maxLens.map(function(l){ return usable*(l/sumL); });
-                    const minW = Math.min(14, usable/ncols);
-                    colW = colW.map(function(w){ return Math.max(minW,w); });
-                    let sumW = colW.reduce(function(a,b){return a+b;},0);
-                    colW = colW.map(function(w){ return w*usable/sumW; });
-
-                    let y = margin;
+                      let headsN = pdfNormalizeHeaders(heads);
+                    const colW = pdfBuildColWidths(headsN, rows, usable);
+                    // use normalized headers for drawing
+                    heads = headsN;
+                  let y = margin;
                     pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
                     pdf.text('EPI District Chakwal — Outreach', margin, y); y += 6;
                     pdf.setFontSize(10); pdf.text(titleHint+' · '+range, margin, y); y += 5;
@@ -4641,7 +4672,7 @@
                         pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
                         let x=margin;
                         heads.forEach(function(h,i){
-                            pdf.text(String(h).substring(0, Math.floor(colW[i]/1.7)), x+1.2, y+4.8);
+                            pdf.text(pdfFitText(pdf, h, colW[i]-2), x+1.2, y+4.8);
                             x+=colW[i];
                         });
                         y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
@@ -4656,7 +4687,7 @@
                             pdf.rect(x,y,colW[i],6);
                             const cell=String(row[i]==null?'':row[i]);
                             pdf.setFontSize(7);
-                            pdf.text(cell.substring(0, Math.max(3, Math.floor(colW[i]/1.75))), x+1.2, y+4.1);
+                            pdf.text(pdfFitText(pdf, cell, colW[i]-2), x+1.2, y+4.1);
                             x+=colW[i];
                         }
                         y+=6;
