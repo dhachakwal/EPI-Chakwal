@@ -484,8 +484,7 @@
                 <div class="emr-filter">
                     <label>Period
                         <select id="emrPeriod" onchange="emrOnPeriodChange()">
-                            <option value="day">Date range</option>
-                            <option value="month:2026-08">August 2026</option>
+                            <option value="month:2026-08" selected>August 2026</option>
                             <option value="month:2026-07">July 2026</option>
                             <option value="month:2026-06">June 2026</option>
                             <option value="month:2026-05">May 2026</option>
@@ -493,6 +492,7 @@
                             <option value="month:2026-03">March 2026</option>
                             <option value="month:2026-02">February 2026</option>
                             <option value="month:2026-01">January 2026</option>
+                            <option value="day">Date range</option>
                         </select>
                     </label>
                     <label id="emrDayLabel" style="display:none">From
@@ -3502,27 +3502,74 @@
                     {key:'2026-01', label:'Jan-2026', tries:[{sheet:'Jan-2026'},{sheet:'January-2026'}]}
                 ];
 
-                if(status) status.textContent = 'Loading '+jobs.length+' month sheets in parallel…';
-                const results = await Promise.all(jobs.map(async function(job){
+                // Fast path: current calendar month first → show UI, then load other months in background
+                const curKey = (function(){
+                    const n=new Date(); const m=n.getMonth()+1;
+                    return n.getFullYear()+'-'+(m<10?'0':'')+m;
+                })();
+                let curJob = null;
+                const otherJobs = [];
+                jobs.forEach(function(j){
+                    if(j.key === curKey) curJob = j;
+                    else otherJobs.push(j);
+                });
+                if(!curJob && jobs.length) curJob = jobs[0];
+
+                let all = [];
+                let loadedNames = [];
+                if(status) status.textContent = 'Loading current month ('+(curJob?curJob.label:curKey)+')…';
+                if(curJob){
+                    const rows = await tryLoadSheet(curJob.tries);
+                    if(rows && rows.length){
+                        all = all.concat(rows);
+                        loadedNames.push(curJob.label+' ('+rows.length.toLocaleString()+')');
+                    }
+                }
+                if(!all.length){
+                    // fallback gid 0 (often current export)
+                    try{
+                        const data = await fetchGviz('gid=0');
+                        const mapped = mapSheetRows((data.table&&data.table.rows)||[]);
+                        if(mapped.length){
+                            all = mapped;
+                            loadedNames.push('gid:0 ('+mapped.length.toLocaleString()+')');
+                        }
+                    }catch(e0){}
+                }
+                emrRows = all;
+                // Early UI: index + period default current month + apply
+                if(emrRows.length){
+                    if(status) status.textContent = 'Indexing '+emrRows.length.toLocaleString()+' rows…';
+                    if(typeof emrIndexAllRows === 'function') emrIndexAllRows();
+                    if(typeof emrRebuildPeriodOptions === 'function') emrRebuildPeriodOptions();
+                    // force period to current month
+                    const sel = document.getElementById('emrPeriod');
+                    if(sel){
+                        const want = 'month:'+curKey;
+                        if(Array.from(sel.options).some(function(o){ return o.value===want; })) sel.value = want;
+                    }
+                    emrFillTehsilUC();
+                    emrPopulateDaySelect();
+                    emrApply();
+                    if(meta) meta.textContent = emrRows.length.toLocaleString()+' records · '+loadedNames.join(' + ')+' (more months loading…) · '+new Date().toLocaleString();
+                    if(typeof emrUpdateSectionAsOf === 'function') emrUpdateSectionAsOf();
+                }
+
+                // Background: remaining months
+                if(status) status.textContent = 'Loading other months in background…';
+                const rest = await Promise.all(otherJobs.map(async function(job){
                     const rows = await tryLoadSheet(job.tries);
                     if(rows && rows.length) return {key:job.key, label:job.label, rows:rows};
                     return null;
                 }));
-
-                let all = [];
-                let loadedNames = [];
-                results.forEach(function(r){
+                rest.forEach(function(r){
                     if(!r) return;
                     all = all.concat(r.rows);
                     loadedNames.push(r.label+' ('+r.rows.length.toLocaleString()+')');
                 });
-
-                if(!all.length){
-                    const data = await fetchGviz('gid=0');
-                    all = mapSheetRows((data.table&&data.table.rows)||[]);
-                    loadedNames.push('gid:0 ('+all.length.toLocaleString()+')');
-                }
                 emrRows = all;
+                // clear _ix so reindex
+                emrRows.forEach(function(r){ if(r) r._ix = 0; });
                 if(status) status.textContent = 'Indexing '+emrRows.length.toLocaleString()+' rows for fast reports…';
                 emrIndexAllRows();
 
@@ -3679,6 +3726,11 @@
             }
             return emrMonthLabel(emrGetReportMonth());
         }
+        function emrCurrentMonthKey(){
+            const n = new Date();
+            const m = n.getMonth()+1;
+            return n.getFullYear()+'-'+(m<10?'0':'')+m;
+        }
         function emrRebuildPeriodOptions(){
             const sel = document.getElementById('emrPeriod');
             if(!sel) return;
@@ -3690,23 +3742,27 @@
                     set[y+'-'+(m<10?'0':'')+m]=true;
                 }
             });
-            if(!Object.keys(set).length){
-                set['2026-08']=true; set['2026-07']=true;
-            }
-            // newest month first (Aug → Jan)
+            const cur = emrCurrentMonthKey();
+            set[cur] = true;
             const keys = Object.keys(set).sort().reverse();
             const prev = sel.value;
-            // Order: Cumulative, Date range, then months (Aug top … Jan bottom)
             let opts = '';
-            opts += '<option value="day">Date range</option>';
             keys.forEach(function(k){
                 const p=k.split('-');
                 opts += '<option value="month:'+k+'">'+emrMonthLabel({year:+p[0], month:(+p[1])-1})+'</option>';
             });
+            opts += '<option value="day">Date range</option>';
             sel.innerHTML = opts;
-            if(prev === 'cumulative') prev = keys.length ? ('month:'+keys[0]) : 'day';
-            if(prev && Array.from(sel.options).some(function(o){return o.value===prev;})) sel.value = prev;
-            else if(keys.length) sel.value = 'month:'+keys[0]; // default latest month
+            const want = 'month:'+cur;
+            if(prev === 'day' && Array.from(sel.options).some(function(o){return o.value==='day';})){
+                sel.value = 'day';
+            } else if(prev && prev.indexOf('month:')===0 && Array.from(sel.options).some(function(o){return o.value===prev;})){
+                sel.value = prev;
+            } else if(Array.from(sel.options).some(function(o){return o.value===want;})){
+                sel.value = want;
+            } else if(keys.length){
+                sel.value = 'month:'+keys[0];
+            }
         }
         function emrOnPeriodChange(){
             const mode = emrPeriodMode();
@@ -4488,7 +4544,12 @@
         
         function emrResetFilters(){
             const period = document.getElementById('emrPeriod');
-            if(period) period.value = 'month';
+            if(period){
+                const cur = (typeof emrCurrentMonthKey==='function') ? emrCurrentMonthKey() : '2026-08';
+                const want = 'month:'+cur;
+                if(Array.from(period.options).some(function(o){return o.value===want;})) period.value = want;
+                else if(period.options.length) period.value = period.options[0].value;
+            }
             const dayLab = document.getElementById('emrDayLabel');
             const dayLab2 = document.getElementById('emrDayToLabel');
             if(dayLab) dayLab.style.display = 'none';
