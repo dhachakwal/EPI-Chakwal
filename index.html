@@ -543,6 +543,7 @@
                     <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
                     <button type="button" class="emr-tab" data-emr="overdue" onclick="emrSwitch('overdue')">12. Overdue Children (Not Vaccinated)</button>
                     <button type="button" class="emr-tab" data-emr="duplicate" onclick="emrSwitch('duplicate')">13. Duplicate Children</button>
+                    <button type="button" class="emr-tab" data-emr="ucAg" onclick="emrSwitch('ucAg')">14. UC-wise Antigen Entries Status</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -618,8 +619,9 @@
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
-                    <button type="button" class="btn btn-sm" onclick="fxDownloadExcel()" style="background:#1565c0">Download Excel (Tab)</button>
-                    <span style="font-size:12px;color:#666">Current tab data</span>
+                    <button type="button" class="btn btn-sm" onclick="fxDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" id="fxTabPdfBtn" onclick="fxExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
+                    <span style="font-size:12px;color:#666">Excel / PDF = current tab</span>
                 </div>
 
                 <div class="emr-stats" id="fxStats"></div>
@@ -3206,6 +3208,93 @@
                 if(performance.now) console.log('fxApply ms', Math.round(performance.now()-t0));
             }, 10);
         }
+        
+        function fxTabTitle(){
+            const map = {hf:'1. HF-Wise Entries', tehsil:'2. Tehsil Summary', antigen:'3. Antigen Summary', tehsilAg:'4. Tehsil-wise Antigen'};
+            return map[fxMode] || ('Fixed: '+fxMode);
+        }
+        function fxExportTabPdf(){
+            if(typeof window.jspdf === 'undefined'){
+                alert('jsPDF library missing. Please refresh the page.');
+                return;
+            }
+            const headers = (fxLastExport && fxLastExport.headers) ? fxLastExport.headers.slice() : [];
+            const rows = (fxLastExport && fxLastExport.rows) ? fxLastExport.rows.slice() : [];
+            if(!headers.length){
+                // fallback: read visible table
+                const head = document.getElementById('fxHead');
+                const body = document.getElementById('fxBody');
+                if(head && body){
+                    headers.push.apply(headers, Array.from(head.querySelectorAll('th')).map(function(th){ return th.textContent.trim(); }));
+                    body.querySelectorAll('tr').forEach(function(tr){
+                        rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){ return td.textContent.trim(); }));
+                    });
+                }
+            }
+            if(!headers.length){
+                alert('No table data on this tab to export.');
+                return;
+            }
+            const btn = document.getElementById('fxTabPdfBtn');
+            const old = btn ? btn.textContent : '';
+            if(btn) btn.textContent = 'Preparing PDF…';
+            try{
+                const { jsPDF } = window.jspdf;
+                const ncols = headers.length;
+                const landscape = ncols > 6;
+                const pdf = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 10;
+                const usable = pageW - margin*2;
+                const maxLens = headers.map(function(_,ci){
+                    let m = String(headers[ci]==null?'':headers[ci]).length;
+                    rows.forEach(function(r){ const t=String((r&&r[ci]!=null)?r[ci]:''); if(t.length>m) m=t.length; });
+                    return Math.max(4, Math.min(m, 36));
+                });
+                const sumL = maxLens.reduce(function(a,b){return a+b;},0)||1;
+                let colW = maxLens.map(function(l){ return usable*(l/sumL); });
+                const minW = Math.min(14, usable/ncols);
+                colW = colW.map(function(w){ return Math.max(minW,w); });
+                let sumW = colW.reduce(function(a,b){return a+b;},0);
+                colW = colW.map(function(w){ return w*usable/sumW; });
+                let y = margin;
+                pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
+                pdf.text('EPI District Chakwal — Fixed Site', margin, y); y += 6;
+                pdf.setFontSize(10); pdf.text(fxTabTitle()+' · '+fxPeriodLabel(), margin, y); y += 5;
+                pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(100,100,100);
+                pdf.text('Generated: '+new Date().toLocaleString()+'  |  Rows: '+rows.length, margin, y); y += 6;
+                function drawHead(){
+                    pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
+                    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
+                    let x=margin;
+                    headers.forEach(function(h,i){ pdf.text(String(h).substring(0, Math.floor(colW[i]/1.7)), x+1.2, y+4.8); x+=colW[i]; });
+                    y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
+                }
+                drawHead();
+                rows.forEach(function(row,ri){
+                    if(y+6 > pageH-margin){ pdf.addPage(); y=margin; drawHead(); }
+                    if(ri%2){ pdf.setFillColor(232,245,233); pdf.rect(margin,y,usable,6,'F'); }
+                    pdf.setDrawColor(200,200,200); pdf.setLineWidth(0.1);
+                    let x=margin;
+                    for(let i=0;i<ncols;i++){
+                        pdf.rect(x,y,colW[i],6);
+                        const cell=String(row[i]==null?'':row[i]);
+                        pdf.setFontSize(7);
+                        pdf.text(cell.substring(0, Math.max(3, Math.floor(colW[i]/1.75))), x+1.2, y+4.1);
+                        x+=colW[i];
+                    }
+                    y+=6;
+                });
+                const fname = ('Fixed Site '+fxTabTitle()+' '+fxPeriodLabel()).replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
+                pdf.save(fname+'.pdf');
+            }catch(e){
+                console.error(e);
+                alert('PDF failed: '+(e.message||e));
+            }
+            if(btn) btn.textContent = old || '📄 PDF (This Tab)';
+        }
+
         function fxDownloadExcel(){
             if(typeof XLSX==='undefined'){ alert('Excel library not loaded. Please refresh the page.'); return; }
             const aoa=[fxLastExport.headers].concat(fxLastExport.rows||[]);
@@ -4063,7 +4152,8 @@
                 tehsilAg:'4. Tehsil-wise Antigen', phone:'5. Missing Phone', father:'6. Missing Father',
                 map:'7. Geo Map Links', late:'8. Late Entry', dropout:'9. Drop-out',
                 targets:'10. Targets vs Coverage', defaulter:'11. Defaulter Children Vaccinated',
-                overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children'
+                overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children',
+                ucAg:'14. UC-wise Antigen Entries Status'
             };
             return map[emrMode] || ('Tab: '+emrMode);
         }
@@ -4081,7 +4171,8 @@
                 targets:"Targets vs Coverage Data",
                 defaulter:"Defaulter Children Vaccinated Data",
                 overdue:"Overdue Children Data",
-                duplicate:"Duplicate Children's Data"
+                duplicate:"Duplicate Children's Data",
+                ucAg:"UC-wise Antigen Entries Status"
             };
             return map[emrMode] || ((emrMode||'EMR')+' Data');
         }
@@ -5294,6 +5385,28 @@
             if(window._emrApplyTimer) clearTimeout(window._emrApplyTimer);
             window._emrApplyTimer = setTimeout(function(){ emrApplyNow(); }, 30);
         }
+
+        const EMR_TEHSIL_ORDER = ['Chakwal','Choa Saidan Shah','Choa Saiden Shah','Kallar Kahar','Talagang'];
+        function emrTehsilRank(t){
+            const n = String(t||'').toLowerCase().replace(/\s+/g,' ').trim();
+            if(n.indexOf('choa')>=0) return 1;
+            if(n.indexOf('kallar')>=0) return 2;
+            if(n.indexOf('talagang')>=0) return 3;
+            if(n.indexOf('chakwal')>=0) return 0;
+            for(let i=0;i<EMR_TEHSIL_ORDER.length;i++){
+                if(n === EMR_TEHSIL_ORDER[i].toLowerCase()) return i;
+            }
+            return 50;
+        }
+        function emrSortTehsilUc(a, b){
+            const ra = emrTehsilRank(a.tehsil), rb = emrTehsilRank(b.tehsil);
+            if(ra !== rb) return ra - rb;
+            const ua = String(a.uc||'').toLowerCase();
+            const ub = String(b.uc||'').toLowerCase();
+            if(ua < ub) return -1;
+            if(ua > ub) return 1;
+            return 0;
+        }
         function emrApplyNow(){
             const data = emrFiltered();
             const st = document.getElementById('emrStatus');
@@ -5324,7 +5437,7 @@
                     if(!map[k]) map[k]={tehsil:t,uc:u,n:0};
                     map[k].n++;
                 });
-                const list = Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.n-a.n; });
+                const list = Object.keys(map).map(function(k){ return map[k]; }).sort(emrSortTehsilUc);
                 emrSetStats([
                     {n:data.length.toLocaleString(), l:'Entries '+emrMonthLabel(emrGetReportMonth())},
                     {n:list.length, l:'UC groups'},
@@ -5718,6 +5831,51 @@
                     extra.style.display = 'block';
                     extra.innerHTML = '<div style="font-size:12.5px;color:#555;padding:8px 4px">Duplicate match on <strong>Name + Father Name + UC + Address</strong> (normalized). CNIC is not in EMR OutReach sheet columns, so CNIC not used. Same Period/Tehsil/UC filters apply.</div>';
                 }
+            }
+
+            else if(emrMode === 'ucAg'){
+                const ym = emrGetReportMonth();
+                const map = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil) || '—';
+                    const u = emrCell(r, EMR_COLS.uc) || '—';
+                    const k = t+'||'+u;
+                    if(!map[k]){
+                        map[k] = {tehsil:t, uc:u, entries:0, ag:{}};
+                        EMR_VAX_ORDER.forEach(function(p){ map[k].ag[p[0]] = 0; });
+                    }
+                    map[k].entries++;
+                    EMR_VAX_ORDER.forEach(function(p){
+                        if(emrHasDoseThisMonth(r, p[0], ym)) map[k].ag[p[0]]++;
+                    });
+                });
+                const list = Object.keys(map).map(function(k){ return map[k]; }).sort(emrSortTehsilUc);
+                const headers = ['Sr','Tehsil','Union Council (UC)','Entries'].concat(EMR_VAX_ORDER.map(function(p){ return p[1]; }));
+                const exp = [];
+                const totals = {entries:0, ag:{}};
+                EMR_VAX_ORDER.forEach(function(p){ totals.ag[p[0]] = 0; });
+                let i = 0;
+                const rowsHtml = list.map(function(x){
+                    i++;
+                    totals.entries += x.entries;
+                    const row = [i, x.tehsil, x.uc, x.entries];
+                    EMR_VAX_ORDER.forEach(function(p){
+                        const c = x.ag[p[0]] || 0;
+                        totals.ag[p[0]] += c;
+                        row.push(c);
+                    });
+                    exp.push(row);
+                    return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.uc+'</td><td><strong>'+x.entries+'</strong></td>'+
+                        EMR_VAX_ORDER.map(function(p){ return '<td>'+(x.ag[p[0]]||0)+'</td>'; }).join('')+'</tr>';
+                }).join('');
+                const totalCells = ['Total','','', totals.entries].concat(EMR_VAX_ORDER.map(function(p){ return totals.ag[p[0]]; }));
+                emrSetStats([
+                    {n: data.length.toLocaleString(), l:'Total Entries'},
+                    {n: list.length, l:'UCs'},
+                    {n: new Set(list.map(function(x){ return x.tehsil; })).size, l:'Tehsils'},
+                    {n: emrPeriodLabel(), l:'Period'}
+                ]);
+                emrRenderTable(headers, rowsHtml, headers, exp, totalCells);
             }
             else if(emrMode === 'targets'){
                 const ym = emrGetReportMonth();
