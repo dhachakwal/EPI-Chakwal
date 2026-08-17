@@ -530,7 +530,7 @@
                 </div>
 
                 <div class="emr-tabs" id="emrTabs">
-                    <button type="button" class="emr-tab active" data-emr="uc" onclick="emrSwitch('uc')">1. UC-wise Entries</button>
+                    <button type="button" class="emr-tab" data-emr="uc" onclick="emrSwitch('uc')">1. UC-wise Entries</button>
                     <button type="button" class="emr-tab" data-emr="tehsil" onclick="emrSwitch('tehsil')">2. Tehsil Summary</button>
                     <button type="button" class="emr-tab" data-emr="antigen" onclick="emrSwitch('antigen')">3. Antigen Summary</button>
                     <button type="button" class="emr-tab" data-emr="tehsilAg" onclick="emrSwitch('tehsilAg')">4. Tehsil-wise Antigen</button>
@@ -3371,7 +3371,7 @@
         ];
         let emrRows = [];
         let emrTargets = [];
-        let emrMode = 'uc';
+        let emrMode = '';
         let emrLateFilter = 'after2';
         let emrLastExport = {headers:[], rows:[]};
         let emrTargetChartObj = null;
@@ -5415,6 +5415,24 @@
 
             // Summary panel (district / tehsil / UC)
             emrUpdateSummaryPanel(data);
+
+            // No tab selected yet — keep report table closed
+            if(!emrMode){
+                emrSetStats([]);
+                const wrap = document.getElementById('emrTableWrap');
+                const head = document.getElementById('emrHead');
+                const body = document.getElementById('emrBody');
+                const extra = document.getElementById('emrExtraVisual');
+                const chartWrap = document.getElementById('emrChartWrap');
+                if(head) head.innerHTML = '';
+                if(body) body.innerHTML = '<tr><td style="text-align:center;color:#666;padding:18px">Select a report tab above to view details (e.g. UC-wise Entries).</td></tr>';
+                if(wrap) wrap.style.display = 'block';
+                if(extra){ extra.style.display = 'none'; extra.innerHTML = ''; }
+                if(chartWrap) chartWrap.style.display = 'none';
+                emrLastExport = {headers:[], rows:[]};
+                if(st){ st.style.display='none'; st.textContent=''; }
+                return;
+            }
             if(st){ st.style.display='none'; st.textContent=''; }
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
