@@ -746,6 +746,68 @@
             </div>
             </div><!-- /sweepExportArea -->
 
+
+            <!-- MR Surveillance -->
+            <div class="section-title" id="section-mr">Measles-Rubella (MR) Surveillance — District Chakwal</div>
+            <div class="emr-card" id="mrCard">
+                <p class="emr-note"><strong>Source:</strong> Measles Case-Based Surveillance Line List (EPI Chakwal 2026). Search by <strong>EPID No.</strong></p>
+                <div class="emr-filter">
+                    <label>Month
+                        <select id="mrMonth" onchange="mrApply()"><option value="">All months</option></select>
+                    </label>
+                    <label>Tehsil
+                        <select id="mrTehsil" onchange="mrOnTehsil()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Union Council
+                        <select id="mrUC" onchange="mrApply()"><option value="">All UCs</option></select>
+                    </label>
+                    <label>Search EPID No.
+                        <span style="display:flex;gap:6px;align-items:center">
+                            <input type="text" id="mrSearch" placeholder="EPID No. e.g. PAK/PB/13/…" style="min-width:180px" onkeydown="if(event.key==='Enter'){event.preventDefault();mrApply();}">
+                            <button type="button" class="btn btn-sm" onclick="mrApply()" style="background:#0d5c3d;padding:8px 12px">🔍 Search</button>
+                            <button type="button" class="btn btn-sm" onclick="mrReset()" style="background:#78909c;padding:8px 12px">↺ Reset</button>
+                        </span>
+                    </label>
+                    <button type="button" class="btn btn-sm" onclick="loadMrData()" style="background:#0d5c3d">🔄 Refresh Data</button>
+                    <span class="sweep-meta" id="mrMeta">Not loaded</span>
+                </div>
+
+                <div class="emr-summary-panel" id="mrSummaryPanel">
+                    <div class="emr-summary-head">
+                        <h3>Overall Situation Panel</h3>
+                        <div class="emr-summary-meta">Cases in filter: <strong id="mrFilterCount">—</strong></div>
+                    </div>
+                    <div class="emr-summary-scope" id="mrSummaryScope">Scope: District Chakwal</div>
+                    <div class="emr-summary-grid" id="mrSummaryGrid">
+                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                    </div>
+                </div>
+
+                <div class="emr-tabs" id="mrTabs">
+                    <button type="button" class="emr-tab active" data-mr="list" onclick="mrSwitch('list')">1. Case Line List</button>
+                    <button type="button" class="emr-tab" data-mr="tehsil" onclick="mrSwitch('tehsil')">2. Tehsil Summary</button>
+                    <button type="button" class="emr-tab" data-mr="uc" onclick="mrSwitch('uc')">3. UC Summary</button>
+                    <button type="button" class="emr-tab" data-mr="lab" onclick="mrSwitch('lab')">4. Lab Results</button>
+                    <button type="button" class="emr-tab" data-mr="vax" onclick="mrSwitch('vax')">5. Vaccination Status</button>
+                    <button type="button" class="emr-tab" data-mr="outcome" onclick="mrSwitch('outcome')">6. Outcome</button>
+                    <button type="button" class="emr-tab" data-mr="hf" onclick="mrSwitch('hf')">7. Reporting HF</button>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+                    <button type="button" class="btn btn-sm" onclick="mrDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" onclick="mrExportPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
+                    <span style="font-size:12px;color:#666">Excel / PDF = open tab</span>
+                </div>
+                <div class="emr-stats" id="mrStats"></div>
+                <div id="mrStatus" class="sweep-loading" style="display:none"></div>
+                <div class="emr-table-wrap" id="mrTableWrap" style="display:none">
+                    <table class="emr-table">
+                        <thead id="mrHead"></thead>
+                        <tbody id="mrBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="section-title">Official Downloads & Reports</div>
             <div class="download-grid">
                 <div class="download-card">
@@ -1792,6 +1854,7 @@
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
                 {type:'section', title:'Urban Sweep-up Activity', desc:'Live reports, graphs, remaining UCs', action:'scroll', target:'Urban Sweep-up'},
                 {type:'section', title:'Child Immunization (EMR) — Outreach', desc:'Outreach entries, filters, antigen reports', action:'scroll', target:'Child Immunization'},
+                {type:'section', title:'Measles-Rubella (MR) Surveillance', desc:'Case line list, lab, EPID search', action:'scroll', target:'Measles-Rubella'},
                 {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
                 {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
                 {type:'section', title:'Dropout Analysis', desc:'Drop-out rates by tehsil', action:'fn', target:'openDropoutModal'},
@@ -6119,7 +6182,7 @@
         // auto-load EMR when page ready
         document.addEventListener('DOMContentLoaded', function(){
             checkSiteLock(); collapseEventsSidebarDefault(); initCollapsibleSections();
-            setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); if(document.getElementById('emrFixedCard')) loadFixedData(); }, 1200);
+            setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); if(document.getElementById('emrFixedCard')) loadFixedData(); if(document.getElementById('mrCard')) loadMrData(); }, 1200);
         });
 
         async function captureSweepCanvas(){
@@ -6325,6 +6388,390 @@
                 if(meta) meta.textContent = 'Last updated: failed';
             }
         }
+        
+        // ===== MR Surveillance (Measles-Rubella) =====
+        const MR_SHEET_ID = '1p_N06q0FcGdUafIY15gijWy9E0iSu7ZLi7Zi-MGoduI';
+        const MR_COLS = {
+            sr:0, epidWeek:1, month:2, hf:3, hfType:4, repDistrict:5, repProvince:6, epid:7,
+            name:8, father:9, phone:10, village:11, uc:12, tehsil:13, district:14, province:15,
+            ageMo:16, sex:17, rashOnset:18, notification:19, investigation:20,
+            riDoses:21, siaDoses:22, lastDose:23, specimen1:24, specimen2:25, sentLab:26, recvLab:27,
+            specimenCond:28, resultRecv:29, labId:30, labReport:31, travel:32,
+            rash:33, fever:34, cough:35, coryza:36, conj:37, otherSym:38, complications:39,
+            outcome:40, labMeasles:41, labRubella:42
+        };
+        let mrRows = [];
+        let mrMode = 'list';
+        let mrLastExport = {headers:[], rows:[]};
+
+        function mrCell(r, i){
+            if(!r || i==null) return '';
+            const v = r[i];
+            if(v==null) return '';
+            return String(v).trim();
+        }
+        function mrParseGvizCell(c){
+            if(!c) return '';
+            if(c.f != null && c.f !== '') return String(c.f).trim();
+            if(c.v == null) return '';
+            if(typeof c.v === 'string' && c.v.indexOf('Date(')===0){
+                try{
+                    const m = c.v.match(/Date\((\d+),(\d+),(\d+)/);
+                    if(m) return (+m[3])+'/'+(+m[2]+1)+'/'+m[1];
+                }catch(e){}
+            }
+            return String(c.v).trim();
+        }
+        function mrIsPos(s){
+            const v = String(s||'').toUpperCase();
+            return v.indexOf('POS')>=0 || v.indexOf('+VE')>=0 || v.indexOf('POSITIVE')>=0;
+        }
+        function mrIsNeg(s){
+            const v = String(s||'').toUpperCase();
+            return v.indexOf('NEG')>=0 || v.indexOf('-VE')>=0 || v.indexOf('NEGATIVE')>=0;
+        }
+
+        async function loadMrData(){
+            const status = document.getElementById('mrStatus');
+            const meta = document.getElementById('mrMeta');
+            if(status){ status.style.display='block'; status.textContent='Loading MR surveillance sheet…'; }
+            try{
+                const url = 'https://docs.google.com/spreadsheets/d/'+MR_SHEET_ID+'/gviz/tq?tqx=out:json&gid=0';
+                const res = await fetch(url);
+                const text = await res.text();
+                const a = text.indexOf('{'), b = text.lastIndexOf('}');
+                const data = JSON.parse(text.substring(a,b+1));
+                const rows = (data.table && data.table.rows) || [];
+                mrRows = rows.map(function(r){
+                    const cells = r.c || [];
+                    const out = [];
+                    for(let i=0;i<43;i++) out.push(mrParseGvizCell(cells[i]));
+                    return out;
+                }).filter(function(r){
+                    return mrCell(r, MR_COLS.epid) || mrCell(r, MR_COLS.name);
+                });
+                mrFillFilters();
+                mrApply();
+                if(meta) meta.textContent = mrRows.length.toLocaleString()+' cases · '+new Date().toLocaleString();
+                if(status){ status.style.display='none'; status.textContent=''; }
+            }catch(err){
+                console.error(err);
+                if(status){ status.style.display='block'; status.textContent='MR load failed: '+(err.message||err); }
+                if(meta) meta.textContent = 'Load failed';
+            }
+        }
+        function mrFillFilters(){
+            const months = {}, tehsils = {};
+            mrRows.forEach(function(r){
+                const m = mrCell(r, MR_COLS.month); if(m) months[m]=1;
+                const t = mrCell(r, MR_COLS.tehsil); if(t) tehsils[t]=1;
+            });
+            const msel = document.getElementById('mrMonth');
+            const tsel = document.getElementById('mrTehsil');
+            if(msel){
+                const cur = msel.value;
+                msel.innerHTML = '<option value="">All months</option>';
+                Object.keys(months).sort().forEach(function(m){ msel.innerHTML += '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>'; });
+                if(cur && months[cur]) msel.value = cur;
+            }
+            if(tsel){
+                const cur = tsel.value;
+                tsel.innerHTML = '<option value="">All Tehsils</option>';
+                Object.keys(tehsils).sort().forEach(function(t){ tsel.innerHTML += '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>'; });
+                if(cur && tehsils[cur]) tsel.value = cur;
+            }
+            mrOnTehsil(true);
+        }
+        function mrOnTehsil(silent){
+            const t = (document.getElementById('mrTehsil')||{}).value || '';
+            const ucs = {};
+            mrRows.forEach(function(r){
+                if(t && mrCell(r, MR_COLS.tehsil) !== t) return;
+                const u = mrCell(r, MR_COLS.uc); if(u) ucs[u]=1;
+            });
+            const usel = document.getElementById('mrUC');
+            if(usel){
+                const cur = usel.value;
+                usel.innerHTML = '<option value="">All UCs</option>';
+                Object.keys(ucs).sort().forEach(function(u){ usel.innerHTML += '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>'; });
+                if(cur && ucs[cur]) usel.value = cur;
+            }
+            if(!silent) mrApply();
+        }
+        function mrFiltered(){
+            const month = (document.getElementById('mrMonth')||{}).value || '';
+            const t = (document.getElementById('mrTehsil')||{}).value || '';
+            const u = (document.getElementById('mrUC')||{}).value || '';
+            const q = ((document.getElementById('mrSearch')||{}).value || '').trim().toLowerCase();
+            return mrRows.filter(function(r){
+                if(month && mrCell(r, MR_COLS.month) !== month) return false;
+                if(t && mrCell(r, MR_COLS.tehsil) !== t) return false;
+                if(u && mrCell(r, MR_COLS.uc) !== u) return false;
+                if(q){
+                    const epid = mrCell(r, MR_COLS.epid).toLowerCase();
+                    const name = mrCell(r, MR_COLS.name).toLowerCase();
+                    if(epid.indexOf(q)<0 && name.indexOf(q)<0) return false;
+                }
+                return true;
+            });
+        }
+        function mrReset(){
+            ['mrMonth','mrTehsil','mrUC','mrSearch'].forEach(function(id){
+                const el = document.getElementById(id); if(el) el.value = '';
+            });
+            mrFillFilters();
+            mrApply();
+        }
+        function mrSwitch(mode){
+            mrMode = mode;
+            document.querySelectorAll('#mrTabs .emr-tab').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-mr')===mode);
+            });
+            mrApply();
+        }
+        function mrSetStats(items){
+            const box = document.getElementById('mrStats');
+            if(!box) return;
+            box.innerHTML = (items||[]).map(function(it){
+                return '<div class="emr-stat"><div class="emr-stat-num">'+it.n+'</div><div class="emr-stat-lbl">'+it.l+'</div></div>';
+            }).join('');
+        }
+        function mrRenderTable(headers, rowsHtml, exportRows, totalCells){
+            const wrap = document.getElementById('mrTableWrap');
+            const head = document.getElementById('mrHead');
+            const body = document.getElementById('mrBody');
+            if(!wrap||!head||!body) return;
+            head.innerHTML = '<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
+            let htmlBody = rowsHtml || ('<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>');
+            if(totalCells && totalCells.length){
+                htmlBody += '<tr style="background:#e8f5e9">'+totalCells.map(function(c,i){
+                    return '<td style="font-weight:800;color:#0d5c3d">'+(i===0?'<strong>'+c+'</strong>':c)+'</td>';
+                }).join('')+'</tr>';
+            }
+            body.innerHTML = htmlBody;
+            wrap.style.display = 'block';
+            const exp = (exportRows||[]).slice();
+            if(totalCells) exp.push(totalCells);
+            mrLastExport = {headers:headers, rows:exp};
+        }
+        function mrUpdatePanel(data){
+            const grid = document.getElementById('mrSummaryGrid');
+            const scope = document.getElementById('mrSummaryScope');
+            const cnt = document.getElementById('mrFilterCount');
+            if(cnt) cnt.textContent = data.length.toLocaleString();
+            const t = (document.getElementById('mrTehsil')||{}).value || '';
+            const u = (document.getElementById('mrUC')||{}).value || '';
+            const month = (document.getElementById('mrMonth')||{}).value || '';
+            let sc = 'Scope: District Chakwal';
+            if(t) sc = 'Scope: Tehsil '+t;
+            if(u) sc += ' · UC '+u;
+            if(month) sc += ' · '+month;
+            if(scope) scope.textContent = sc;
+            let measlesPos=0, rubellaPos=0, pending=0, death=0, male=0, female=0, zeroDose=0;
+            data.forEach(function(r){
+                const lm = mrCell(r, MR_COLS.labMeasles);
+                const lr = mrCell(r, MR_COLS.labRubella);
+                if(mrIsPos(lm)) measlesPos++;
+                if(mrIsPos(lr)) rubellaPos++;
+                if(!lm && !lr) pending++;
+                else if(!mrIsPos(lm) && !mrIsNeg(lm) && !mrIsPos(lr) && !mrIsNeg(lr) && lm+lr==='') pending++;
+                const out = mrCell(r, MR_COLS.outcome).toLowerCase();
+                if(out.indexOf('death')>=0 || out.indexOf('dead')>=0) death++;
+                const sex = mrCell(r, MR_COLS.sex).toUpperCase();
+                if(sex.indexOf('F')===0) female++; else if(sex) male++;
+                const ri = parseInt(mrCell(r, MR_COLS.riDoses),10);
+                if(!isNaN(ri) && ri===0) zeroDose++;
+            });
+            if(!grid) return;
+            const items = [
+                {n:data.length.toLocaleString(), l:'Total Cases'},
+                {n:measlesPos.toLocaleString(), l:'Measles IgM +ve'},
+                {n:rubellaPos.toLocaleString(), l:'Rubella IgM +ve'},
+                {n:zeroDose.toLocaleString(), l:'Zero-dose (RI)'},
+                {n:death.toLocaleString(), l:'Deaths'},
+                {n:male.toLocaleString(), l:'Male'},
+                {n:female.toLocaleString(), l:'Female'}
+            ];
+            grid.innerHTML = items.map(function(it){
+                return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+            }).join('');
+        }
+        function mrApply(){
+            const data = mrFiltered();
+            mrUpdatePanel(data);
+            if(!mrRows.length){
+                mrSetStats([]);
+                mrRenderTable(['Info'], '<tr><td>Click Refresh Data to load the MR line list.</td></tr>', [], null);
+                return;
+            }
+            if(mrMode === 'list'){
+                const headers = ['Sr','EPID No.','Name','Father','Age (mo)','Sex','Tehsil','UC','HF','Rash onset','Outcome','Measles Lab','Rubella Lab'];
+                const exp = [];
+                let i=0;
+                const rowsHtml = data.map(function(r){
+                    i++;
+                    const row = [i, mrCell(r,MR_COLS.epid), mrCell(r,MR_COLS.name), mrCell(r,MR_COLS.father), mrCell(r,MR_COLS.ageMo), mrCell(r,MR_COLS.sex), mrCell(r,MR_COLS.tehsil), mrCell(r,MR_COLS.uc), mrCell(r,MR_COLS.hf), mrCell(r,MR_COLS.rashOnset), mrCell(r,MR_COLS.outcome), mrCell(r,MR_COLS.labMeasles), mrCell(r,MR_COLS.labRubella)];
+                    exp.push(row);
+                    return '<tr>'+row.map(function(c){ return '<td>'+c+'</td>'; }).join('')+'</tr>';
+                }).join('');
+                mrSetStats([{n:data.length, l:'Cases'},{n: new Set(data.map(function(r){return mrCell(r,MR_COLS.tehsil);})).size, l:'Tehsils'}]);
+                mrRenderTable(headers, rowsHtml, exp, null);
+            }
+            else if(mrMode === 'tehsil'){
+                const map = {};
+                data.forEach(function(r){
+                    const t = mrCell(r, MR_COLS.tehsil)||'—';
+                    if(!map[t]) map[t]={n:0, mPos:0, rPos:0, death:0};
+                    map[t].n++;
+                    if(mrIsPos(mrCell(r,MR_COLS.labMeasles))) map[t].mPos++;
+                    if(mrIsPos(mrCell(r,MR_COLS.labRubella))) map[t].rPos++;
+                    if((mrCell(r,MR_COLS.outcome)||'').toLowerCase().indexOf('death')>=0) map[t].death++;
+                });
+                const list = Object.keys(map).sort();
+                const headers = ['Sr','Tehsil','Cases','Measles +ve','Rubella +ve','Deaths'];
+                const exp=[]; let i=0, sumN=0,sumM=0,sumR=0,sumD=0;
+                const rowsHtml = list.map(function(t){
+                    i++; const x=map[t]; sumN+=x.n; sumM+=x.mPos; sumR+=x.rPos; sumD+=x.death;
+                    const row=[i,t,x.n,x.mPos,x.rPos,x.death]; exp.push(row);
+                    return '<tr><td>'+i+'</td><td>'+t+'</td><td><strong>'+x.n+'</strong></td><td>'+x.mPos+'</td><td>'+x.rPos+'</td><td>'+x.death+'</td></tr>';
+                }).join('');
+                mrSetStats([{n:sumN,l:'Cases'},{n:list.length,l:'Tehsils'}]);
+                mrRenderTable(headers, rowsHtml, exp, ['Total','',sumN,sumM,sumR,sumD]);
+            }
+            else if(mrMode === 'uc'){
+                const map = {};
+                data.forEach(function(r){
+                    const t = mrCell(r, MR_COLS.tehsil)||'—';
+                    const u = mrCell(r, MR_COLS.uc)||'—';
+                    const k = t+'||'+u;
+                    if(!map[k]) map[k]={tehsil:t,uc:u,n:0,mPos:0};
+                    map[k].n++;
+                    if(mrIsPos(mrCell(r,MR_COLS.labMeasles))) map[k].mPos++;
+                });
+                const list = Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){
+                    if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1;
+                    return a.uc<b.uc?-1:1;
+                });
+                const headers=['Sr','Tehsil','UC','Cases','Measles +ve'];
+                const exp=[]; let i=0,sum=0,sumM=0;
+                const rowsHtml=list.map(function(x){
+                    i++; sum+=x.n; sumM+=x.mPos; const row=[i,x.tehsil,x.uc,x.n,x.mPos]; exp.push(row);
+                    return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.uc+'</td><td><strong>'+x.n+'</strong></td><td>'+x.mPos+'</td></tr>';
+                }).join('');
+                mrSetStats([{n:sum,l:'Cases'},{n:list.length,l:'UCs'}]);
+                mrRenderTable(headers, rowsHtml, exp, ['Total','','',sum,sumM]);
+            }
+            else if(mrMode === 'lab'){
+                const headers=['Sr','EPID No.','Name','Tehsil','Specimen I','Lab ID','Measles Lab','Rubella Lab','Condition'];
+                const exp=[]; let i=0;
+                const rowsHtml=data.map(function(r){
+                    i++;
+                    const row=[i,mrCell(r,MR_COLS.epid),mrCell(r,MR_COLS.name),mrCell(r,MR_COLS.tehsil),mrCell(r,MR_COLS.specimen1),mrCell(r,MR_COLS.labId),mrCell(r,MR_COLS.labMeasles),mrCell(r,MR_COLS.labRubella),mrCell(r,MR_COLS.specimenCond)];
+                    exp.push(row);
+                    return '<tr>'+row.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+                }).join('');
+                mrSetStats([{n:data.length,l:'Cases'}]);
+                mrRenderTable(headers, rowsHtml, exp, null);
+            }
+            else if(mrMode === 'vax'){
+                const headers=['Sr','EPID No.','Name','Age (mo)','RI doses','SIA doses','Last dose date','Tehsil','UC'];
+                const exp=[]; let i=0, zero=0;
+                const rowsHtml=data.map(function(r){
+                    i++;
+                    const ri=mrCell(r,MR_COLS.riDoses);
+                    if(String(ri)==='0') zero++;
+                    const row=[i,mrCell(r,MR_COLS.epid),mrCell(r,MR_COLS.name),mrCell(r,MR_COLS.ageMo),ri,mrCell(r,MR_COLS.siaDoses),mrCell(r,MR_COLS.lastDose),mrCell(r,MR_COLS.tehsil),mrCell(r,MR_COLS.uc)];
+                    exp.push(row);
+                    return '<tr>'+row.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+                }).join('');
+                mrSetStats([{n:data.length,l:'Cases'},{n:zero,l:'Zero-dose RI'}]);
+                mrRenderTable(headers, rowsHtml, exp, null);
+            }
+            else if(mrMode === 'outcome'){
+                const map={};
+                data.forEach(function(r){
+                    const o=mrCell(r,MR_COLS.outcome)||'—';
+                    map[o]=(map[o]||0)+1;
+                });
+                const headers=['Sr','Outcome','Cases'];
+                const exp=[]; let i=0,sum=0;
+                const rowsHtml=Object.keys(map).sort().map(function(o){
+                    i++; sum+=map[o]; exp.push([i,o,map[o]]);
+                    return '<tr><td>'+i+'</td><td>'+o+'</td><td><strong>'+map[o]+'</strong></td></tr>';
+                }).join('');
+                mrSetStats([{n:sum,l:'Cases'}]);
+                mrRenderTable(headers, rowsHtml, exp, ['Total','',sum]);
+            }
+            else if(mrMode === 'hf'){
+                const map={};
+                data.forEach(function(r){
+                    const h=mrCell(r,MR_COLS.hf)||'—';
+                    const ty=mrCell(r,MR_COLS.hfType)||'';
+                    const k=h+'||'+ty;
+                    if(!map[k]) map[k]={hf:h,type:ty,n:0};
+                    map[k].n++;
+                });
+                const list=Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return b.n-a.n;});
+                const headers=['Sr','Reporting HF','Type','Cases'];
+                const exp=[]; let i=0,sum=0;
+                const rowsHtml=list.map(function(x){
+                    i++; sum+=x.n; exp.push([i,x.hf,x.type,x.n]);
+                    return '<tr><td>'+i+'</td><td>'+x.hf+'</td><td>'+x.type+'</td><td><strong>'+x.n+'</strong></td></tr>';
+                }).join('');
+                mrSetStats([{n:sum,l:'Cases'},{n:list.length,l:'Facilities'}]);
+                mrRenderTable(headers, rowsHtml, exp, ['Total','','',sum]);
+            }
+        }
+        function mrDownloadExcel(){
+            if(typeof XLSX === 'undefined'){ alert('XLSX library missing'); return; }
+            if(!mrLastExport.headers.length){ alert('No table data'); return; }
+            const aoa = [mrLastExport.headers].concat(mrLastExport.rows||[]);
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'MR');
+            XLSX.writeFile(wb, 'MR_Surveillance_'+mrMode+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+        }
+        function mrExportPdf(){
+            if(typeof window.jspdf === 'undefined'){ alert('jsPDF missing'); return; }
+            let headers = (mrLastExport.headers||[]).slice();
+            const rows = (mrLastExport.rows||[]).slice();
+            if(!headers.length){ alert('No table data'); return; }
+            if(typeof pdfNormalizeHeaders === 'function') headers = pdfNormalizeHeaders(headers);
+            const { jsPDF } = window.jspdf;
+            const ncols = headers.length;
+            const pdf = new jsPDF({ orientation: ncols>6?'landscape':'portrait', unit:'mm', format:'a4' });
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const margin=10, usable=pageW-margin*2;
+            const colW = (typeof pdfBuildColWidths==='function') ? pdfBuildColWidths(headers, rows, usable) : headers.map(function(){return usable/ncols;});
+            let y=margin;
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
+            pdf.text('EPI District Chakwal — MR Surveillance', margin, y); y+=6;
+            pdf.setFontSize(10); pdf.text('Tab: '+mrMode+'  |  Generated: '+new Date().toLocaleString(), margin, y); y+=6;
+            function drawHead(){
+                pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
+                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
+                let x=margin;
+                headers.forEach(function(h,i){ pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,h,colW[i]-2):String(h).substring(0,12)), x+1.2, y+4.8); x+=colW[i]; });
+                y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
+            }
+            drawHead();
+            rows.forEach(function(row,ri){
+                if(y+6>pageH-margin){ pdf.addPage(); y=margin; drawHead(); }
+                if(ri%2){ pdf.setFillColor(232,245,233); pdf.rect(margin,y,usable,6,'F'); }
+                let x=margin;
+                for(let i=0;i<ncols;i++){
+                    pdf.setDrawColor(200,200,200); pdf.rect(x,y,colW[i],6);
+                    const cell=String(row[i]==null?'':row[i]);
+                    pdf.setFontSize(7);
+                    pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,cell,colW[i]-2):cell.substring(0,12)), x+1.2, y+4.1);
+                    x+=colW[i];
+                }
+                y+=6;
+            });
+            pdf.save('MR_Surveillance_'+mrMode+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+        }
+
         function sortNewsList(){
             const list = document.querySelector('.sidebar .news-list');
             if(!list) return;
