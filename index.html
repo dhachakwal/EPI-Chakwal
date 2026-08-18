@@ -883,7 +883,14 @@
                         <div class="cif-section">
                             <h4>Identification</h4>
                             <div class="cif-body">
-                                <label>EPID No. (manual) *<input type="text" id="cif_epid" placeholder="PAK/PB/13/26/MR/0001" required></label>
+                                <label class="cif-full">EPID No. *
+                                    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                                        <span style="font-weight:800;color:#0d5c3d;background:#e8f5e9;padding:8px 10px;border-radius:6px;border:1px solid #1a8a5c;font-size:13px">PAK/PB/13/26/MR/00</span>
+                                        <input type="text" id="cif_epidSuffix" placeholder="01" maxlength="6" style="width:90px" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                                        <span style="font-size:12px;color:#666;font-weight:500">sirf last digits (e.g. 01, 55)</span>
+                                    </span>
+                                    <input type="hidden" id="cif_epid" value="">
+                                </label>
                                 <label>Cross Notified
                                     <select id="cif_cross"><option value="">—</option><option>Yes</option><option>No</option></select>
                                 </label>
@@ -905,8 +912,17 @@
                                 </label>
                                 <label>Name of Reporting Site<input type="text" id="cif_repSite"></label>
                                 <label>Reporting Person<input type="text" id="cif_repPerson"></label>
-                                <label>Designation<input type="text" id="cif_repDesig"></label>
-                                <label>Reporting UC<input type="text" id="cif_repUC"></label>
+                                <label>Designation
+                                    <select id="cif_repDesig">
+                                        <option value="">—</option>
+                                        <option>Pediatrician</option>
+                                        <option>Child Specialist</option>
+                                        <option>Medical Officer</option>
+                                    </select>
+                                </label>
+                                <label>Reporting UC
+                                    <select id="cif_repUC"><option value="">— Loading UCs…</option></select>
+                                </label>
                                 <label>Reporting Tehsil
                                     <select id="cif_repTehsil"><option value="">—</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select>
                                 </label>
@@ -923,12 +939,14 @@
                                 <label>Sex
                                     <select id="cif_sex"><option value="">—</option><option>Male</option><option>Female</option><option>TG</option></select>
                                 </label>
-                                <label>Date of Birth<input type="date" id="cif_dob"></label>
-                                <label>Age (months)<input type="number" id="cif_ageMo" min="0" step="1"></label>
+                                <label>Date of Birth<input type="date" id="cif_dob" onchange="cifOnDobChange()"></label>
+                                <label>Age (months)<input type="number" id="cif_ageMo" min="0" step="1" placeholder="if DOB unknown"></label>
                                 <label>Contact No.<input type="text" id="cif_phone"></label>
                                 <label class="cif-full">Complete Address (Village / Street / Mohallah)<input type="text" id="cif_address"></label>
                                 <label>Near Landmark<input type="text" id="cif_landmark"></label>
-                                <label>UC (patient)<input type="text" id="cif_uc"></label>
+                                <label>UC (patient)
+                                    <select id="cif_uc"><option value="">— Loading UCs…</option></select>
+                                </label>
                                 <label>Tehsil (patient)
                                     <select id="cif_tehsil"><option value="">—</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select>
                                 </label>
@@ -984,7 +1002,9 @@
                                 <label>Zero-dose reason
                                     <select id="cif_zeroReason"><option value="">—</option><option>Refusal</option><option>Unaware</option><option>Not Eligible</option><option>Missed</option><option>Other</option></select>
                                 </label>
-                                <label>Additional MR doses (SIA/ORI/mop-up)<input type="number" id="cif_siaDoses" min="0"></label>
+                                <label>Additional MR doses (SIA/ORI/mop-up)
+                                    <select id="cif_siaDoses"><option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option></select>
+                                </label>
                             </div>
                         </div>
 
@@ -1010,7 +1030,7 @@
                                 </label>
                                 <label>School / Madrassa / Hospital / Village name<input type="text" id="cif_sourceName"></label>
                                 <label>Travel 7–23 days before onset
-                                    <select id="cif_travel"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                    <select id="cif_travel" onchange="cifOnTravelChange()"><option value="">—</option><option>Yes</option><option>No</option></select>
                                 </label>
                                 <label class="cif-full">Travel details (if yes)<input type="text" id="cif_travelDetail"></label>
                                 <label>Travel UC<input type="text" id="cif_travelUC"></label>
@@ -1024,9 +1044,9 @@
                         <div class="cif-section">
                             <h4>CIF filled by (District)</h4>
                             <div class="cif-body">
-                                <label>Name *<input type="text" id="cif_filledBy" placeholder="e.g. Syed Asad Abbas"></label>
-                                <label>Designation<input type="text" id="cif_filledDesig" placeholder="e.g. DSV"></label>
-                                <label>Contact No.<input type="text" id="cif_filledPhone"></label>
+                                <label>Name *<input type="text" id="cif_filledBy" value="Syed Asad Abbas" readonly style="background:#f5f5f5"></label>
+                                <label>Designation<input type="text" id="cif_filledDesig" value="DSV" readonly style="background:#f5f5f5"></label>
+                                <label>Contact No.<input type="text" id="cif_filledPhone" value="0333-5902949" readonly style="background:#f5f5f5"></label>
                             </div>
                         </div>
 
@@ -1089,14 +1109,20 @@
                             </div>
                         </div>
 
-                        <div class="cif-actions">
-                            <button type="button" class="btn" onclick="cifSubmit()" style="background:#0d5c3d">💾 Save to Google Sheet</button>
-                            <button type="button" class="btn btn-outline" onclick="cifPrint()">🖨️ Print CIF</button>
-                            <button type="button" class="btn" onclick="cifReset()" style="background:#78909c">↺ Clear Form</button>
-                            <span class="cif-status" id="cifStatus"></span>
+                        <div class="cif-actions" style="flex-direction:column;align-items:stretch">
+                            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+                                <button type="button" class="btn" onclick="cifSubmit()" style="background:#0d5c3d">💾 Save to Google Sheet</button>
+                                <button type="button" class="btn btn-outline" onclick="cifPrint()">🖨️ Print CIF</button>
+                                <button type="button" class="btn" onclick="cifReset()" style="background:#78909c">↺ Clear Form</button>
+                                <span class="cif-status" id="cifStatus"></span>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;padding:10px;background:#f0f7f4;border-radius:8px;border:1px solid #c8e6c9">
+                                <strong style="color:#0d5c3d;font-size:13px">Edit existing case:</strong>
+                                <input type="text" id="cif_loadEpid" placeholder="Full EPID e.g. PAK/PB/13/26/MR/00055" style="flex:1;min-width:200px;padding:8px;border:1px solid #ccc;border-radius:6px">
+                                <button type="button" class="btn btn-sm" onclick="cifLoadByEpid()" style="background:#1565c0">🔍 Load for Edit</button>
+                            </div>
                         </div>
                         <p style="font-size:12px;color:#666;margin-top:10px">
-                            <strong>Note:</strong> EPID number aap khud likhein (auto nahi). Pehli dafa setup: Google Sheet me Apps Script deploy karke neeche URL set karein.
                             Script URL: <input type="text" id="cif_scriptUrl" value="https://script.google.com/macros/s/AKfycbwq2wQStLyOusTLuulhHINnQq-q36AVCFs_nNv1eH890EjUkn7iTCClvAM6TuExqQ1N/exec" style="width:min(100%,420px);padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px">
                         </p>
                     </div>
@@ -6982,6 +7008,7 @@
                 if(cif) cif.style.display = 'block';
                 if(wrap) wrap.style.display = 'none';
                 if(stats) stats.innerHTML = '';
+                if(typeof cifLoadUcList==='function') cifLoadUcList();
                 return;
             }
             if(cif) cif.style.display = 'none';
@@ -7299,7 +7326,7 @@
         function cifCollect(){
             return {
                 timestamp: new Date().toISOString(),
-                epid: cifVal('cif_epid'),
+                epid: (typeof cifFullEpid==='function'?cifFullEpid():cifVal('cif_epid')),
                 crossNotified: cifVal('cif_cross'),
                 uniqueId: cifVal('cif_uid'),
                 year: cifVal('cif_year'),
@@ -7353,9 +7380,9 @@
                 sourceName: cifVal('cif_sourceName'),
                 travel: cifVal('cif_travel'),
                 travelDetail: cifVal('cif_travelDetail'),
-                filledBy: cifVal('cif_filledBy'),
-                filledDesignation: cifVal('cif_filledDesig'),
-                filledPhone: cifVal('cif_filledPhone'),
+                filledBy: cifVal('cif_filledBy') || 'Syed Asad Abbas',
+                filledDesignation: cifVal('cif_filledDesig') || 'DSV',
+                filledPhone: cifVal('cif_filledPhone') || '0333-5902949',
                 finalClassification: cifVal('cif_finalClass'),
                 outcome: cifVal('cif_outcome'),
                 epiStatus: cifVal('cif_epiStatus'),
@@ -7398,6 +7425,12 @@
             const p1 = document.getElementById('cif_repProvince'); if(p1) p1.value = 'Punjab';
             const p2 = document.getElementById('cif_province'); if(p2) p2.value = 'Punjab';
             const n = document.getElementById('cif_nationality'); if(n) n.value = 'Pakistani';
+            const fb = document.getElementById('cif_filledBy'); if(fb) fb.value = 'Syed Asad Abbas';
+            const fd = document.getElementById('cif_filledDesig'); if(fd) fd.value = 'DSV';
+            const fp = document.getElementById('cif_filledPhone'); if(fp) fp.value = '0333-5902949';
+            const es = document.getElementById('cif_epidSuffix'); if(es) es.value = '';
+            cifEditMode = false;
+            if(typeof cifOnTravelChange==='function') cifOnTravelChange();
             const st = document.getElementById('cifStatus'); if(st) st.textContent = '';
         }
         function cifChk(on){
@@ -7410,6 +7443,161 @@
             const s=String(v||'').toLowerCase();
             return s==='yes'||s==='y'||s==='true';
         }
+
+        const CIF_EPID_PREFIX = 'PAK/PB/13/26/MR/00';
+        let cifUcList = [];
+        let cifEditMode = false;
+
+        function cifOnDobChange(){
+            const dobEl = document.getElementById('cif_dob');
+            const ageEl = document.getElementById('cif_ageMo');
+            if(!dobEl || !ageEl || !dobEl.value) return;
+            const dob = new Date(dobEl.value + 'T00:00:00');
+            if(isNaN(dob.getTime())) return;
+            const now = new Date();
+            let months = (now.getFullYear()-dob.getFullYear())*12 + (now.getMonth()-dob.getMonth());
+            if(now.getDate() < dob.getDate()) months--;
+            if(months < 0) months = 0;
+            ageEl.value = months;
+        }
+        function cifOnTravelChange(){
+            const t = cifVal('cif_travel');
+            const ids = ['cif_travelDetail','cif_travelUC','cif_travelTehsil','cif_travelDistrict','cif_travelProvince','cif_travelCountry'];
+            ids.forEach(function(id){
+                const el = document.getElementById(id);
+                if(!el) return;
+                if(t === 'No'){
+                    el.value = 'N/A';
+                    el.readOnly = true;
+                    el.style.background = '#f5f5f5';
+                } else {
+                    if(el.value === 'N/A') el.value = '';
+                    el.readOnly = false;
+                    el.style.background = '';
+                }
+            });
+        }
+        function cifFullEpid(){
+            const pre = CIF_EPID_PREFIX;
+            let s = cifVal('cif_epidSuffix');
+            if(!s){
+                const full = cifVal('cif_epid');
+                if(full) return full;
+                return pre;
+            }
+            return pre + String(s).trim();
+        }
+        function cifSetEpid(full){
+            const pre = CIF_EPID_PREFIX;
+            const elS = document.getElementById('cif_epidSuffix');
+            const elH = document.getElementById('cif_epid');
+            full = String(full||'').trim();
+            if(full.indexOf(pre)===0){
+                if(elS) elS.value = full.slice(pre.length);
+                if(elH) elH.value = full;
+            } else if(full.indexOf('PAK/')===0){
+                if(elH) elH.value = full;
+                const m = full.match(/MR\/00?(.*)$/i);
+                if(elS && m) elS.value = m[1];
+            } else if(full){
+                if(elS) elS.value = full;
+                if(elH) elH.value = pre + full;
+            }
+        }
+        function cifPopulateUcDropdowns(){
+            const opts = ['<option value="">—</option>'];
+            cifUcList.forEach(function(x){
+                const label = x.uc + (x.tehsil ? ' ('+x.tehsil+')' : '');
+                opts.push('<option value="'+String(x.uc).replace(/"/g,'&quot;')+'">'+label+'</option>');
+            });
+            const htmlOpts = opts.join('');
+            ['cif_repUC','cif_uc'].forEach(function(id){
+                const el = document.getElementById(id);
+                if(!el) return;
+                const cur = el.value;
+                el.innerHTML = htmlOpts;
+                if(cur) el.value = cur;
+            });
+        }
+        async function cifLoadUcList(){
+            try{
+                const sid = (typeof MR_SHEET_ID!=='undefined') ? MR_SHEET_ID : '1p_N06q0FcGdUafIY15gijWy9E0iSu7ZLi7Zi-MGoduI';
+                const url = 'https://docs.google.com/spreadsheets/d/'+sid+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent('ALL UCs');
+                const res = await fetch(url);
+                const text = await res.text();
+                const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
+                const rows = (data.table && data.table.rows) || [];
+                const list = [];
+                rows.forEach(function(r){
+                    const cells = r.c || [];
+                    function cell(i){
+                        const c = cells[i]; if(!c) return '';
+                        return String(c.f!=null&&c.f!==''?c.f:(c.v!=null?c.v:'')).trim();
+                    }
+                    const t = cell(0), u = cell(1);
+                    if(!u || u.toUpperCase().indexOf('UNION')>=0 || t.toUpperCase()==='TEHSIL') return;
+                    list.push({tehsil:t, uc:u});
+                });
+                list.sort(function(a,b){
+                    if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1;
+                    return a.uc<b.uc?-1:1;
+                });
+                cifUcList = list;
+                cifPopulateUcDropdowns();
+            }catch(e){
+                console.warn('UC list', e);
+                const set = {};
+                (typeof mrRows!=='undefined'?mrRows:[]).forEach(function(r){
+                    if(r.uc) set[r.uc] = r.tehsil||'';
+                });
+                cifUcList = Object.keys(set).sort().map(function(u){ return {uc:u, tehsil:set[u]}; });
+                cifPopulateUcDropdowns();
+            }
+        }
+        function cifRequiredPart1(){
+            return [
+                {id:'epid', label:'EPID No.'},
+                {id:'cif_reportedBy', label:'Reported By'},
+                {id:'cif_reportedFrom', label:'Reported From'},
+                {id:'cif_repSite', label:'Name of Reporting Site'},
+                {id:'cif_repPerson', label:'Reporting Person'},
+                {id:'cif_repDesig', label:'Designation'},
+                {id:'cif_repUC', label:'Reporting UC'},
+                {id:'cif_repTehsil', label:'Reporting Tehsil'},
+                {id:'cif_name', label:'Patient Name'},
+                {id:'cif_father', label:'Father Name'},
+                {id:'cif_sex', label:'Sex'},
+                {id:'age', label:'Age (months) or Date of Birth'},
+                {id:'cif_phone', label:'Contact No.'},
+                {id:'cif_address', label:'Complete Address'},
+                {id:'cif_uc', label:'UC (patient)'},
+                {id:'cif_tehsil', label:'Tehsil (patient)'},
+                {id:'cif_rashOnset', label:'Date of Rash Onset'},
+                {id:'cif_notification', label:'Date of Notification'},
+                {id:'cif_investigation', label:'Date of Investigation'},
+                {id:'cif_riDoses', label:'MR doses (Routine EPI)'},
+                {id:'cif_sampleYes', label:'Sample collected'},
+                {id:'cif_travel', label:'Travel 7-23 days'},
+                {id:'cif_filledBy', label:'CIF Filled By'}
+            ];
+        }
+        function cifMissingFields(){
+            const miss = [];
+            cifRequiredPart1().forEach(function(f){
+                let v = '';
+                if(f.id==='epid') v = (typeof cifFullEpid==='function'?cifFullEpid():'') ;
+                else if(f.id==='age') v = cifVal('cif_ageMo') || cifVal('cif_dob');
+                else v = cifVal(f.id);
+                if(f.id==='epid'){
+                    if(!cifVal('cif_epidSuffix') && !(cifVal('cif_epid')||'').length) miss.push(f.label);
+                    else if(v === CIF_EPID_PREFIX) miss.push(f.label);
+                    return;
+                }
+                if(v===undefined || v===null || String(v).trim()==='' || String(v).trim()==='—') miss.push(f.label);
+            });
+            return miss;
+        }
+
         function cifBuildOfficialHtml(d){
             const sexM = cifEq(d.sex,'Male') || cifEq(d.sex,'M');
             const sexF = cifEq(d.sex,'Female') || cifEq(d.sex,'F');
@@ -7603,32 +7791,121 @@
             + '<tr><td class="lab">Comments:</td><td class="fill">'+F(d.comments)+'</td></tr>'
             + '</table>'
 
-            + '<div class="cif-off-note"><strong>Note:</strong> Please send the 1st copy of this CIF to laboratory with specimen, 2nd copy to be sent to CEO/DHO (Health) office and 3rd copy to be kept in reporting health facility. CEO/DHO office must ensure to send filled scan copy to provincial EPI Cell. 2. All fields are compulsory/mandatory to be filled. 3. Write Form No. on Sample taken. Measles Rubella (MR) V.1.0 — District Chakwal EPI.</div>'
+            + '<div class="cif-off-note">Note: Note: Please send the 1st copy of this CIF to laboratory with specimen, 2nd copy to be sent to CEO/DHO (Health) office and 3rd copy to be kept in reporting health facility. CEO/DHO office must ensure to send filled scan copy to provincial EPI Cell. 2. All fields are compulsory/mandatory to be filled. 3. Write Form No. on Sample taken Measles Rubella (MR) V.1.0 form developed in July 2024.</div>' 
             + '</div>';
         }
         function cifPrint(){
-            const d = cifCollect();
-            if(!d.epid && !d.name){
-                alert('Print se pehle kam az kam EPID ya Patient Name bharain.');
-                return;
+            if(typeof cifOnTravelChange==='function') cifOnTravelChange();
+            const miss = (typeof cifMissingFields==='function') ? cifMissingFields() : [];
+            if(miss.length){
+                const msg = 'The following required fields are missing:\n\n• ' + miss.join('\n• ') + '\n\nDo you still want to print the CIF?';
+                if(!window.confirm(msg)) return;
             }
+            const d = cifCollect();
+            if(typeof cifFullEpid==='function') d.epid = cifFullEpid();
             const sheet = document.getElementById('cifOfficialSheet');
             if(!sheet){ window.print(); return; }
+            document.querySelectorAll('.sidebar-open-btn').forEach(function(el){ el.style.visibility='hidden'; });
             sheet.innerHTML = cifBuildOfficialHtml(d);
             sheet.style.display = 'block';
             setTimeout(function(){
                 window.print();
-                setTimeout(function(){ sheet.style.display = 'none'; }, 400);
-            }, 150);
+                setTimeout(function(){
+                    sheet.style.display = 'none';
+                    document.querySelectorAll('.sidebar-open-btn').forEach(function(el){ el.style.visibility=''; });
+                }, 500);
+            }, 200);
         }
-
+        function cifLoadByEpid(){
+            const q = ((document.getElementById('cif_loadEpid')||{}).value || '').trim();
+            const key = q.toLowerCase();
+            if(!key){ alert('Enter full EPID No. to load.'); return; }
+            let found = null;
+            try{
+                const cache = JSON.parse(localStorage.getItem('epi_cif_by_epid')||'{}');
+                const k = Object.keys(cache).find(function(x){ return x.toLowerCase()===key || x.toLowerCase().indexOf(key)>=0; });
+                if(k) found = cache[k];
+            }catch(e){}
+            if(!found && typeof mrRows!=='undefined'){
+                const r = mrRows.find(function(row){
+                    const e = String(row.epid||'').toLowerCase();
+                    return e===key || e.indexOf(key)>=0;
+                });
+                if(r){
+                    found = {
+                        epid: r.epid, name: r.name, father: r.father, sex: r.sex, ageMonths: r.ageMo,
+                        phone: r.phone, address: r.address||r.village, uc: r.uc, tehsil: r.tehsil,
+                        district: r.district||'Chakwal', province: r.province||'Punjab',
+                        rashOnset: r.rashOnset, notification: r.notification, investigation: r.investigation,
+                        riDoses: r.riDoses, siaDoses: r.siaDoses, lastDose: r.lastDose,
+                        sampleDate: r.specimen1, outcome: r.outcome,
+                        labMeasles: r.labMeasles, labRubella: r.labRubella, labId: r.labId,
+                        reportingSite: r.hf, year: r.year||'2026'
+                    };
+                }
+            }
+            if(!found){
+                alert('No saved CIF / line-list match for this EPID.\nSave a form first, or check EPID spelling.');
+                return;
+            }
+            cifFillForm(found);
+            cifEditMode = true;
+            const st = document.getElementById('cifStatus');
+            if(st) st.textContent = 'Loaded for edit: '+(found.epid||q);
+        }
+        function cifFillForm(d){
+            if(!d) return;
+            cifSetEpid(d.epid||'');
+            const map = {
+                cif_cross:'crossNotified', cif_uid:'uniqueId', cif_year:'year',
+                cif_reportedBy:'reportedBy', cif_reportedFrom:'reportedFrom', cif_repSite:'reportingSite',
+                cif_repPerson:'reportingPerson', cif_repDesig:'reportingDesignation', cif_repUC:'reportingUC',
+                cif_repTehsil:'reportingTehsil', cif_repDistrict:'reportingDistrict', cif_repProvince:'reportingProvince',
+                cif_name:'name', cif_father:'father', cif_sex:'sex', cif_dob:'dob', cif_ageMo:'ageMonths',
+                cif_phone:'phone', cif_address:'address', cif_landmark:'landmark', cif_uc:'uc', cif_tehsil:'tehsil',
+                cif_district:'district', cif_province:'province', cif_nationality:'nationality',
+                cif_rashOnset:'rashOnset', cif_notification:'notification', cif_investigation:'investigation',
+                cif_hosp:'hospitalized', cif_hospName:'hospitalName', cif_riDoses:'riDoses', cif_lastDose:'lastDose',
+                cif_vaxVerify:'vaxVerifiedBy', cif_zeroReason:'zeroDoseReason', cif_siaDoses:'siaDoses',
+                cif_sampleYes:'sampleCollected', cif_sampleType:'sampleType', cif_sampleDate:'sampleDate',
+                cif_sampleSent:'sampleSent', cif_source:'sourceInfection', cif_sourceName:'sourceName',
+                cif_travel:'travel', cif_travelDetail:'travelDetail', cif_travelUC:'travelUC',
+                cif_travelTehsil:'travelTehsil', cif_travelDistrict:'travelDistrict',
+                cif_travelProvince:'travelProvince', cif_travelCountry:'travelCountry',
+                cif_labId:'labId', cif_labMeasles:'labMeasles', cif_labRubella:'labRubella',
+                cif_finalClass:'finalClassification', cif_outcome:'outcome', cif_epiStatus:'epiStatus',
+                cif_comments:'comments', cif_visitedHf:'visitedHf', cif_visitedHfName:'visitedHfName',
+                cif_admitDate:'admitDate'
+            };
+            Object.keys(map).forEach(function(id){
+                const el = document.getElementById(id);
+                if(!el) return;
+                const v = d[map[id]];
+                if(v==null || v==='') return;
+                el.value = v;
+            });
+            [['cif_fever','fever'],['cif_rash','rash'],['cif_cough','cough'],['cif_coryza','coryza'],['cif_conj','conjunctivitis']].forEach(function(p){
+                const el=document.getElementById(p[0]);
+                if(el) el.checked = (String(d[p[1]]||'').toLowerCase()==='yes' || d[p[1]]===true);
+            });
+            const fb=document.getElementById('cif_filledBy'); if(fb) fb.value='Syed Asad Abbas';
+            const fd=document.getElementById('cif_filledDesig'); if(fd) fd.value='DSV';
+            const fp=document.getElementById('cif_filledPhone'); if(fp) fp.value='0333-5902949';
+            if(typeof cifOnTravelChange==='function') cifOnTravelChange();
+        }
         async function cifSubmit(){
             const st = document.getElementById('cifStatus');
             const data = cifCollect();
-            if(!data.epid){
-                alert('EPID No. likhna zaroori hai (manual).');
+            if(typeof cifFullEpid==='function') data.epid = cifFullEpid();
+            if(!data.epid || data.epid === (typeof CIF_EPID_PREFIX!=='undefined'?CIF_EPID_PREFIX:'PAK/PB/13/26/MR/00')){
+                alert('EPID No. ke last digits likhna zaroori hain.');
                 return;
             }
+            try{
+                const cache = JSON.parse(localStorage.getItem('epi_cif_by_epid')||'{}');
+                cache[data.epid] = data;
+                localStorage.setItem('epi_cif_by_epid', JSON.stringify(cache));
+            }catch(eC){}
             if(!data.name){
                 alert('Patient Name zaroori hai.');
                 return;
