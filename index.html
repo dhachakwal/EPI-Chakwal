@@ -340,7 +340,7 @@
         .section-collapse-body.open{display:block!important}
     
     
-        /* MR Case Investigation Form (CIF) */
+        /* MR Case Investigation Form (CIF) — entry + official print */
         .cif-wrap{background:#fff;border:1px solid #c8e6c9;border-radius:12px;padding:18px;margin-top:12px}
         .cif-title{text-align:center;color:#0d5c3d;font-size:18px;font-weight:800;margin-bottom:4px}
         .cif-sub{text-align:center;font-size:12.5px;color:#555;margin-bottom:14px}
@@ -355,12 +355,28 @@
         .cif-full{grid-column:1/-1}
         .cif-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
         .cif-status{font-size:13px;color:#0d5c3d;font-weight:600}
-        .cif-print-only{display:none}
+        #cifOfficialSheet{display:none}
+        .cif-off{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:210mm;max-width:100%;margin:0 auto;border:2px solid #000;box-sizing:border-box}
+        .cif-off *{box-sizing:border-box}
+        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #000;padding:6px 8px;gap:8px}
+        .cif-off-head img{height:48px;width:auto;object-fit:contain}
+        .cif-off-head h1{flex:1;text-align:center;font-size:16px;margin:0;font-weight:800;letter-spacing:.2px}
+        .cif-off table{width:100%;border-collapse:collapse;font-size:10.5px;line-height:1.25}
+        .cif-off td,.cif-off th{border:1px solid #000;padding:3px 5px;vertical-align:middle}
+        .cif-off .lab{font-weight:700;white-space:nowrap}
+        .cif-off .sec{background:#e8e8e8;font-weight:800;font-size:11px;text-align:left}
+        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#f0f0f0;width:18px;padding:4px 2px}
+        .cif-off .chk{display:inline-block;width:11px;height:11px;border:1.5px solid #000;margin:0 3px 0 2px;vertical-align:middle;text-align:center;line-height:10px;font-size:9px;font-weight:900}
+        .cif-off .chk.on{background:#000;color:#fff}
+        .cif-off .fill{font-weight:600;min-height:14px}
+        .cif-off-note{font-size:9px;padding:5px 6px;border-top:1px solid #000}
         @media print{
-            body *{visibility:hidden}
-            #cifPrintArea, #cifPrintArea *{visibility:visible}
-            #cifPrintArea{position:absolute;left:0;top:0;width:100%;padding:12px}
-            .cif-actions,.emr-filter,.emr-tabs,.emr-summary-panel,.sidebar,.header,.news-ticker,.search-wrap{display:none!important}
+            @page{size:A4;margin:8mm}
+            body *{visibility:hidden !important}
+            #cifOfficialSheet, #cifOfficialSheet *{visibility:visible !important}
+            #cifOfficialSheet{display:block !important;position:absolute;left:0;top:0;width:100%;padding:0;margin:0}
+            .cif-off{width:100%;border-width:1.5px}
+            .cif-actions,#mrCifPanel .cif-wrap,.emr-filter,.emr-tabs,.emr-summary-panel,.sidebar,.header,.news-ticker,.search-wrap,.footer,.sidebar-open-btn{display:none !important}
         }
 
     </style>
@@ -857,6 +873,7 @@
                     </table>
                 </div>
 
+                <div id="cifOfficialSheet" aria-hidden="true"></div>
                 <div id="mrCifPanel" style="display:none">
                     <div class="cif-wrap" id="cifPrintArea">
                         <div class="cif-title">Measles Rubella (MR) — Case Investigation Form (CIF)</div>
@@ -7323,9 +7340,185 @@
             const n = document.getElementById('cif_nationality'); if(n) n.value = 'Pakistani';
             const st = document.getElementById('cifStatus'); if(st) st.textContent = '';
         }
-        function cifPrint(){
-            window.print();
+        function cifChk(on){
+            return '<span class="chk'+(on?' on':'')+'">'+(on?'✓':'')+'</span>';
         }
+        function cifEq(a,b){
+            return String(a||'').toLowerCase()===String(b||'').toLowerCase();
+        }
+        function cifYes(v){
+            const s=String(v||'').toLowerCase();
+            return s==='yes'||s==='y'||s==='true';
+        }
+        function cifBuildOfficialHtml(d){
+            const sexM = cifEq(d.sex,'Male') || cifEq(d.sex,'M');
+            const sexF = cifEq(d.sex,'Female') || cifEq(d.sex,'F');
+            const crossY = cifEq(d.crossNotified,'Yes');
+            const crossN = cifEq(d.crossNotified,'No');
+            const pass = (d.reportedBy||'').indexOf('Passive')>=0;
+            const actS = (d.reportedBy||'').indexOf('Active Surveillance')>=0;
+            const actSearch = (d.reportedBy||'').indexOf('Active Search')>=0;
+            const pub = (d.reportedFrom||'').indexOf('Public')>=0;
+            const com = (d.reportedFrom||'').indexOf('Community')>=0;
+            const priv = (d.reportedFrom||'').indexOf('Private')>=0;
+            const ri0 = cifEq(d.riDoses,'Zero')||d.riDoses==='0';
+            const ri1 = cifEq(d.riDoses,'One')||d.riDoses==='1';
+            const ri2 = cifEq(d.riDoses,'Two')||d.riDoses==='2';
+            const riU = cifEq(d.riDoses,'Unknown');
+            const sampleY = cifEq(d.sampleCollected,'Yes');
+            const sampleN = cifEq(d.sampleCollected,'No');
+            const serum = cifEq(d.sampleType,'Serum');
+            const swab = (d.sampleType||'').toLowerCase().indexOf('throat')>=0;
+            const oral = (d.sampleType||'').toLowerCase().indexOf('oral')>=0;
+            const hospY = cifEq(d.hospitalized,'Yes');
+            const hospN = cifEq(d.hospitalized,'No');
+            const travelY = cifEq(d.travel,'Yes');
+            const travelN = cifEq(d.travel,'No');
+            const src = String(d.sourceInfection||'');
+            function srcOn(x){ return src.toLowerCase().indexOf(x)>=0; }
+            const fc = String(d.finalClassification||'');
+            function fcOn(x){ return fc.toLowerCase().indexOf(x.toLowerCase())>=0; }
+            const out = String(d.outcome||'');
+            function outOn(x){ return out.toLowerCase().indexOf(x.toLowerCase())>=0; }
+            const epi = String(d.epiStatus||'');
+            const ageLabel = d.ageMonths ? ('( '+d.ageMonths+' Months )') : '';
+            const logoL = 'favicon.png.png';
+            const logoR = 'logo-right2.png';
+            return ''
+            + '<div class="cif-off">'
+            + '<div class="cif-off-head">'
+            + '<img src="'+logoL+'" alt="EPI" onerror="this.style.display=\'none\'">'
+            + '<h1>Measles Rubella (MR)-Case Investigation Form (CIF)</h1>'
+            + '<img src="'+logoR+'" alt="Gov" onerror="this.style.display=\'none\'">'
+            + '</div>'
+            + '<table>'
+            + '<tr><td class="fill" style="width:38%"><strong>'+(d.epid||'&nbsp;')+'</strong></td>'
+            + '<td class="lab">Cross Notified</td><td>Yes: '+cifChk(crossY)+' &nbsp; No: '+cifChk(crossN)+'</td>'
+            + '<td class="lab">UNIQUE ID:#</td><td class="fill">'+(d.uniqueId||'&nbsp;')+'</td></tr>'
+            + '</table>'
+            + '<table>'
+            + '<tr><td class="vsec" rowspan="6">Case Report</td><td class="sec" colspan="6">Part-1: For use by reporting health facility and / or investigation team and District Health Office</td></tr>'
+            + '<tr><td class="lab">Reported By</td><td colspan="5">Passive Surveillance '+cifChk(pass)
+            + ' &nbsp; Active Surveillance '+cifChk(actS)
+            + ' &nbsp; Active Search '+cifChk(actSearch)+'</td></tr>'
+            + '<tr><td class="lab">Reported From</td><td colspan="5">Public Health Facility '+cifChk(pub)
+            + ' &nbsp; Community '+cifChk(com)
+            + ' &nbsp; Private Sector '+cifChk(priv)+'</td></tr>'
+            + '<tr><td class="lab">Name Of Reporting Site:</td><td class="fill" colspan="2">'+(d.reportingSite||'&nbsp;')+'</td>'
+            + '<td class="lab">Reporting Person:</td><td class="fill">'+(d.reportingPerson||'&nbsp;')+'</td>'
+            + '<td class="lab">Designation: <span class="fill">'+(d.reportingDesignation||'&nbsp;')+'</span></td></tr>'
+            + '<tr><td class="lab">Union Council:</td><td class="fill">'+(d.reportingUC||'&nbsp;')+'</td>'
+            + '<td class="lab">Tehsil:</td><td class="fill" colspan="3">'+(d.reportingTehsil||'&nbsp;')+'</td></tr>'
+            + '<tr><td class="lab">District:</td><td class="fill">'+(d.reportingDistrict||d.district||'Chakwal')+'</td>'
+            + '<td class="lab">Province:</td><td class="fill" colspan="3">'+(d.reportingProvince||d.province||'Punjab')+'</td></tr>'
+            + '</table>'
+            + '<table>'
+            + '<tr><td class="vsec" rowspan="6">Patient\'s Detail</td>'
+            + '<td class="lab">Patient Name:</td><td class="fill">'+(d.name||'&nbsp;')+'</td>'
+            + '<td class="lab">Father Name:</td><td class="fill">'+(d.father||'&nbsp;')+'</td>'
+            + '<td class="lab">Sex</td><td>Male '+cifChk(sexM)+' Female '+cifChk(sexF)+'</td></tr>'
+            + '<tr><td class="lab">Date Of Birth:</td><td class="fill">'+(d.dob||'&nbsp;')+'</td>'
+            + '<td class="lab">Age: in months</td><td class="fill">'+ageLabel+'</td>'
+            + '<td class="lab">Contact No.</td><td class="fill">'+(d.phone||'&nbsp;')+'</td></tr>'
+            + '<tr><td class="lab">Complete Address Of Patient:</td><td class="fill" colspan="5">'+(d.address||'&nbsp;')+'</td></tr>'
+            + '<tr><td class="lab">Near Landmark</td><td class="fill">'+(d.landmark||'.--.')+'</td>'
+            + '<td class="lab">Union Council</td><td class="fill">'+(d.uc||'&nbsp;')+'</td>'
+            + '<td class="lab">Tehsil</td><td class="fill">'+(d.tehsil||'&nbsp;')+'</td></tr>'
+            + '<tr><td class="lab">District:</td><td class="fill">'+(d.district||'Chakwal')+'</td>'
+            + '<td class="lab">Province</td><td class="fill">'+(d.province||'Punjab')+'</td>'
+            + '<td class="lab">Nationality</td><td class="fill">'+(d.nationality||'Pakistani')+'</td></tr>'
+            + '</table>'
+            + '<table>'
+            + '<tr><td class="vsec" rowspan="8">Clinical Findings &amp; Vaccination</td>'
+            + '<td class="lab">Date Of Rashonset:</td><td class="fill">'+(d.rashOnset||'&nbsp;')+'</td>'
+            + '<td class="lab">Date Of Notification:</td><td class="fill">'+(d.notification||'&nbsp;')+'</td>'
+            + '<td class="lab">Date Of Investigation:</td><td class="fill">'+(d.investigation||'&nbsp;')+'</td></tr>'
+            + '<tr><td class="lab">Sign &amp; Symptoms</td><td colspan="5">Fever '+cifChk(cifYes(d.fever))
+            + ' Maculopapular Rash '+cifChk(cifYes(d.rash))
+            + ' Cough '+cifChk(cifYes(d.cough))
+            + ' Coryza '+cifChk(cifYes(d.coryza))
+            + ' Conjunctivitis '+cifChk(cifYes(d.conjunctivitis))+'</td></tr>'
+            + '<tr><td class="lab">Complication (if any)</td><td colspan="5">Pneumonia '+cifChk(cifYes(d.pneumonia))
+            + ' Diarrhoea '+cifChk(cifYes(d.diarrhoea))
+            + ' Encephalitis '+cifChk(cifYes(d.encephalitis))
+            + ' Others '+cifChk(cifYes(d.compOther))
+            + ' No '+cifChk(cifYes(d.compNone))+'</td></tr>'
+            + '<tr><td class="lab">Hospitalized due to current illness</td><td colspan="5">Yes '+cifChk(hospY)+' No '+cifChk(hospN)
+            + ' &nbsp; If yes, Name Hospital: <span class="fill">'+(d.hospitalName||'&nbsp;')+'</span></td></tr>'
+            + '<tr><td class="lab">MR doses received in Routine EPI:</td><td colspan="5">Zero '+cifChk(ri0)+' One '+cifChk(ri1)+' Two '+cifChk(ri2)+' Unknown '+cifChk(riU)
+            + ' &nbsp; Date of Last Dose: <span class="fill">'+(d.lastDose||'&nbsp;')+'</span></td></tr>'
+            + '<tr><td class="lab">Verified By:</td><td colspan="5">Recall '+cifChk(cifEq(d.vaxVerifiedBy,'Recall'))
+            + ' EPI Card: '+cifChk(cifEq(d.vaxVerifiedBy,'EPI Card'))
+            + ' &nbsp; If Zero Dose(reason): Refusal '+cifChk(cifEq(d.zeroDoseReason,'Refusal'))
+            + ' Unaware '+cifChk(cifEq(d.zeroDoseReason,'Unaware'))
+            + ' Not Eligible '+cifChk(cifEq(d.zeroDoseReason,'Not Eligible'))
+            + ' Missed '+cifChk(cifEq(d.zeroDoseReason,'Missed'))
+            + ' Other '+cifChk(cifEq(d.zeroDoseReason,'Other'))+'</td></tr>'
+            + '<tr><td class="lab">Number Of Additional MR Vaccine Doses (Campaign/ORI/mop-up):</td><td class="fill" colspan="5">'+(d.siaDoses||'&nbsp;')+'</td></tr>'
+            + '</table>'
+            + '<table>'
+            + '<tr><td class="vsec" rowspan="3">Sample</td>'
+            + '<td class="lab">Sample Collected:</td><td>Yes '+cifChk(sampleY)+' No '+cifChk(sampleN)+'</td>'
+            + '<td class="lab">Type Of Sample</td><td colspan="2">Serum '+cifChk(serum)+' Throat Swab '+cifChk(swab)+' Oral Fluid '+cifChk(oral)+'</td></tr>'
+            + '<tr><td class="lab">Date Of Sample Collection</td><td class="fill" colspan="2">'+(d.sampleDate||'&nbsp;')+'</td>'
+            + '<td class="lab">Date Of Sample sent to Lab</td><td class="fill">'+(d.sampleSent||'&nbsp;')+'</td></tr>'
+            + '</table>'
+            + '<table>'
+            + '<tr><td class="vsec" rowspan="4">Source Of Infection</td>'
+            + '<td class="lab">Source Of Infection</td><td colspan="5">School '+cifChk(srcOn('school'))
+            + ' Madrassa '+cifChk(srcOn('madrassa'))
+            + ' Area '+cifChk(srcOn('area'))
+            + ' Hospital/Clinic '+cifChk(srcOn('hospital'))
+            + ' Unknown '+cifChk(srcOn('unknown'))+'</td></tr>'
+            + '<tr><td class="lab">School / Madrassa / Hospital / Village Name:</td><td class="fill" colspan="5">'+(d.sourceName||'&nbsp;')+'</td></tr>'
+            + '<tr><td class="lab">Travel History 7-23 Days before onset:</td><td colspan="5">Yes '+cifChk(travelY)+' No '+cifChk(travelN)
+            + ' &nbsp; Details: <span class="fill">'+(d.travelDetail||'&nbsp;')+'</span></td></tr>'
+            + '<tr><td class="lab">CIF Filled By (Name):</td><td class="fill">'+(d.filledBy||'&nbsp;')+'</td>'
+            + '<td class="lab">Designation:</td><td class="fill">'+(d.filledDesignation||'&nbsp;')+'</td>'
+            + '<td class="lab">Contact No.</td><td class="fill">'+(d.filledPhone||'&nbsp;')+'</td></tr>'
+            + '</table>'
+            + '<table>'
+            + '<tr><td class="vsec" rowspan="5">Classification</td><td class="sec" colspan="5">Part-3: Final Classification</td></tr>'
+            + '<tr><td class="lab">Final Classification:</td><td colspan="5">'
+            + 'Lab Confirmed Measles '+cifChk(fcOn('Lab Confirmed Measles'))
+            + ' Lab Confirmed Rubella '+cifChk(fcOn('Lab Confirmed Rubella'))
+            + ' Epi-Linked Measles '+cifChk(fcOn('Epi-Linked Measles'))
+            + ' Epi-Linked Rubella '+cifChk(fcOn('Epi-Linked Rubella'))+'<br>'
+            + 'Clinically Compatible Measles '+cifChk(fcOn('Clinically Compatible Measles'))
+            + ' Clinically Compatible Rubella '+cifChk(fcOn('Clinically Compatible Rubella'))
+            + ' Discarded '+cifChk(fcOn('Discarded'))
+            + ' Other '+cifChk(fcOn('Other'))+'</td></tr>'
+            + '<tr><td class="lab">Outcome:</td><td colspan="5">'
+            + 'Improving '+cifChk(outOn('Improving'))
+            + ' Recovered '+cifChk(outOn('Recovered'))
+            + ' Alive with Complications '+cifChk(outOn('Alive with'))
+            + ' Lost to follow-up '+cifChk(outOn('Lost'))
+            + ' Died '+cifChk(outOn('Died'))
+            + ' Alive '+cifChk(outOn('Alive')&&!outOn('Alive with'))
+            + ' Hospitalized '+cifChk(outOn('Hospitalized'))+'</td></tr>'
+            + '<tr><td class="lab">Epidemiological Status</td><td colspan="5">Sporadic '+cifChk(epi.toLowerCase().indexOf('sporadic')>=0)
+            + ' Part Of Outbreak '+cifChk(epi.toLowerCase().indexOf('outbreak')>=0)+'</td></tr>'
+            + '<tr><td class="lab">Comments:</td><td class="fill" colspan="5">'+(d.comments||'&nbsp;')+'</td></tr>'
+            + '</table>'
+            + '<div class="cif-off-note"><strong>Note:</strong> Please send the 1st copy of this CIF to laboratory with specimen, 2nd copy to CEO/DHO (Health) office and 3rd copy to be kept in reporting health facility. All fields are compulsory/mandatory to be filled. Form No. on Sample taken. Measles Rubella (MR) V.1.0 — District Chakwal EPI.</div>'
+            + '</div>';
+        }
+        function cifPrint(){
+            const d = cifCollect();
+            if(!d.epid && !d.name){
+                alert('Print se pehle kam az kam EPID ya Patient Name bharain.');
+                return;
+            }
+            const sheet = document.getElementById('cifOfficialSheet');
+            if(!sheet){ window.print(); return; }
+            sheet.innerHTML = cifBuildOfficialHtml(d);
+            sheet.style.display = 'block';
+            setTimeout(function(){
+                window.print();
+                setTimeout(function(){ sheet.style.display = 'none'; }, 400);
+            }, 150);
+        }
+
         async function cifSubmit(){
             const st = document.getElementById('cifStatus');
             const data = cifCollect();
