@@ -342,13 +342,13 @@
     
         /* MR Case Investigation Form (CIF) — entry + official print */
         .cif-wrap{background:#fff;border:1px solid #c8e6c9;border-radius:12px;padding:18px;margin-top:12px}
-        .cif-title{text-align:center;color:#0d5c3d;font-size:18px;font-weight:800;margin-bottom:4px}
-        .cif-sub{text-align:center;font-size:12.5px;color:#555;margin-bottom:14px}
+        .cif-title{text-align:center;color:#0d5c3d;font-size:24px;font-weight:800;margin-bottom:6px}
+        .cif-sub{text-align:center;font-size:15px;color:#333;margin-bottom:16px;font-weight:600}
         .cif-section{border:1px solid #e0e0e0;border-radius:10px;margin-bottom:14px;overflow:hidden}
-        .cif-section h4{background:#0d5c3d;color:#fff;margin:0;padding:10px 14px;font-size:14px}
+        .cif-section h4{background:#0d5c3d;color:#fff;margin:0;padding:12px 14px;font-size:16px}
         .cif-body{padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 14px}
-        .cif-body label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:#444}
-        .cif-body input,.cif-body select,.cif-body textarea{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-weight:500}
+        .cif-body label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600;color:#222}
+        .cif-body input,.cif-body select,.cif-body textarea{padding:9px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-weight:500}
         .cif-body textarea{min-height:60px;resize:vertical}
         .cif-check{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:4px 0}
         .cif-check label{flex-direction:row;align-items:center;font-weight:500;gap:6px}
@@ -366,18 +366,20 @@
         .cif-off .lab{font-weight:700}
         .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:11px;text-align:left;padding:5px 6px}
         .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:15px;min-width:15px;max-width:15px;padding:3px 0;font-size:9px;letter-spacing:0.6px;line-height:1.15}
-        .cif-off .chk{display:inline-block;width:11px;height:11px;border:1.4px solid #000;margin:0 3px;vertical-align:middle;text-align:center;line-height:10px;font-size:8px;font-weight:900;flex-shrink:0}
-        .cif-off .chk.on{background:#000;color:#fff}
+        .cif-off .chk{display:inline-block;width:14px;height:14px;border:2px solid #000;margin:0 3px;vertical-align:middle;text-align:center;line-height:12px;font-size:11px;font-weight:900;flex-shrink:0;background:#fff;color:#000}
+        .cif-off .chk.on{background:#000;color:#fff;box-shadow:inset 0 0 0 2px #000}
         .cif-off .fill{font-weight:600}
         .cif-off-note{font-size:9px;padding:6px 7px;border-top:1px solid #000;line-height:1.4}
         @media print{
             @page{size:A4 portrait;margin:5mm 6mm 6mm 6mm}
-            html,body{background:#fff !important}
+            html,body{background:#fff !important;margin:0 !important;padding:0 !important}
             body *{visibility:hidden !important}
             #cifOfficialSheet, #cifOfficialSheet *{visibility:visible !important}
-            #cifOfficialSheet{display:block !important;position:absolute;left:0;top:0;width:100%;padding:0;margin:0;background:#fff}
-            .cif-off{width:100%;max-width:100%;border-width:1.5px}
-            .cif-actions,#mrCifPanel,.emr-filter,.emr-tabs,.emr-summary-panel,.sidebar,.header,.news-ticker,.search-wrap,.footer,.sidebar-open-btn,#mrStats,#mrTableWrap,.emr-summary-panel{display:none !important}
+            #cifOfficialSheet{display:block !important;position:fixed !important;left:0 !important;top:0 !important;right:0 !important;width:100% !important;padding:0 !important;margin:0 !important;background:#fff !important;z-index:99999 !important}
+            .cif-off{width:100%;max-width:100%;border-width:1.5px;margin:0 auto}
+            .sidebar,.sidebar-open-btn,.sidebar-toggle,header,.header,.news-ticker,.search-wrap,.footer,
+            .cif-actions,#mrCifPanel,.emr-filter,.emr-tabs,.emr-summary-panel,#mrStats,#mrTableWrap,
+            button,nav,.menu-btn,.hamburger{display:none !important;visibility:hidden !important;opacity:0 !important}
         }
 
     </style>
@@ -886,7 +888,7 @@
                                 <label class="cif-full">EPID No. *
                                     <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                                         <span style="font-weight:800;color:#0d5c3d;background:#e8f5e9;padding:8px 10px;border-radius:6px;border:1px solid #1a8a5c;font-size:13px">PAK/PB/13/26/MR/00</span>
-                                        <input type="text" id="cif_epidSuffix" placeholder="01" maxlength="6" style="width:90px" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                                        <input type="text" id="cif_epidSuffix" placeholder="01" maxlength="6" style="width:90px" oninput="this.value=this.value.replace(/[^0-9]/g,'');cifUpdateUniqueId()">
                                         <span style="font-size:12px;color:#666;font-weight:500">sirf last digits (e.g. 01, 55)</span>
                                     </span>
                                     <input type="hidden" id="cif_epid" value="">
@@ -894,7 +896,7 @@
                                 <label>Cross Notified
                                     <select id="cif_cross"><option value="">—</option><option>Yes</option><option>No</option></select>
                                 </label>
-                                <label>UNIQUE ID<input type="text" id="cif_uid" placeholder="Optional"></label>
+                                <label>UNIQUE ID<input type="text" id="cif_uid" placeholder="Auto" readonly style="background:#e8f5e9;font-weight:700"></label>
                                 <label>Year
                                     <select id="cif_year"><option>2026</option><option>2025</option><option>2024</option></select>
                                 </label>
@@ -959,7 +961,7 @@
                         <div class="cif-section">
                             <h4>Clinical Findings &amp; Vaccination</h4>
                             <div class="cif-body">
-                                <label>Date of Rash Onset<input type="date" id="cif_rashOnset"></label>
+                                <label>Date of Rash Onset<input type="date" id="cif_rashOnset" onchange="cifOnRashOnsetChange()"></label>
                                 <label>Date of Notification<input type="date" id="cif_notification"></label>
                                 <label>Date of Investigation<input type="date" id="cif_investigation"></label>
                                 <div class="cif-full">
@@ -984,7 +986,7 @@
                                 </div>
 
                                 <label>Visited HF/Clinician/Faith healer
-                                    <select id="cif_visitedHf"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                    <select id="cif_visitedHf" onchange="cifOnVisitedHfChange()"><option value="">—</option><option>Yes</option><option>No</option></select>
                                 </label>
                                 <label>If yes, Name(s)<input type="text" id="cif_visitedHfName"></label>
                                 <label>Date of Admission<input type="date" id="cif_admitDate"></label>
@@ -1026,7 +1028,7 @@
                             <h4>Source of Infection &amp; Travel</h4>
                             <div class="cif-body">
                                 <label>Source of infection
-                                    <select id="cif_source"><option value="">—</option><option>School</option><option>Madrassa</option><option>Area</option><option>Hospital/Clinic</option><option>Unknown</option></select>
+                                    <select id="cif_source" onchange="cifOnSourceChange()"><option value="">—</option><option>School</option><option>Madrassa</option><option>Area</option><option>Hospital/Clinic</option><option>Unknown</option></select>
                                 </label>
                                 <label>School / Madrassa / Hospital / Village name<input type="text" id="cif_sourceName"></label>
                                 <label>Travel 7–23 days before onset
@@ -6852,6 +6854,68 @@
                 }
                 mrRows = all;
 
+                // CIF_Archive (website form saves) — merge so EPID search works
+                try{
+                    if(status) status.textContent = 'Loading CIF_Archive…';
+                    const cdata = await mrFetchSheet('CIF_Archive');
+                    const ccols = (cdata.table && cdata.table.cols) || [];
+                    const crows = (cdata.table && cdata.table.rows) || [];
+                    const clab = ccols.map(function(c){ return String((c&&c.label)||'').toLowerCase(); });
+                    function cix(names){
+                        for(let i=0;i<names.length;i++){
+                            const j = clab.indexOf(names[i]);
+                            if(j>=0) return j;
+                        }
+                        return -1;
+                    }
+                    const iEpid = cix(['epid','epid no','epid no.']);
+                    const iName = cix(['name']);
+                    const iYear = cix(['year']);
+                    const iFather = cix(['father']);
+                    const iSex = cix(['sex']);
+                    const iAge = cix(['agemonths','age months','age']);
+                    const iPhone = cix(['phone']);
+                    const iUc = cix(['uc']);
+                    const iTeh = cix(['tehsil']);
+                    const iRash = cix(['rashonset','rash onset']);
+                    const iOut = cix(['outcome']);
+                    const iJson = cix(['json']);
+                    let cn = 0;
+                    crows.forEach(function(r){
+                        const cells = (r.c||[]).map(mrParseGvizCell);
+                        const epid = iEpid>=0 ? String(cells[iEpid]||'').trim() : '';
+                        if(!epid || epid.toLowerCase()==='epid') return;
+                        let extra = {};
+                        if(iJson>=0 && cells[iJson]){
+                            try{ extra = JSON.parse(String(cells[iJson])); }catch(e){}
+                        }
+                        const row = {
+                            year: (iYear>=0?cells[iYear]:'') || extra.year || '2026',
+                            epid: epid,
+                            name: (iName>=0?cells[iName]:'') || extra.name || '',
+                            father: (iFather>=0?cells[iFather]:'') || extra.father || '',
+                            sex: (iSex>=0?cells[iSex]:'') || extra.sex || '',
+                            ageMo: (iAge>=0?cells[iAge]:'') || extra.ageMonths || '',
+                            phone: (iPhone>=0?cells[iPhone]:'') || extra.phone || '',
+                            uc: (iUc>=0?cells[iUc]:'') || extra.uc || '',
+                            tehsil: (iTeh>=0?cells[iTeh]:'') || extra.tehsil || '',
+                            district: extra.district || 'Chakwal',
+                            rashOnset: (iRash>=0?cells[iRash]:'') || extra.rashOnset || '',
+                            outcome: (iOut>=0?cells[iOut]:'') || extra.outcome || '',
+                            labMeasles: extra.labMeasles || '',
+                            labRubella: extra.labRubella || '',
+                            hf: extra.reportingSite || '',
+                            _fromCif: true,
+                            _cif: extra
+                        };
+                        const ix = all.findIndex(function(x){ return String(x.epid||'').toLowerCase()===epid.toLowerCase(); });
+                        if(ix>=0) all[ix] = Object.assign({}, all[ix], row);
+                        else { all.push(row); cn++; }
+                    });
+                    if(cn) loaded.push('CIF_Archive (+'+cn+')');
+                    mrRows = all;
+                }catch(ce){ console.warn('CIF_Archive', ce); }
+
                 // Population from Sheet1 (columns A Tehsil, B Population — rates C & D computed)
                 mrPop = [];
                 try{
@@ -7111,7 +7175,31 @@
                 return '<div class="emr-sum-item" style="cursor:pointer;'+active+'" onclick="mrClickPanel(\''+it.key+'\')" title="Click to view cases"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
         }
+        function mrMergeCifCache(){
+            try{
+                const cache = JSON.parse(localStorage.getItem('epi_cif_by_epid')||'{}');
+                Object.keys(cache).forEach(function(epid){
+                    const data = cache[epid];
+                    if(!data) return;
+                    const exist = mrRows.findIndex(function(r){ return String(r.epid||'').toLowerCase()===String(epid).toLowerCase(); });
+                    const row = {
+                        year: data.year||'2026', epid: data.epid||epid, name: data.name, father: data.father, sex: data.sex,
+                        ageMo: data.ageMonths, phone: data.phone, uc: data.uc, tehsil: data.tehsil,
+                        district: data.district||'Chakwal', province: data.province||'Punjab',
+                        address: data.address, village: data.address, hf: data.reportingSite,
+                        rashOnset: data.rashOnset, notification: data.notification, investigation: data.investigation,
+                        riDoses: data.riDoses, siaDoses: data.siaDoses, lastDose: data.lastDose,
+                        specimen1: data.sampleDate, outcome: data.outcome,
+                        labMeasles: data.labMeasles, labRubella: data.labRubella, labId: data.labId,
+                        finalClass: data.finalClassification, _fromCif: true, _cif: data
+                    };
+                    if(exist>=0) mrRows[exist] = Object.assign({}, mrRows[exist], row);
+                    else mrRows.push(row);
+                });
+            }catch(e){}
+        }
         function mrApply(){
+            mrMergeCifCache();
             const base = mrBaseFiltered();
             mrUpdatePanel(base);
             const data = mrFiltered();
@@ -7127,7 +7215,10 @@
                     i++;
                     const row=[i,r.year,r.epid,r.name,r.father,r.ageMo,r.sex,r.tehsil,r.uc,r.hf,r.rashOnset,r.outcome,r.labMeasles,r.labRubella];
                     exp.push(row);
-                    return '<tr>'+row.map(function(c){return '<td>'+(c||'')+'</td>';}).join('')+'</tr>';
+                    const epidTd = r.epid
+                        ? ('<td><a href="#" data-epid="'+String(r.epid).replace(/"/g,'&quot;')+'" style="color:#0d5c3d;font-weight:700;text-decoration:underline" title="Open CIF for edit">'+String(r.epid)+'</a></td>')
+                        : '<td></td>';
+                    return '<tr><td>'+i+'</td><td>'+(r.year||'')+'</td>'+epidTd+'<td>'+(r.name||'')+'</td><td>'+(r.father||'')+'</td><td>'+(r.ageMo||'')+'</td><td>'+(r.sex||'')+'</td><td>'+(r.tehsil||'')+'</td><td>'+(r.uc||'')+'</td><td>'+(r.hf||'')+'</td><td>'+(r.rashOnset||'')+'</td><td>'+(r.outcome||'')+'</td><td>'+(r.labMeasles||'')+'</td><td>'+(r.labRubella||'')+'</td></tr>';
                 }).join('');
                 mrSetStats([{n:data.length,l:'Cases shown'},{n:base.length,l:'In filters'}]);
                 mrRenderTable(headers, rowsHtml, exp, null);
@@ -7328,7 +7419,7 @@
                 timestamp: new Date().toISOString(),
                 epid: (typeof cifFullEpid==='function'?cifFullEpid():cifVal('cif_epid')),
                 crossNotified: cifVal('cif_cross'),
-                uniqueId: cifVal('cif_uid'),
+                uniqueId: (function(){ if(typeof cifUpdateUniqueId==='function') cifUpdateUniqueId(); return cifVal('cif_uid'); })(),
                 year: cifVal('cif_year'),
                 reportedBy: cifVal('cif_reportedBy'),
                 reportedFrom: cifVal('cif_reportedFrom'),
@@ -7477,6 +7568,66 @@
                 }
             });
         }
+        function cifOnRashOnsetChange(){
+            const rash = document.getElementById('cif_rashOnset');
+            const n1 = document.getElementById('cif_notification');
+            const n2 = document.getElementById('cif_investigation');
+            if(!rash || !rash.value) return;
+            if(n1){ n1.min = rash.value; if(n1.value && n1.value < rash.value) n1.value = rash.value; }
+            if(n2){ n2.min = rash.value; if(n2.value && n2.value < rash.value) n2.value = rash.value; }
+        }
+        function cifSetNA(id, on){
+            const el = document.getElementById(id);
+            if(!el) return;
+            if(on){
+                if(el.tagName==='SELECT'){
+                    // add N/A option if needed
+                    let has = false;
+                    for(let i=0;i<el.options.length;i++){ if(el.options[i].value==='N/A') has=true; }
+                    if(!has){ const o=document.createElement('option'); o.value='N/A'; o.textContent='N/A'; el.appendChild(o); }
+                    el.value = 'N/A';
+                } else {
+                    el.value = 'N/A';
+                }
+                el.readOnly = true;
+                el.disabled = (el.tagName==='SELECT');
+                el.style.background = '#f5f5f5';
+            } else {
+                el.readOnly = false;
+                el.disabled = false;
+                el.style.background = '';
+                if(el.value==='N/A') el.value = '';
+            }
+        }
+        function cifOnVisitedHfChange(){
+            const v = cifVal('cif_visitedHf');
+            const na = (v === 'No');
+            cifSetNA('cif_visitedHfName', na);
+            cifSetNA('cif_admitDate', na);
+            cifSetNA('cif_hosp', na);
+            cifSetNA('cif_hospName', na);
+        }
+        function cifOnSourceChange(){
+            const s = cifVal('cif_source');
+            // Unknown or empty → N/A for place name
+            const na = (!s || s === 'Unknown');
+            cifSetNA('cif_sourceName', na);
+        }
+        function cifUpdateUniqueId(){
+            const uid = document.getElementById('cif_uid');
+            if(!uid) return;
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2,'0');
+            const mm = String(now.getMonth()+1).padStart(2,'0');
+            const y = String(now.getFullYear()); // 2026
+            const y3 = y.slice(-3); // 026
+            let suf = cifVal('cif_epidSuffix') || '';
+            suf = String(parseInt(suf,10)||0); // 63 not 0063
+            if(!cifVal('cif_epidSuffix')){ uid.value = ''; return; }
+            uid.value = dd + mm + suf + y3;
+        }
+
+
         function cifFullEpid(){
             const pre = CIF_EPID_PREFIX;
             let s = cifVal('cif_epidSuffix');
@@ -7816,6 +7967,43 @@
                 }, 500);
             }, 200);
         }
+        function mrEpidClick(epid){
+            if(!epid) return;
+            if(typeof mrSetMode==='function') mrSetMode('cif');
+            else {
+                const tabs = document.querySelectorAll('.emr-tab,[data-mode]');
+                tabs.forEach(function(t){
+                    const m = t.getAttribute('data-mode')||'';
+                    if(m==='cif' || (t.textContent||'').indexOf('Case Investigation')>=0 || (t.textContent||'').indexOf('CIF')>=0) t.click();
+                });
+            }
+            setTimeout(function(){
+                const inp = document.getElementById('cif_loadEpid');
+                if(inp) inp.value = epid;
+                let filled = false;
+                try{
+                    const cache = JSON.parse(localStorage.getItem('epi_cif_by_epid')||'{}');
+                    const k = Object.keys(cache).find(function(x){ return x.toLowerCase()===String(epid).toLowerCase(); });
+                    if(k){ cifFillForm(cache[k]); filled = true; }
+                }catch(e){}
+                if(!filled && typeof mrRows!=='undefined'){
+                    const r = mrRows.find(function(row){ return String(row.epid||'').toLowerCase()===String(epid).toLowerCase(); });
+                    if(r && r._cif && Object.keys(r._cif).length){ cifFillForm(r._cif); filled = true; }
+                    else if(r){ cifFillForm({
+                        epid:r.epid,name:r.name,father:r.father,sex:r.sex,ageMonths:r.ageMo,phone:r.phone,
+                        uc:r.uc,tehsil:r.tehsil,address:r.address||r.village,rashOnset:r.rashOnset,
+                        notification:r.notification,investigation:r.investigation,riDoses:r.riDoses,
+                        labMeasles:r.labMeasles,labRubella:r.labRubella,outcome:r.outcome,reportingSite:r.hf,
+                        year:r.year,sampleDate:r.specimen1
+                    }); filled = true; }
+                }
+                if(!filled && typeof cifLoadByEpid==='function') cifLoadByEpid();
+                const st=document.getElementById('cifStatus');
+                if(st) st.textContent = filled ? ('Opened CIF for edit: '+epid) : 'EPID loaded — fill / update lab results then Save';
+                const panel = document.getElementById('mrCifPanel');
+                if(panel) window.scrollTo({top: panel.offsetTop||0, behavior:'smooth'});
+            }, 250);
+        }
         function cifLoadByEpid(){
             const q = ((document.getElementById('cif_loadEpid')||{}).value || '').trim();
             const key = q.toLowerCase();
@@ -7940,7 +8128,27 @@
                     headers: {'Content-Type': 'text/plain;charset=utf-8'},
                     body: JSON.stringify(data)
                 });
-                if(st) st.textContent = 'Submitted (EPID '+data.epid+'). Google Sheet → tab CIF_Archive check karein (30 sec wait + refresh).';
+                if(st) st.textContent = 'Submitted (EPID '+data.epid+'). Search EPID on tabs 1–8 or Load for Edit below.';
+                // Make searchable immediately
+                try{
+                    if(typeof mrRows!=='undefined'){
+                        const exist = mrRows.findIndex(function(r){ return String(r.epid||'').toLowerCase()===String(data.epid).toLowerCase(); });
+                        const row = {
+                            year: data.year||'2026', epid: data.epid, name: data.name, father: data.father, sex: data.sex,
+                            ageMo: data.ageMonths, phone: data.phone, uc: data.uc, tehsil: data.tehsil,
+                            district: data.district||'Chakwal', province: data.province||'Punjab',
+                            address: data.address, village: data.address, hf: data.reportingSite,
+                            rashOnset: data.rashOnset, notification: data.notification, investigation: data.investigation,
+                            riDoses: data.riDoses, siaDoses: data.siaDoses, lastDose: data.lastDose,
+                            specimen1: data.sampleDate, outcome: data.outcome,
+                            labMeasles: data.labMeasles, labRubella: data.labRubella, labId: data.labId,
+                            finalClass: data.finalClassification, _fromCif: true, _cif: data
+                        };
+                        if(exist>=0) mrRows[exist] = Object.assign({}, mrRows[exist], row);
+                        else mrRows.push(row);
+                    }
+                }catch(ePush){}
+
             }catch(err){
                 console.error(err);
                 // fallback: hidden form POST
@@ -7968,6 +8176,13 @@
             }
         }
         // restore script url
+        document.addEventListener('click', function(ev){
+            const a = ev.target.closest('[data-epid]');
+            if(a){
+                ev.preventDefault();
+                mrEpidClick(a.getAttribute('data-epid'));
+            }
+        });
         document.addEventListener('DOMContentLoaded', function(){
             try{
                 const el = document.getElementById('cif_scriptUrl');
