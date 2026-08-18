@@ -339,6 +339,30 @@
         .section-collapse-body{display:none!important;margin-bottom:8px}
         .section-collapse-body.open{display:block!important}
     
+    
+        /* MR Case Investigation Form (CIF) */
+        .cif-wrap{background:#fff;border:1px solid #c8e6c9;border-radius:12px;padding:18px;margin-top:12px}
+        .cif-title{text-align:center;color:#0d5c3d;font-size:18px;font-weight:800;margin-bottom:4px}
+        .cif-sub{text-align:center;font-size:12.5px;color:#555;margin-bottom:14px}
+        .cif-section{border:1px solid #e0e0e0;border-radius:10px;margin-bottom:14px;overflow:hidden}
+        .cif-section h4{background:#0d5c3d;color:#fff;margin:0;padding:10px 14px;font-size:14px}
+        .cif-body{padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 14px}
+        .cif-body label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:#444}
+        .cif-body input,.cif-body select,.cif-body textarea{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-weight:500}
+        .cif-body textarea{min-height:60px;resize:vertical}
+        .cif-check{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:4px 0}
+        .cif-check label{flex-direction:row;align-items:center;font-weight:500;gap:6px}
+        .cif-full{grid-column:1/-1}
+        .cif-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
+        .cif-status{font-size:13px;color:#0d5c3d;font-weight:600}
+        .cif-print-only{display:none}
+        @media print{
+            body *{visibility:hidden}
+            #cifPrintArea, #cifPrintArea *{visibility:visible}
+            #cifPrintArea{position:absolute;left:0;top:0;width:100%;padding:12px}
+            .cif-actions,.emr-filter,.emr-tabs,.emr-summary-panel,.sidebar,.header,.news-ticker,.search-wrap{display:none!important}
+        }
+
     </style>
 </head>
 <body>
@@ -816,6 +840,7 @@
                     <button type="button" class="emr-tab" data-mr="outcome" onclick="mrSwitch('outcome')">6. Outcome</button>
                     <button type="button" class="emr-tab" data-mr="hf" onclick="mrSwitch('hf')">7. Reporting HF</button>
                     <button type="button" class="emr-tab" data-mr="rates" onclick="mrSwitch('rates')">8. Discarded & Incidence Rates</button>
+                    <button type="button" class="emr-tab" data-mr="cif" onclick="mrSwitch('cif')">9. Case Investigation Form (CIF)</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -831,6 +856,199 @@
                         <tbody id="mrBody"></tbody>
                     </table>
                 </div>
+
+                <div id="mrCifPanel" style="display:none">
+                    <div class="cif-wrap" id="cifPrintArea">
+                        <div class="cif-title">Measles Rubella (MR) — Case Investigation Form (CIF)</div>
+                        <div class="cif-sub">District Chakwal · EPI / VPD Surveillance · Manual EPID entry · Print after save</div>
+
+                        <div class="cif-section">
+                            <h4>Identification</h4>
+                            <div class="cif-body">
+                                <label>EPID No. (manual) *<input type="text" id="cif_epid" placeholder="PAK/PB/13/26/MR/0001" required></label>
+                                <label>Cross Notified
+                                    <select id="cif_cross"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                </label>
+                                <label>UNIQUE ID<input type="text" id="cif_uid" placeholder="Optional"></label>
+                                <label>Year
+                                    <select id="cif_year"><option>2026</option><option>2025</option><option>2024</option></select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>Part-1 · Case Report (Reporting)</h4>
+                            <div class="cif-body">
+                                <label>Reported By
+                                    <select id="cif_reportedBy"><option value="">—</option><option>Passive Surveillance</option><option>Active Surveillance</option><option>Active Search</option></select>
+                                </label>
+                                <label>Reported From
+                                    <select id="cif_reportedFrom"><option value="">—</option><option>Public Health Facility</option><option>Community</option><option>Private Sector</option></select>
+                                </label>
+                                <label>Name of Reporting Site<input type="text" id="cif_repSite"></label>
+                                <label>Reporting Person<input type="text" id="cif_repPerson"></label>
+                                <label>Designation<input type="text" id="cif_repDesig"></label>
+                                <label>Reporting UC<input type="text" id="cif_repUC"></label>
+                                <label>Reporting Tehsil
+                                    <select id="cif_repTehsil"><option value="">—</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select>
+                                </label>
+                                <label>District<input type="text" id="cif_repDistrict" value="Chakwal"></label>
+                                <label>Province<input type="text" id="cif_repProvince" value="Punjab"></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>Patient Details</h4>
+                            <div class="cif-body">
+                                <label>Patient Name *<input type="text" id="cif_name" required></label>
+                                <label>Father Name<input type="text" id="cif_father"></label>
+                                <label>Sex
+                                    <select id="cif_sex"><option value="">—</option><option>Male</option><option>Female</option><option>TG</option></select>
+                                </label>
+                                <label>Date of Birth<input type="date" id="cif_dob"></label>
+                                <label>Age (months)<input type="number" id="cif_ageMo" min="0" step="1"></label>
+                                <label>Contact No.<input type="text" id="cif_phone"></label>
+                                <label class="cif-full">Complete Address (Village / Street / Mohallah)<input type="text" id="cif_address"></label>
+                                <label>Near Landmark<input type="text" id="cif_landmark"></label>
+                                <label>UC (patient)<input type="text" id="cif_uc"></label>
+                                <label>Tehsil (patient)
+                                    <select id="cif_tehsil"><option value="">—</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select>
+                                </label>
+                                <label>District<input type="text" id="cif_district" value="Chakwal"></label>
+                                <label>Province<input type="text" id="cif_province" value="Punjab"></label>
+                                <label>Nationality<input type="text" id="cif_nationality" value="Pakistani"></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>Clinical Findings &amp; Vaccination</h4>
+                            <div class="cif-body">
+                                <label>Date of Rash Onset<input type="date" id="cif_rashOnset"></label>
+                                <label>Date of Notification<input type="date" id="cif_notification"></label>
+                                <label>Date of Investigation<input type="date" id="cif_investigation"></label>
+                                <div class="cif-full">
+                                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">Signs &amp; Symptoms</div>
+                                    <div class="cif-check">
+                                        <label><input type="checkbox" id="cif_fever"> Fever</label>
+                                        <label><input type="checkbox" id="cif_rash"> Maculopapular Rash</label>
+                                        <label><input type="checkbox" id="cif_cough"> Cough</label>
+                                        <label><input type="checkbox" id="cif_coryza"> Coryza</label>
+                                        <label><input type="checkbox" id="cif_conj"> Conjunctivitis</label>
+                                    </div>
+                                </div>
+                                <div class="cif-full">
+                                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">Complications</div>
+                                    <div class="cif-check">
+                                        <label><input type="checkbox" id="cif_pneu"> Pneumonia</label>
+                                        <label><input type="checkbox" id="cif_diarr"> Diarrhoea</label>
+                                        <label><input type="checkbox" id="cif_enceph"> Encephalitis</label>
+                                        <label><input type="checkbox" id="cif_compOther"> Others</label>
+                                        <label><input type="checkbox" id="cif_compNone"> No</label>
+                                    </div>
+                                </div>
+                                <label>Hospitalized
+                                    <select id="cif_hosp"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                </label>
+                                <label>Hospital name (if yes)<input type="text" id="cif_hospName"></label>
+                                <label>MR doses (Routine EPI)
+                                    <select id="cif_riDoses"><option value="">—</option><option>Zero</option><option>One</option><option>Two</option><option>Unknown</option></select>
+                                </label>
+                                <label>Date of last MR dose<input type="date" id="cif_lastDose"></label>
+                                <label>Verified by
+                                    <select id="cif_vaxVerify"><option value="">—</option><option>Recall</option><option>EPI Card</option></select>
+                                </label>
+                                <label>Zero-dose reason
+                                    <select id="cif_zeroReason"><option value="">—</option><option>Refusal</option><option>Unaware</option><option>Not Eligible</option><option>Missed</option><option>Other</option></select>
+                                </label>
+                                <label>Additional MR doses (SIA/ORI/mop-up)<input type="number" id="cif_siaDoses" min="0"></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>Sample</h4>
+                            <div class="cif-body">
+                                <label>Sample collected
+                                    <select id="cif_sampleYes"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                </label>
+                                <label>Sample type
+                                    <select id="cif_sampleType"><option value="">—</option><option>Serum</option><option>Throat Swab</option><option>Oral Fluid</option></select>
+                                </label>
+                                <label>Date of sample collection<input type="date" id="cif_sampleDate"></label>
+                                <label>Date sample sent to lab<input type="date" id="cif_sampleSent"></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>Source of Infection &amp; Travel</h4>
+                            <div class="cif-body">
+                                <label>Source of infection
+                                    <select id="cif_source"><option value="">—</option><option>School</option><option>Madrassa</option><option>Area</option><option>Hospital/Clinic</option><option>Unknown</option></select>
+                                </label>
+                                <label>School / Madrassa / Hospital / Village name<input type="text" id="cif_sourceName"></label>
+                                <label>Travel 7–23 days before onset
+                                    <select id="cif_travel"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                </label>
+                                <label class="cif-full">Travel details (if yes)<input type="text" id="cif_travelDetail"></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>CIF filled by (District)</h4>
+                            <div class="cif-body">
+                                <label>Name *<input type="text" id="cif_filledBy" placeholder="e.g. Syed Asad Abbas"></label>
+                                <label>Designation<input type="text" id="cif_filledDesig" placeholder="e.g. DSV"></label>
+                                <label>Contact No.<input type="text" id="cif_filledPhone"></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-section">
+                            <h4>Part-3 · Final Classification (optional at investigation)</h4>
+                            <div class="cif-body">
+                                <label>Final classification
+                                    <select id="cif_finalClass">
+                                        <option value="">—</option>
+                                        <option>Lab Confirmed Measles</option>
+                                        <option>Lab Confirmed Rubella</option>
+                                        <option>Epi-Linked Measles</option>
+                                        <option>Epi-Linked Rubella</option>
+                                        <option>Clinically Compatible Measles</option>
+                                        <option>Clinically Compatible Rubella</option>
+                                        <option>Discarded</option>
+                                        <option>Other</option>
+                                    </select>
+                                </label>
+                                <label>Outcome
+                                    <select id="cif_outcome">
+                                        <option value="">—</option>
+                                        <option>Improving</option>
+                                        <option>Recovered</option>
+                                        <option>Alive with Complications</option>
+                                        <option>Lost to follow-up</option>
+                                        <option>Died</option>
+                                        <option>Alive</option>
+                                        <option>Hospitalized</option>
+                                    </select>
+                                </label>
+                                <label>Epidemiological status
+                                    <select id="cif_epiStatus"><option value="">—</option><option>Sporadic</option><option>Part of Outbreak</option></select>
+                                </label>
+                                <label class="cif-full">Comments<textarea id="cif_comments"></textarea></label>
+                            </div>
+                        </div>
+
+                        <div class="cif-actions">
+                            <button type="button" class="btn" onclick="cifSubmit()" style="background:#0d5c3d">💾 Save to Google Sheet</button>
+                            <button type="button" class="btn btn-outline" onclick="cifPrint()">🖨️ Print CIF</button>
+                            <button type="button" class="btn" onclick="cifReset()" style="background:#78909c">↺ Clear Form</button>
+                            <span class="cif-status" id="cifStatus"></span>
+                        </div>
+                        <p style="font-size:12px;color:#666;margin-top:10px">
+                            <strong>Note:</strong> EPID number aap khud likhein (auto nahi). Pehli dafa setup: Google Sheet me Apps Script deploy karke neeche URL set karein.
+                            Script URL: <input type="text" id="cif_scriptUrl" placeholder="https://script.google.com/macros/s/…/exec" style="width:min(100%,420px);padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px">
+                        </p>
+                    </div>
+                </div>
+
             </div>
 
             <div class="section-title">Official Downloads & Reports</div>
@@ -6704,6 +6922,16 @@
             document.querySelectorAll('#mrTabs .emr-tab').forEach(function(b){
                 b.classList.toggle('active', b.getAttribute('data-mr')===mode);
             });
+            const cif = document.getElementById('mrCifPanel');
+            const wrap = document.getElementById('mrTableWrap');
+            const stats = document.getElementById('mrStats');
+            if(mode === 'cif'){
+                if(cif) cif.style.display = 'block';
+                if(wrap) wrap.style.display = 'none';
+                if(stats) stats.innerHTML = '';
+                return;
+            }
+            if(cif) cif.style.display = 'none';
             mrApply();
         }
         function mrClickPanel(key){
@@ -7004,6 +7232,153 @@
             });
             pdf.save('MR_Surveillance_'+mrMode+'_'+new Date().toISOString().slice(0,10)+'.pdf');
         }
+
+        
+        // ===== MR CIF Form =====
+        const CIF_STORAGE_KEY = 'epi_cif_script_url';
+        function cifVal(id){
+            const el = document.getElementById(id);
+            if(!el) return '';
+            if(el.type === 'checkbox') return el.checked ? 'Yes' : 'No';
+            return String(el.value || '').trim();
+        }
+        function cifCollect(){
+            return {
+                timestamp: new Date().toISOString(),
+                epid: cifVal('cif_epid'),
+                crossNotified: cifVal('cif_cross'),
+                uniqueId: cifVal('cif_uid'),
+                year: cifVal('cif_year'),
+                reportedBy: cifVal('cif_reportedBy'),
+                reportedFrom: cifVal('cif_reportedFrom'),
+                reportingSite: cifVal('cif_repSite'),
+                reportingPerson: cifVal('cif_repPerson'),
+                reportingDesignation: cifVal('cif_repDesig'),
+                reportingUC: cifVal('cif_repUC'),
+                reportingTehsil: cifVal('cif_repTehsil'),
+                reportingDistrict: cifVal('cif_repDistrict'),
+                reportingProvince: cifVal('cif_repProvince'),
+                name: cifVal('cif_name'),
+                father: cifVal('cif_father'),
+                sex: cifVal('cif_sex'),
+                dob: cifVal('cif_dob'),
+                ageMonths: cifVal('cif_ageMo'),
+                phone: cifVal('cif_phone'),
+                address: cifVal('cif_address'),
+                landmark: cifVal('cif_landmark'),
+                uc: cifVal('cif_uc'),
+                tehsil: cifVal('cif_tehsil'),
+                district: cifVal('cif_district'),
+                province: cifVal('cif_province'),
+                nationality: cifVal('cif_nationality'),
+                rashOnset: cifVal('cif_rashOnset'),
+                notification: cifVal('cif_notification'),
+                investigation: cifVal('cif_investigation'),
+                fever: cifVal('cif_fever'),
+                rash: cifVal('cif_rash'),
+                cough: cifVal('cif_cough'),
+                coryza: cifVal('cif_coryza'),
+                conjunctivitis: cifVal('cif_conj'),
+                pneumonia: cifVal('cif_pneu'),
+                diarrhoea: cifVal('cif_diarr'),
+                encephalitis: cifVal('cif_enceph'),
+                compOther: cifVal('cif_compOther'),
+                compNone: cifVal('cif_compNone'),
+                hospitalized: cifVal('cif_hosp'),
+                hospitalName: cifVal('cif_hospName'),
+                riDoses: cifVal('cif_riDoses'),
+                lastDose: cifVal('cif_lastDose'),
+                vaxVerifiedBy: cifVal('cif_vaxVerify'),
+                zeroDoseReason: cifVal('cif_zeroReason'),
+                siaDoses: cifVal('cif_siaDoses'),
+                sampleCollected: cifVal('cif_sampleYes'),
+                sampleType: cifVal('cif_sampleType'),
+                sampleDate: cifVal('cif_sampleDate'),
+                sampleSent: cifVal('cif_sampleSent'),
+                sourceInfection: cifVal('cif_source'),
+                sourceName: cifVal('cif_sourceName'),
+                travel: cifVal('cif_travel'),
+                travelDetail: cifVal('cif_travelDetail'),
+                filledBy: cifVal('cif_filledBy'),
+                filledDesignation: cifVal('cif_filledDesig'),
+                filledPhone: cifVal('cif_filledPhone'),
+                finalClassification: cifVal('cif_finalClass'),
+                outcome: cifVal('cif_outcome'),
+                epiStatus: cifVal('cif_epiStatus'),
+                comments: cifVal('cif_comments')
+            };
+        }
+        function cifReset(){
+            document.querySelectorAll('#mrCifPanel input[type="text"], #mrCifPanel input[type="number"], #mrCifPanel input[type="date"], #mrCifPanel textarea').forEach(function(el){
+                if(el.id === 'cif_scriptUrl') return;
+                el.value = '';
+            });
+            document.querySelectorAll('#mrCifPanel select').forEach(function(el){ el.selectedIndex = 0; });
+            document.querySelectorAll('#mrCifPanel input[type="checkbox"]').forEach(function(el){ el.checked = false; });
+            const d1 = document.getElementById('cif_repDistrict'); if(d1) d1.value = 'Chakwal';
+            const d2 = document.getElementById('cif_district'); if(d2) d2.value = 'Chakwal';
+            const p1 = document.getElementById('cif_repProvince'); if(p1) p1.value = 'Punjab';
+            const p2 = document.getElementById('cif_province'); if(p2) p2.value = 'Punjab';
+            const n = document.getElementById('cif_nationality'); if(n) n.value = 'Pakistani';
+            const st = document.getElementById('cifStatus'); if(st) st.textContent = '';
+        }
+        function cifPrint(){
+            window.print();
+        }
+        async function cifSubmit(){
+            const st = document.getElementById('cifStatus');
+            const data = cifCollect();
+            if(!data.epid){
+                alert('EPID No. likhna zaroori hai (manual).');
+                return;
+            }
+            if(!data.name){
+                alert('Patient Name zaroori hai.');
+                return;
+            }
+            let url = cifVal('cif_scriptUrl');
+            if(!url){
+                try{ url = localStorage.getItem(CIF_STORAGE_KEY) || ''; }catch(e){}
+            }
+            if(url){
+                try{ localStorage.setItem(CIF_STORAGE_KEY, url); }catch(e){}
+            }
+            if(!url){
+                // Local backup if script not configured yet
+                try{
+                    const key = 'epi_cif_local_queue';
+                    const q = JSON.parse(localStorage.getItem(key) || '[]');
+                    q.push(data);
+                    localStorage.setItem(key, JSON.stringify(q));
+                }catch(e){}
+                if(st) st.textContent = 'Saved locally (Script URL missing). Apps Script deploy karke URL yahan paste karein, phir dubara Save.';
+                alert('Google Apps Script URL abhi set nahi.\n\n1) Sheet me Script deploy karein\n2) Web App URL is form me paste karein\n3) Phir Save dabayein\n\nAbhi data browser me local backup ho gaya.');
+                return;
+            }
+            if(st) st.textContent = 'Saving to Google Sheet…';
+            try{
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                    body: JSON.stringify(data)
+                });
+                // no-cors: cannot read response; assume OK
+                if(st) st.textContent = 'Submitted (EPID '+data.epid+'). Sheet refresh karke verify karein. Print available.';
+            }catch(err){
+                console.error(err);
+                if(st) st.textContent = 'Save failed: '+(err.message||err);
+                alert('Save failed. Script URL / deployment check karein.\n'+err);
+            }
+        }
+        // restore script url
+        document.addEventListener('DOMContentLoaded', function(){
+            try{
+                const u = localStorage.getItem(CIF_STORAGE_KEY);
+                const el = document.getElementById('cif_scriptUrl');
+                if(u && el) el.value = u;
+            }catch(e){}
+        });
 
         function sortNewsList(){
             const list = document.querySelector('.sidebar .news-list');
