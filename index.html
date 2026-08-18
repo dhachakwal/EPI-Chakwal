@@ -752,6 +752,9 @@
             <div class="emr-card" id="mrCard">
                 <p class="emr-note"><strong>Source:</strong> Measles Case-Based Surveillance Line List (EPI Chakwal 2026). Search by <strong>EPID No.</strong></p>
                 <div class="emr-filter">
+                    <label>Period (Year)
+                        <select id="mrYear" onchange="mrOnYear()"><option value="">All years</option></select>
+                    </label>
                     <label>Month
                         <select id="mrMonth" onchange="mrApply()"><option value="">All months</option></select>
                     </label>
@@ -791,6 +794,7 @@
                     <button type="button" class="emr-tab" data-mr="vax" onclick="mrSwitch('vax')">5. Vaccination Status</button>
                     <button type="button" class="emr-tab" data-mr="outcome" onclick="mrSwitch('outcome')">6. Outcome</button>
                     <button type="button" class="emr-tab" data-mr="hf" onclick="mrSwitch('hf')">7. Reporting HF</button>
+                    <button type="button" class="emr-tab" data-mr="rates" onclick="mrSwitch('rates')">8. Discarded & Incidence Rates</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -6389,26 +6393,23 @@
             }
         }
         
+
         // ===== MR Surveillance (Measles-Rubella) =====
         const MR_SHEET_ID = '1p_N06q0FcGdUafIY15gijWy9E0iSu7ZLi7Zi-MGoduI';
-        const MR_COLS = {
-            sr:0, epidWeek:1, month:2, hf:3, hfType:4, repDistrict:5, repProvince:6, epid:7,
-            name:8, father:9, phone:10, village:11, uc:12, tehsil:13, district:14, province:15,
-            ageMo:16, sex:17, rashOnset:18, notification:19, investigation:20,
-            riDoses:21, siaDoses:22, lastDose:23, specimen1:24, specimen2:25, sentLab:26, recvLab:27,
-            specimenCond:28, resultRecv:29, labId:30, labReport:31, travel:32,
-            rash:33, fever:34, cough:35, coryza:36, conj:37, otherSym:38, complications:39,
-            outcome:40, labMeasles:41, labRubella:42
-        };
         let mrRows = [];
+        let mrPop = []; // {tehsil, population}
         let mrMode = 'list';
         let mrLastExport = {headers:[], rows:[]};
+        let mrPanelFilter = null; // null | 'all' | 'measlesPos' | 'rubellaPos' | 'zeroDose' | 'death' | 'male' | 'female'
 
-        function mrCell(r, i){
-            if(!r || i==null) return '';
-            const v = r[i];
-            if(v==null) return '';
-            return String(v).trim();
+        function mrCell(r, key){
+            if(!r) return '';
+            if(typeof key === 'number') {
+                const v = r._cells ? r._cells[key] : '';
+                return v==null?'':String(v).trim();
+            }
+            const v = r[key];
+            return v==null?'':String(v).trim();
         }
         function mrParseGvizCell(c){
             if(!c) return '';
@@ -6424,35 +6425,142 @@
         }
         function mrIsPos(s){
             const v = String(s||'').toUpperCase();
-            return v.indexOf('POS')>=0 || v.indexOf('+VE')>=0 || v.indexOf('POSITIVE')>=0;
+            return v.indexOf('POS')>=0 || v.indexOf('+VE')>=0 || v.indexOf('+ VE')>=0;
         }
         function mrIsNeg(s){
             const v = String(s||'').toUpperCase();
-            return v.indexOf('NEG')>=0 || v.indexOf('-VE')>=0 || v.indexOf('NEGATIVE')>=0;
+            return v.indexOf('NEG')>=0 || v.indexOf('-VE')>=0 || v.indexOf('- VE')>=0 || v.indexOf('DISCARD')>=0;
         }
-
+        function mrMapHeaders(cols){
+            const labels = (cols||[]).map(function(c){ return String((c&&c.label)||'').toLowerCase().replace(/\s+/g,' '); });
+            function find(parts){
+                for(let i=0;i<labels.length;i++){
+                    let ok=true;
+                    for(let p=0;p<parts.length;p++){ if(labels[i].indexOf(parts[p])<0){ ok=false; break; } }
+                    if(ok) return i;
+                }
+                return -1;
+            }
+            return {
+                epid: find(['epid']),
+                name: find(['name of the case'])>=0?find(['name of the case']):find(['name']),
+                father: find(['father']),
+                phone: find(['contact']),
+                uc: find(['uc'])>=0?find(['uc']):find(['union']),
+                tehsil: find(['tehsil']),
+                hf: find(['reporting hf'])>=0?find(['reporting hf']):(find(['name of reporting'])>=0?find(['name of reporting']):find(['health facility'])),
+                hfType: find(['type of reporting']),
+                month: find(['month']),
+                ageMo: find(['age']),
+                sex: find(['sex']),
+                rashOnset: find(['rash onset']),
+                outcome: find(['outcome']),
+                labMeasles: find(['lab result measles'])>=0?find(['lab result measles']):find(['measles igm']),
+                labRubella: find(['lab result rubella'])>=0?find(['lab result rubella']):find(['rubella igm']),
+                riDoses: find(['routine']),
+                siaDoses: find(['sia']),
+                lastDose: find(['last dose']),
+                specimen1: find(['specimen-i'])>=0?find(['specimen-i']):find(['serum']),
+                labId: find(['lab id']),
+                specimenCond: find(['condition of specimen']),
+                finalClass: find(['final classification'])
+            };
+        }
+        function mrRowFromCells(cells, map, year){
+            function g(idx){ return (idx>=0 && cells[idx]!=null) ? String(cells[idx]).trim() : ''; }
+            return {
+                year: year,
+                epid: g(map.epid),
+                name: g(map.name),
+                father: g(map.father),
+                phone: g(map.phone),
+                uc: g(map.uc),
+                tehsil: g(map.tehsil),
+                hf: g(map.hf),
+                hfType: g(map.hfType),
+                month: g(map.month),
+                ageMo: g(map.ageMo),
+                sex: g(map.sex),
+                rashOnset: g(map.rashOnset),
+                outcome: g(map.outcome),
+                labMeasles: g(map.labMeasles),
+                labRubella: g(map.labRubella),
+                riDoses: g(map.riDoses),
+                siaDoses: g(map.siaDoses),
+                lastDose: g(map.lastDose),
+                specimen1: g(map.specimen1),
+                labId: g(map.labId),
+                specimenCond: g(map.specimenCond),
+                finalClass: g(map.finalClass),
+                _cells: cells
+            };
+        }
+        async function mrFetchSheet(sheetName){
+            const url = 'https://docs.google.com/spreadsheets/d/'+MR_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(sheetName);
+            const res = await fetch(url);
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            const text = await res.text();
+            const a=text.indexOf('{'), b=text.lastIndexOf('}');
+            return JSON.parse(text.substring(a,b+1));
+        }
         async function loadMrData(){
             const status = document.getElementById('mrStatus');
             const meta = document.getElementById('mrMeta');
-            if(status){ status.style.display='block'; status.textContent='Loading MR surveillance sheet…'; }
+            if(status){ status.style.display='block'; status.textContent='Loading MR year sheets…'; }
             try{
-                const url = 'https://docs.google.com/spreadsheets/d/'+MR_SHEET_ID+'/gviz/tq?tqx=out:json&gid=0';
-                const res = await fetch(url);
-                const text = await res.text();
-                const a = text.indexOf('{'), b = text.lastIndexOf('}');
-                const data = JSON.parse(text.substring(a,b+1));
-                const rows = (data.table && data.table.rows) || [];
-                mrRows = rows.map(function(r){
-                    const cells = r.c || [];
-                    const out = [];
-                    for(let i=0;i<43;i++) out.push(mrParseGvizCell(cells[i]));
-                    return out;
-                }).filter(function(r){
-                    return mrCell(r, MR_COLS.epid) || mrCell(r, MR_COLS.name);
-                });
+                const yearSheets = ['2026','2025','2024','2023','2022'];
+                let all = [];
+                let loaded = [];
+                for(let yi=0; yi<yearSheets.length; yi++){
+                    const y = yearSheets[yi];
+                    try{
+                        if(status) status.textContent = 'Loading MR '+y+'…';
+                        const data = await mrFetchSheet(y);
+                        const cols = (data.table && data.table.cols) || [];
+                        const rows = (data.table && data.table.rows) || [];
+                        // skip population-style sheets (few cols named Tehsil/Population)
+                        const lab0 = String((cols[0]&&cols[0].label)||'').toLowerCase();
+                        if(lab0 === 'tehsil' && cols.length <= 12) continue;
+                        const map = mrMapHeaders(cols);
+                        if(map.epid < 0 && map.name < 0) continue;
+                        let n=0;
+                        rows.forEach(function(r){
+                            const cells = (r.c||[]).map(mrParseGvizCell);
+                            const obj = mrRowFromCells(cells, map, y);
+                            if(obj.epid || obj.name){ all.push(obj); n++; }
+                        });
+                        if(n) loaded.push(y+' ('+n+')');
+                    }catch(e){ console.warn('MR year', y, e); }
+                }
+                mrRows = all;
+
+                // Population from Sheet1 (columns A Tehsil, B Population — rates C & D computed)
+                mrPop = [];
+                try{
+                    const pdata = await mrFetchSheet('Sheet1');
+                    const prows = (pdata.table && pdata.table.rows) || [];
+                    prows.forEach(function(r){
+                        const cells = (r.c||[]).map(mrParseGvizCell);
+                        const t = String(cells[0]||'').trim();
+                        const p = parseFloat(String(cells[1]||'').replace(/,/g,''));
+                        if(t && t.toLowerCase()!=='total' && !isNaN(p)) mrPop.push({tehsil:t, population:p});
+                        if(t && t.toLowerCase()==='total' && !isNaN(p)) mrPop.push({tehsil:'Total', population:p});
+                    });
+                }catch(pe){ console.warn('MR pop', pe); }
+
+                mrPanelFilter = null;
                 mrFillFilters();
+                // default year = latest available in data
+                const years = {};
+                mrRows.forEach(function(r){ if(r.year) years[r.year]=1; });
+                const ysel = document.getElementById('mrYear');
+                const ykeys = Object.keys(years).sort().reverse();
+                if(ysel && ykeys.length){
+                    ysel.value = ykeys[0];
+                    mrOnYear(true);
+                }
                 mrApply();
-                if(meta) meta.textContent = mrRows.length.toLocaleString()+' cases · '+new Date().toLocaleString();
+                if(meta) meta.textContent = mrRows.length.toLocaleString()+' cases · '+loaded.join(' + ')+' · '+new Date().toLocaleString();
                 if(status){ status.style.display='none'; status.textContent=''; }
             }catch(err){
                 console.error(err);
@@ -6461,194 +6569,271 @@
             }
         }
         function mrFillFilters(){
-            const months = {}, tehsils = {};
+            const years={}, months={}, tehsils={};
             mrRows.forEach(function(r){
-                const m = mrCell(r, MR_COLS.month); if(m) months[m]=1;
-                const t = mrCell(r, MR_COLS.tehsil); if(t) tehsils[t]=1;
+                if(r.year) years[r.year]=1;
+                if(r.month) months[r.month]=1;
+                if(r.tehsil) tehsils[r.tehsil]=1;
             });
-            const msel = document.getElementById('mrMonth');
-            const tsel = document.getElementById('mrTehsil');
-            if(msel){
-                const cur = msel.value;
-                msel.innerHTML = '<option value="">All months</option>';
-                Object.keys(months).sort().forEach(function(m){ msel.innerHTML += '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>'; });
-                if(cur && months[cur]) msel.value = cur;
+            const ysel=document.getElementById('mrYear');
+            if(ysel){
+                const cur=ysel.value;
+                ysel.innerHTML='<option value="">All years</option>';
+                Object.keys(years).sort().reverse().forEach(function(y){
+                    ysel.innerHTML += '<option value="'+y+'">'+y+'</option>';
+                });
+                if(cur && years[cur]) ysel.value=cur;
             }
+            mrFillMonths();
+            const tsel=document.getElementById('mrTehsil');
             if(tsel){
-                const cur = tsel.value;
-                tsel.innerHTML = '<option value="">All Tehsils</option>';
-                Object.keys(tehsils).sort().forEach(function(t){ tsel.innerHTML += '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>'; });
-                if(cur && tehsils[cur]) tsel.value = cur;
+                const cur=tsel.value;
+                tsel.innerHTML='<option value="">All Tehsils</option>';
+                Object.keys(tehsils).sort().forEach(function(t){
+                    tsel.innerHTML += '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+                });
+                if(cur && tehsils[cur]) tsel.value=cur;
             }
             mrOnTehsil(true);
         }
-        function mrOnTehsil(silent){
-            const t = (document.getElementById('mrTehsil')||{}).value || '';
-            const ucs = {};
+        function mrFillMonths(){
+            const year=(document.getElementById('mrYear')||{}).value||'';
+            const months={};
             mrRows.forEach(function(r){
-                if(t && mrCell(r, MR_COLS.tehsil) !== t) return;
-                const u = mrCell(r, MR_COLS.uc); if(u) ucs[u]=1;
+                if(year && r.year!==year) return;
+                if(r.month) months[r.month]=1;
             });
-            const usel = document.getElementById('mrUC');
+            const msel=document.getElementById('mrMonth');
+            if(!msel) return;
+            const cur=msel.value;
+            msel.innerHTML='<option value="">All months</option>';
+            Object.keys(months).sort().forEach(function(m){
+                msel.innerHTML += '<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>';
+            });
+            if(cur && months[cur]) msel.value=cur;
+            else msel.value='';
+        }
+        function mrOnYear(silent){
+            mrFillMonths();
+            if(!silent) mrApply();
+        }
+        function mrOnTehsil(silent){
+            const t=(document.getElementById('mrTehsil')||{}).value||'';
+            const year=(document.getElementById('mrYear')||{}).value||'';
+            const ucs={};
+            mrRows.forEach(function(r){
+                if(year && r.year!==year) return;
+                if(t && r.tehsil!==t) return;
+                if(r.uc) ucs[r.uc]=1;
+            });
+            const usel=document.getElementById('mrUC');
             if(usel){
-                const cur = usel.value;
-                usel.innerHTML = '<option value="">All UCs</option>';
-                Object.keys(ucs).sort().forEach(function(u){ usel.innerHTML += '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>'; });
-                if(cur && ucs[cur]) usel.value = cur;
+                const cur=usel.value;
+                usel.innerHTML='<option value="">All UCs</option>';
+                Object.keys(ucs).sort().forEach(function(u){
+                    usel.innerHTML += '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';
+                });
+                if(cur && ucs[cur]) usel.value=cur;
             }
             if(!silent) mrApply();
         }
-        function mrFiltered(){
-            const month = (document.getElementById('mrMonth')||{}).value || '';
-            const t = (document.getElementById('mrTehsil')||{}).value || '';
-            const u = (document.getElementById('mrUC')||{}).value || '';
-            const q = ((document.getElementById('mrSearch')||{}).value || '').trim().toLowerCase();
+        function mrBaseFiltered(){
+            const year=(document.getElementById('mrYear')||{}).value||'';
+            const month=(document.getElementById('mrMonth')||{}).value||'';
+            const t=(document.getElementById('mrTehsil')||{}).value||'';
+            const u=(document.getElementById('mrUC')||{}).value||'';
+            const q=((document.getElementById('mrSearch')||{}).value||'').trim().toLowerCase();
             return mrRows.filter(function(r){
-                if(month && mrCell(r, MR_COLS.month) !== month) return false;
-                if(t && mrCell(r, MR_COLS.tehsil) !== t) return false;
-                if(u && mrCell(r, MR_COLS.uc) !== u) return false;
+                if(year && r.year!==year) return false;
+                if(month && r.month!==month) return false;
+                if(t && r.tehsil!==t) return false;
+                if(u && r.uc!==u) return false;
                 if(q){
-                    const epid = mrCell(r, MR_COLS.epid).toLowerCase();
-                    const name = mrCell(r, MR_COLS.name).toLowerCase();
+                    const epid=(r.epid||'').toLowerCase();
+                    const name=(r.name||'').toLowerCase();
                     if(epid.indexOf(q)<0 && name.indexOf(q)<0) return false;
                 }
                 return true;
             });
         }
+        function mrMatchPanel(r, key){
+            if(!key || key==='all') return true;
+            if(key==='measlesPos') return mrIsPos(r.labMeasles);
+            if(key==='rubellaPos') return mrIsPos(r.labRubella);
+            if(key==='zeroDose'){ const ri=parseInt(r.riDoses,10); return !isNaN(ri) && ri===0; }
+            if(key==='death'){ const o=(r.outcome||'').toLowerCase(); return o.indexOf('death')>=0||o.indexOf('dead')>=0; }
+            if(key==='male'){ const s=(r.sex||'').toUpperCase(); return s.indexOf('M')===0 && s.indexOf('F')!==0; }
+            if(key==='female'){ return (r.sex||'').toUpperCase().indexOf('F')===0; }
+            if(key==='discarded'){ return mrIsNeg(r.labMeasles) && mrIsNeg(r.labRubella); }
+            return true;
+        }
+        function mrFiltered(){
+            return mrBaseFiltered().filter(function(r){ return mrMatchPanel(r, mrPanelFilter); });
+        }
         function mrReset(){
-            ['mrMonth','mrTehsil','mrUC','mrSearch'].forEach(function(id){
-                const el = document.getElementById(id); if(el) el.value = '';
+            ['mrYear','mrMonth','mrTehsil','mrUC','mrSearch'].forEach(function(id){
+                const el=document.getElementById(id); if(el) el.value='';
             });
+            mrPanelFilter=null;
             mrFillFilters();
             mrApply();
         }
         function mrSwitch(mode){
-            mrMode = mode;
+            mrMode=mode;
             document.querySelectorAll('#mrTabs .emr-tab').forEach(function(b){
                 b.classList.toggle('active', b.getAttribute('data-mr')===mode);
             });
             mrApply();
         }
+        function mrClickPanel(key){
+            mrPanelFilter = (mrPanelFilter===key) ? null : key;
+            // show list for drill-down
+            if(key && key!=='all'){
+                mrMode='list';
+                document.querySelectorAll('#mrTabs .emr-tab').forEach(function(b){
+                    b.classList.toggle('active', b.getAttribute('data-mr')==='list');
+                });
+            }
+            mrApply();
+        }
         function mrSetStats(items){
-            const box = document.getElementById('mrStats');
+            const box=document.getElementById('mrStats');
             if(!box) return;
-            box.innerHTML = (items||[]).map(function(it){
+            box.innerHTML=(items||[]).map(function(it){
                 return '<div class="emr-stat"><div class="emr-stat-num">'+it.n+'</div><div class="emr-stat-lbl">'+it.l+'</div></div>';
             }).join('');
         }
         function mrRenderTable(headers, rowsHtml, exportRows, totalCells){
-            const wrap = document.getElementById('mrTableWrap');
-            const head = document.getElementById('mrHead');
-            const body = document.getElementById('mrBody');
+            const wrap=document.getElementById('mrTableWrap');
+            const head=document.getElementById('mrHead');
+            const body=document.getElementById('mrBody');
             if(!wrap||!head||!body) return;
-            head.innerHTML = '<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
-            let htmlBody = rowsHtml || ('<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>');
-            if(totalCells && totalCells.length){
-                htmlBody += '<tr style="background:#e8f5e9">'+totalCells.map(function(c,i){
+            head.innerHTML='<tr>'+headers.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr>';
+            let htmlBody=rowsHtml||('<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>');
+            if(totalCells&&totalCells.length){
+                htmlBody+='<tr style="background:#e8f5e9">'+totalCells.map(function(c,i){
                     return '<td style="font-weight:800;color:#0d5c3d">'+(i===0?'<strong>'+c+'</strong>':c)+'</td>';
                 }).join('')+'</tr>';
             }
-            body.innerHTML = htmlBody;
-            wrap.style.display = 'block';
-            const exp = (exportRows||[]).slice();
+            body.innerHTML=htmlBody;
+            wrap.style.display='block';
+            const exp=(exportRows||[]).slice();
             if(totalCells) exp.push(totalCells);
-            mrLastExport = {headers:headers, rows:exp};
+            mrLastExport={headers:headers, rows:exp};
         }
-        function mrUpdatePanel(data){
-            const grid = document.getElementById('mrSummaryGrid');
-            const scope = document.getElementById('mrSummaryScope');
-            const cnt = document.getElementById('mrFilterCount');
-            if(cnt) cnt.textContent = data.length.toLocaleString();
-            const t = (document.getElementById('mrTehsil')||{}).value || '';
-            const u = (document.getElementById('mrUC')||{}).value || '';
-            const month = (document.getElementById('mrMonth')||{}).value || '';
-            let sc = 'Scope: District Chakwal';
-            if(t) sc = 'Scope: Tehsil '+t;
-            if(u) sc += ' · UC '+u;
-            if(month) sc += ' · '+month;
-            if(scope) scope.textContent = sc;
-            let measlesPos=0, rubellaPos=0, pending=0, death=0, male=0, female=0, zeroDose=0;
-            data.forEach(function(r){
-                const lm = mrCell(r, MR_COLS.labMeasles);
-                const lr = mrCell(r, MR_COLS.labRubella);
-                if(mrIsPos(lm)) measlesPos++;
-                if(mrIsPos(lr)) rubellaPos++;
-                if(!lm && !lr) pending++;
-                else if(!mrIsPos(lm) && !mrIsNeg(lm) && !mrIsPos(lr) && !mrIsNeg(lr) && lm+lr==='') pending++;
-                const out = mrCell(r, MR_COLS.outcome).toLowerCase();
-                if(out.indexOf('death')>=0 || out.indexOf('dead')>=0) death++;
-                const sex = mrCell(r, MR_COLS.sex).toUpperCase();
-                if(sex.indexOf('F')===0) female++; else if(sex) male++;
-                const ri = parseInt(mrCell(r, MR_COLS.riDoses),10);
-                if(!isNaN(ri) && ri===0) zeroDose++;
+        function mrPopOf(tehsil){
+            const n=String(tehsil||'').toLowerCase();
+            for(let i=0;i<mrPop.length;i++){
+                if(String(mrPop[i].tehsil).toLowerCase()===n) return mrPop[i].population;
+            }
+            return 0;
+        }
+        function mrDistrictPop(){
+            for(let i=0;i<mrPop.length;i++){
+                if(String(mrPop[i].tehsil).toLowerCase()==='total') return mrPop[i].population;
+            }
+            return mrPop.reduce(function(s,x){ return s+(x.tehsil.toLowerCase()==='total'?0:x.population); },0);
+        }
+        function mrRate(num, pop){
+            if(!pop) return '—';
+            return (num/pop*100000).toFixed(2);
+        }
+        function mrUpdatePanel(baseData){
+            const grid=document.getElementById('mrSummaryGrid');
+            const scope=document.getElementById('mrSummaryScope');
+            const cnt=document.getElementById('mrFilterCount');
+            if(cnt) cnt.textContent=baseData.length.toLocaleString();
+            const year=(document.getElementById('mrYear')||{}).value||'';
+            const t=(document.getElementById('mrTehsil')||{}).value||'';
+            const u=(document.getElementById('mrUC')||{}).value||'';
+            const month=(document.getElementById('mrMonth')||{}).value||'';
+            let sc='Scope: District Chakwal';
+            if(year) sc+=' · '+year;
+            if(t) sc+=' · Tehsil '+t;
+            if(u) sc+=' · UC '+u;
+            if(month) sc+=' · '+month;
+            if(mrPanelFilter) sc+=' · filter: '+mrPanelFilter;
+            if(scope) scope.textContent=sc;
+            let measlesPos=0,rubellaPos=0,death=0,male=0,female=0,zeroDose=0,discarded=0;
+            baseData.forEach(function(r){
+                if(mrIsPos(r.labMeasles)) measlesPos++;
+                if(mrIsPos(r.labRubella)) rubellaPos++;
+                if(mrIsNeg(r.labMeasles) && mrIsNeg(r.labRubella)) discarded++;
+                const out=(r.outcome||'').toLowerCase();
+                if(out.indexOf('death')>=0||out.indexOf('dead')>=0) death++;
+                const sex=(r.sex||'').toUpperCase();
+                if(sex.indexOf('F')===0) female++;
+                else if(sex.indexOf('M')===0) male++;
+                const ri=parseInt(r.riDoses,10);
+                if(!isNaN(ri)&&ri===0) zeroDose++;
             });
             if(!grid) return;
-            const items = [
-                {n:data.length.toLocaleString(), l:'Total Cases'},
-                {n:measlesPos.toLocaleString(), l:'Measles IgM +ve'},
-                {n:rubellaPos.toLocaleString(), l:'Rubella IgM +ve'},
-                {n:zeroDose.toLocaleString(), l:'Zero-dose (RI)'},
-                {n:death.toLocaleString(), l:'Deaths'},
-                {n:male.toLocaleString(), l:'Male'},
-                {n:female.toLocaleString(), l:'Female'}
+            const items=[
+                {n:baseData.length.toLocaleString(), l:'Total Cases', key:'all'},
+                {n:measlesPos.toLocaleString(), l:'Measles IgM +ve', key:'measlesPos'},
+                {n:rubellaPos.toLocaleString(), l:'Rubella IgM +ve', key:'rubellaPos'},
+                {n:zeroDose.toLocaleString(), l:'Zero-dose (RI)', key:'zeroDose'},
+                {n:death.toLocaleString(), l:'Deaths', key:'death'},
+                {n:male.toLocaleString(), l:'Male', key:'male'},
+                {n:female.toLocaleString(), l:'Female', key:'female'}
             ];
-            grid.innerHTML = items.map(function(it){
-                return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+            grid.innerHTML=items.map(function(it){
+                const active = mrPanelFilter===it.key ? 'border:2px solid #0d5c3d;box-shadow:0 0 0 2px rgba(13,92,61,.2)' : '';
+                return '<div class="emr-sum-item" style="cursor:pointer;'+active+'" onclick="mrClickPanel(\''+it.key+'\')" title="Click to view cases"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
         }
         function mrApply(){
+            const base = mrBaseFiltered();
+            mrUpdatePanel(base);
             const data = mrFiltered();
-            mrUpdatePanel(data);
             if(!mrRows.length){
                 mrSetStats([]);
                 mrRenderTable(['Info'], '<tr><td>Click Refresh Data to load the MR line list.</td></tr>', [], null);
                 return;
             }
-            if(mrMode === 'list'){
-                const headers = ['Sr','EPID No.','Name','Father','Age (mo)','Sex','Tehsil','UC','HF','Rash onset','Outcome','Measles Lab','Rubella Lab'];
-                const exp = [];
-                let i=0;
-                const rowsHtml = data.map(function(r){
+            if(mrMode==='list'){
+                const headers=['Sr','Year','EPID No.','Name','Father','Age (mo)','Sex','Tehsil','UC','HF','Rash onset','Outcome','Measles Lab','Rubella Lab'];
+                const exp=[]; let i=0;
+                const rowsHtml=data.map(function(r){
                     i++;
-                    const row = [i, mrCell(r,MR_COLS.epid), mrCell(r,MR_COLS.name), mrCell(r,MR_COLS.father), mrCell(r,MR_COLS.ageMo), mrCell(r,MR_COLS.sex), mrCell(r,MR_COLS.tehsil), mrCell(r,MR_COLS.uc), mrCell(r,MR_COLS.hf), mrCell(r,MR_COLS.rashOnset), mrCell(r,MR_COLS.outcome), mrCell(r,MR_COLS.labMeasles), mrCell(r,MR_COLS.labRubella)];
+                    const row=[i,r.year,r.epid,r.name,r.father,r.ageMo,r.sex,r.tehsil,r.uc,r.hf,r.rashOnset,r.outcome,r.labMeasles,r.labRubella];
                     exp.push(row);
-                    return '<tr>'+row.map(function(c){ return '<td>'+c+'</td>'; }).join('')+'</tr>';
+                    return '<tr>'+row.map(function(c){return '<td>'+(c||'')+'</td>';}).join('')+'</tr>';
                 }).join('');
-                mrSetStats([{n:data.length, l:'Cases'},{n: new Set(data.map(function(r){return mrCell(r,MR_COLS.tehsil);})).size, l:'Tehsils'}]);
+                mrSetStats([{n:data.length,l:'Cases shown'},{n:base.length,l:'In filters'}]);
                 mrRenderTable(headers, rowsHtml, exp, null);
             }
-            else if(mrMode === 'tehsil'){
-                const map = {};
+            else if(mrMode==='tehsil'){
+                const map={};
                 data.forEach(function(r){
-                    const t = mrCell(r, MR_COLS.tehsil)||'—';
-                    if(!map[t]) map[t]={n:0, mPos:0, rPos:0, death:0};
+                    const t=r.tehsil||'—';
+                    if(!map[t]) map[t]={n:0,mPos:0,rPos:0,death:0,disc:0};
                     map[t].n++;
-                    if(mrIsPos(mrCell(r,MR_COLS.labMeasles))) map[t].mPos++;
-                    if(mrIsPos(mrCell(r,MR_COLS.labRubella))) map[t].rPos++;
-                    if((mrCell(r,MR_COLS.outcome)||'').toLowerCase().indexOf('death')>=0) map[t].death++;
+                    if(mrIsPos(r.labMeasles)) map[t].mPos++;
+                    if(mrIsPos(r.labRubella)) map[t].rPos++;
+                    if(mrIsNeg(r.labMeasles)&&mrIsNeg(r.labRubella)) map[t].disc++;
+                    if((r.outcome||'').toLowerCase().indexOf('death')>=0) map[t].death++;
                 });
-                const list = Object.keys(map).sort();
-                const headers = ['Sr','Tehsil','Cases','Measles +ve','Rubella +ve','Deaths'];
-                const exp=[]; let i=0, sumN=0,sumM=0,sumR=0,sumD=0;
-                const rowsHtml = list.map(function(t){
-                    i++; const x=map[t]; sumN+=x.n; sumM+=x.mPos; sumR+=x.rPos; sumD+=x.death;
-                    const row=[i,t,x.n,x.mPos,x.rPos,x.death]; exp.push(row);
-                    return '<tr><td>'+i+'</td><td>'+t+'</td><td><strong>'+x.n+'</strong></td><td>'+x.mPos+'</td><td>'+x.rPos+'</td><td>'+x.death+'</td></tr>';
+                const list=Object.keys(map).sort();
+                const headers=['Sr','Tehsil','Cases','Measles +ve','Rubella +ve','Discarded (Neg)','Deaths'];
+                const exp=[]; let i=0,sN=0,sM=0,sR=0,sD=0,sDisc=0;
+                const rowsHtml=list.map(function(t){
+                    i++; const x=map[t]; sN+=x.n;sM+=x.mPos;sR+=x.rPos;sD+=x.death;sDisc+=x.disc;
+                    const row=[i,t,x.n,x.mPos,x.rPos,x.disc,x.death]; exp.push(row);
+                    return '<tr><td>'+i+'</td><td>'+t+'</td><td><strong>'+x.n+'</strong></td><td>'+x.mPos+'</td><td>'+x.rPos+'</td><td>'+x.disc+'</td><td>'+x.death+'</td></tr>';
                 }).join('');
-                mrSetStats([{n:sumN,l:'Cases'},{n:list.length,l:'Tehsils'}]);
-                mrRenderTable(headers, rowsHtml, exp, ['Total','',sumN,sumM,sumR,sumD]);
+                mrSetStats([{n:sN,l:'Cases'}]);
+                mrRenderTable(headers, rowsHtml, exp, ['Total','',sN,sM,sR,sDisc,sD]);
             }
-            else if(mrMode === 'uc'){
-                const map = {};
+            else if(mrMode==='uc'){
+                const map={};
                 data.forEach(function(r){
-                    const t = mrCell(r, MR_COLS.tehsil)||'—';
-                    const u = mrCell(r, MR_COLS.uc)||'—';
-                    const k = t+'||'+u;
+                    const t=r.tehsil||'—', u=r.uc||'—', k=t+'||'+u;
                     if(!map[k]) map[k]={tehsil:t,uc:u,n:0,mPos:0};
                     map[k].n++;
-                    if(mrIsPos(mrCell(r,MR_COLS.labMeasles))) map[k].mPos++;
+                    if(mrIsPos(r.labMeasles)) map[k].mPos++;
                 });
-                const list = Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){
+                const list=Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){
                     if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1;
                     return a.uc<b.uc?-1:1;
                 });
@@ -6658,56 +6843,46 @@
                     i++; sum+=x.n; sumM+=x.mPos; const row=[i,x.tehsil,x.uc,x.n,x.mPos]; exp.push(row);
                     return '<tr><td>'+i+'</td><td>'+x.tehsil+'</td><td>'+x.uc+'</td><td><strong>'+x.n+'</strong></td><td>'+x.mPos+'</td></tr>';
                 }).join('');
-                mrSetStats([{n:sum,l:'Cases'},{n:list.length,l:'UCs'}]);
                 mrRenderTable(headers, rowsHtml, exp, ['Total','','',sum,sumM]);
             }
-            else if(mrMode === 'lab'){
-                const headers=['Sr','EPID No.','Name','Tehsil','Specimen I','Lab ID','Measles Lab','Rubella Lab','Condition'];
+            else if(mrMode==='lab'){
+                const headers=['Sr','Year','EPID No.','Name','Tehsil','Specimen I','Lab ID','Measles Lab','Rubella Lab','Condition'];
                 const exp=[]; let i=0;
                 const rowsHtml=data.map(function(r){
                     i++;
-                    const row=[i,mrCell(r,MR_COLS.epid),mrCell(r,MR_COLS.name),mrCell(r,MR_COLS.tehsil),mrCell(r,MR_COLS.specimen1),mrCell(r,MR_COLS.labId),mrCell(r,MR_COLS.labMeasles),mrCell(r,MR_COLS.labRubella),mrCell(r,MR_COLS.specimenCond)];
+                    const row=[i,r.year,r.epid,r.name,r.tehsil,r.specimen1,r.labId,r.labMeasles,r.labRubella,r.specimenCond];
                     exp.push(row);
-                    return '<tr>'+row.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+                    return '<tr>'+row.map(function(c){return '<td>'+(c||'')+'</td>';}).join('')+'</tr>';
                 }).join('');
-                mrSetStats([{n:data.length,l:'Cases'}]);
                 mrRenderTable(headers, rowsHtml, exp, null);
             }
-            else if(mrMode === 'vax'){
-                const headers=['Sr','EPID No.','Name','Age (mo)','RI doses','SIA doses','Last dose date','Tehsil','UC'];
+            else if(mrMode==='vax'){
+                const headers=['Sr','Year','EPID No.','Name','Age (mo)','RI doses','SIA doses','Last dose','Tehsil','UC'];
                 const exp=[]; let i=0, zero=0;
                 const rowsHtml=data.map(function(r){
-                    i++;
-                    const ri=mrCell(r,MR_COLS.riDoses);
-                    if(String(ri)==='0') zero++;
-                    const row=[i,mrCell(r,MR_COLS.epid),mrCell(r,MR_COLS.name),mrCell(r,MR_COLS.ageMo),ri,mrCell(r,MR_COLS.siaDoses),mrCell(r,MR_COLS.lastDose),mrCell(r,MR_COLS.tehsil),mrCell(r,MR_COLS.uc)];
+                    i++; if(String(r.riDoses)==='0') zero++;
+                    const row=[i,r.year,r.epid,r.name,r.ageMo,r.riDoses,r.siaDoses,r.lastDose,r.tehsil,r.uc];
                     exp.push(row);
-                    return '<tr>'+row.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+                    return '<tr>'+row.map(function(c){return '<td>'+(c||'')+'</td>';}).join('')+'</tr>';
                 }).join('');
                 mrSetStats([{n:data.length,l:'Cases'},{n:zero,l:'Zero-dose RI'}]);
                 mrRenderTable(headers, rowsHtml, exp, null);
             }
-            else if(mrMode === 'outcome'){
+            else if(mrMode==='outcome'){
                 const map={};
-                data.forEach(function(r){
-                    const o=mrCell(r,MR_COLS.outcome)||'—';
-                    map[o]=(map[o]||0)+1;
-                });
+                data.forEach(function(r){ const o=r.outcome||'—'; map[o]=(map[o]||0)+1; });
                 const headers=['Sr','Outcome','Cases'];
                 const exp=[]; let i=0,sum=0;
                 const rowsHtml=Object.keys(map).sort().map(function(o){
                     i++; sum+=map[o]; exp.push([i,o,map[o]]);
                     return '<tr><td>'+i+'</td><td>'+o+'</td><td><strong>'+map[o]+'</strong></td></tr>';
                 }).join('');
-                mrSetStats([{n:sum,l:'Cases'}]);
                 mrRenderTable(headers, rowsHtml, exp, ['Total','',sum]);
             }
-            else if(mrMode === 'hf'){
+            else if(mrMode==='hf'){
                 const map={};
                 data.forEach(function(r){
-                    const h=mrCell(r,MR_COLS.hf)||'—';
-                    const ty=mrCell(r,MR_COLS.hfType)||'';
-                    const k=h+'||'+ty;
+                    const h=r.hf||'—', ty=r.hfType||'', k=h+'||'+ty;
                     if(!map[k]) map[k]={hf:h,type:ty,n:0};
                     map[k].n++;
                 });
@@ -6718,39 +6893,77 @@
                     i++; sum+=x.n; exp.push([i,x.hf,x.type,x.n]);
                     return '<tr><td>'+i+'</td><td>'+x.hf+'</td><td>'+x.type+'</td><td><strong>'+x.n+'</strong></td></tr>';
                 }).join('');
-                mrSetStats([{n:sum,l:'Cases'},{n:list.length,l:'Facilities'}]);
                 mrRenderTable(headers, rowsHtml, exp, ['Total','','',sum]);
+            }
+            else if(mrMode==='rates'){
+                // Non-measles non-rubella (Discarded = both labs NEGATIVE) rate per 100,000
+                // Measles incidence = Measles IgM +ve per 100,000
+                // Uses Sheet1 columns A (Tehsil) B (Population); C & D computed
+                const map={};
+                data.forEach(function(r){
+                    const t=r.tehsil||'—';
+                    if(!map[t]) map[t]={cases:0, disc:0, mPos:0};
+                    map[t].cases++;
+                    if(mrIsNeg(r.labMeasles)&&mrIsNeg(r.labRubella)) map[t].disc++;
+                    if(mrIsPos(r.labMeasles)) map[t].mPos++;
+                });
+                const headers=['Sr','Tehsil','Population','Cases','Discarded (Neg/Neg)','NMNR Rate /100,000','Measles +ve','Measles Incidence /100,000'];
+                const exp=[]; let i=0;
+                const tehsilList = (mrPop.length? mrPop.filter(function(x){return x.tehsil.toLowerCase()!=='total';}).map(function(x){return x.tehsil;}) : Object.keys(map)).slice();
+                // ensure data tehsils included
+                Object.keys(map).forEach(function(t){ if(tehsilList.indexOf(t)<0) tehsilList.push(t); });
+                tehsilList.sort();
+                let tCases=0,tDisc=0,tM=0;
+                const rowsHtml=tehsilList.map(function(t){
+                    i++;
+                    const x=map[t]||{cases:0,disc:0,mPos:0};
+                    const pop=mrPopOf(t);
+                    tCases+=x.cases; tDisc+=x.disc; tM+=x.mPos;
+                    const nmnr=mrRate(x.disc, pop);
+                    const inc=mrRate(x.mPos, pop);
+                    const row=[i,t, pop?pop.toLocaleString():'—', x.cases, x.disc, nmnr, x.mPos, inc];
+                    exp.push(row);
+                    return '<tr><td>'+i+'</td><td>'+t+'</td><td>'+(pop?pop.toLocaleString():'—')+'</td><td>'+x.cases+'</td><td>'+x.disc+'</td><td><strong>'+nmnr+'</strong></td><td>'+x.mPos+'</td><td><strong>'+inc+'</strong></td></tr>';
+                }).join('');
+                const dpop=mrDistrictPop();
+                const totalRow=['Total','District', dpop?dpop.toLocaleString():'—', tCases, tDisc, mrRate(tDisc,dpop), tM, mrRate(tM,dpop)];
+                mrSetStats([
+                    {n:mrRate(tDisc,dpop), l:'District NMNR /100k'},
+                    {n:mrRate(tM,dpop), l:'District Measles Inc /100k'},
+                    {n:tDisc, l:'Discarded cases'}
+                ]);
+                const note='<tr><td colspan="8" style="text-align:left;font-size:12px;color:#555;padding:10px">Discarded = Lab Measles <strong>NEGATIVE</strong> and Lab Rubella <strong>NEGATIVE</strong>. NMNR rate & Measles incidence = count ÷ population × 100,000 (Sheet1 Col B population; rates = Col C & D style).</td></tr>';
+                mrRenderTable(headers, rowsHtml+note, exp, totalRow);
             }
         }
         function mrDownloadExcel(){
-            if(typeof XLSX === 'undefined'){ alert('XLSX library missing'); return; }
+            if(typeof XLSX==='undefined'){ alert('XLSX missing'); return; }
             if(!mrLastExport.headers.length){ alert('No table data'); return; }
-            const aoa = [mrLastExport.headers].concat(mrLastExport.rows||[]);
-            const ws = XLSX.utils.aoa_to_sheet(aoa);
-            const wb = XLSX.utils.book_new();
+            const aoa=[mrLastExport.headers].concat(mrLastExport.rows||[]);
+            const ws=XLSX.utils.aoa_to_sheet(aoa);
+            const wb=XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'MR');
             XLSX.writeFile(wb, 'MR_Surveillance_'+mrMode+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
         }
         function mrExportPdf(){
-            if(typeof window.jspdf === 'undefined'){ alert('jsPDF missing'); return; }
-            let headers = (mrLastExport.headers||[]).slice();
-            const rows = (mrLastExport.rows||[]).slice();
+            if(typeof window.jspdf==='undefined'){ alert('jsPDF missing'); return; }
+            let headers=(mrLastExport.headers||[]).slice();
+            const rows=(mrLastExport.rows||[]).slice();
             if(!headers.length){ alert('No table data'); return; }
-            if(typeof pdfNormalizeHeaders === 'function') headers = pdfNormalizeHeaders(headers);
-            const { jsPDF } = window.jspdf;
-            const ncols = headers.length;
-            const pdf = new jsPDF({ orientation: ncols>6?'landscape':'portrait', unit:'mm', format:'a4' });
-            const pageW = pdf.internal.pageSize.getWidth();
-            const pageH = pdf.internal.pageSize.getHeight();
+            if(typeof pdfNormalizeHeaders==='function') headers=pdfNormalizeHeaders(headers);
+            const { jsPDF }=window.jspdf;
+            const ncols=headers.length;
+            const pdf=new jsPDF({orientation:ncols>6?'landscape':'portrait', unit:'mm', format:'a4'});
+            const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
             const margin=10, usable=pageW-margin*2;
-            const colW = (typeof pdfBuildColWidths==='function') ? pdfBuildColWidths(headers, rows, usable) : headers.map(function(){return usable/ncols;});
+            const colW=(typeof pdfBuildColWidths==='function')?pdfBuildColWidths(headers,rows,usable):headers.map(function(){return usable/ncols;});
             let y=margin;
             pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
             pdf.text('EPI District Chakwal — MR Surveillance', margin, y); y+=6;
-            pdf.setFontSize(10); pdf.text('Tab: '+mrMode+'  |  Generated: '+new Date().toLocaleString(), margin, y); y+=6;
+            pdf.setFontSize(10); pdf.text('Tab: '+mrMode+'  |  '+new Date().toLocaleString(), margin, y); y+=6;
             function drawHead(){
                 pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
-                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
+                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
                 let x=margin;
                 headers.forEach(function(h,i){ pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,h,colW[i]-2):String(h).substring(0,12)), x+1.2, y+4.8); x+=colW[i]; });
                 y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
@@ -6762,9 +6975,8 @@
                 let x=margin;
                 for(let i=0;i<ncols;i++){
                     pdf.setDrawColor(200,200,200); pdf.rect(x,y,colW[i],6);
-                    const cell=String(row[i]==null?'':row[i]);
                     pdf.setFontSize(7);
-                    pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,cell,colW[i]-2):cell.substring(0,12)), x+1.2, y+4.1);
+                    pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,row[i],colW[i]-2):String(row[i]==null?'':row[i]).substring(0,12)), x+1.2, y+4.1);
                     x+=colW[i];
                 }
                 y+=6;
