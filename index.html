@@ -356,62 +356,46 @@
         .cif-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
         .cif-status{font-size:13px;color:#0d5c3d;font-weight:600}
         #cifOfficialSheet{display:none}
-        .cif-off{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:210mm;max-width:100%;margin:0 auto;border:2px solid #000;box-sizing:border-box}
+        .cif-off{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:210mm;max-width:100%;margin:0 auto;border:1.5px solid #000;box-sizing:border-box}
         .cif-off *{box-sizing:border-box}
-        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #000;padding:8px 10px;gap:8px}
-        .cif-off-head img{height:58px;width:58px;object-fit:contain}
-        .cif-off-head h1{flex:1;text-align:center;font-size:16px;margin:0;font-weight:800}
-        .cif-off table{width:100%;border-collapse:collapse;font-size:11px;line-height:1.4;table-layout:fixed}
-        .cif-off td,.cif-off th{border:1px solid #000;padding:6px 6px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
+        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #000;padding:3px 5px;gap:4px}
+        .cif-off-head img{height:40px;width:40px;object-fit:contain}
+        .cif-off-head h1{flex:1;text-align:center;font-size:13px;margin:0;font-weight:800}
+        .cif-off table{width:100%;border-collapse:collapse;font-size:8.5px;line-height:1.15;table-layout:fixed}
+        .cif-off td,.cif-off th{border:1px solid #000;padding:2px 3px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
         .cif-off .lab{font-weight:700}
-        .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:11px;text-align:left;padding:6px 7px}
-        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:15px;min-width:15px;max-width:15px;padding:3px 0;font-size:9px;letter-spacing:0.5px;line-height:1.15}
-        .cif-off .chk{display:inline-block;width:13px;height:13px;border:2px solid #000;margin:0 3px;vertical-align:middle;text-align:center;line-height:11px;font-size:11px;font-weight:900;flex-shrink:0;background:#fff;color:#000}
+        .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:8.5px;text-align:left;padding:2px 4px}
+        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:11px;min-width:11px;max-width:11px;padding:1px 0;font-size:7px;letter-spacing:0.3px;line-height:1.05}
+        .cif-off .chk{display:inline-block;width:10px;height:10px;border:1.5px solid #000;margin:0 2px;vertical-align:middle;text-align:center;line-height:9px;font-size:8px;font-weight:900;background:#fff;color:#000}
         .cif-off .chk.on{background:#000;color:#fff}
         .cif-off .fill{font-weight:600}
-        .cif-off .sp{display:inline-block;margin:0 10px 2px 0;white-space:nowrap}
-        .cif-off .sp2{display:inline-block;margin:0 14px 2px 0;white-space:nowrap}
-        .cif-off-note{font-size:9px;padding:7px 8px;border-top:1px solid #000;line-height:1.35}
+        .cif-off .sp{display:inline-block;margin:0 6px 1px 0;white-space:nowrap}
+        .cif-off .sp2{display:inline-block;margin:0 8px 1px 0;white-space:nowrap}
+        .cif-off-note{font-size:7px;padding:3px 4px;border-top:1px solid #000;line-height:1.2}
         @media print{
-            @page{size:A4 portrait;margin:5mm 4mm 7mm 4mm}
+            @page{size:A4 portrait;margin:4mm}
             html,body{
-                background:#fff !important;
-                margin:0 !important;
-                padding:0 !important;
-                width:100% !important;
-                height:auto !important;
-                overflow:visible !important;
-                -webkit-print-color-adjust:exact !important;
-                print-color-adjust:exact !important;
+                background:#fff !important;margin:0 !important;padding:0 !important;
+                width:100% !important;height:auto !important;overflow:visible !important;
+                -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;
             }
             body *{visibility:hidden !important}
             #cifOfficialSheet, #cifOfficialSheet *{visibility:visible !important}
             #cifOfficialSheet{
-                display:block !important;
-                position:absolute !important;
-                left:0 !important;
-                top:0 !important;
-                width:200mm !important;
-                max-width:100% !important;
-                margin:0 auto !important;
-                padding:0 !important;
-                background:#fff !important;
-                z-index:99999 !important;
-                overflow:visible !important;
-                transform-origin: top center;
+                display:block !important;position:absolute !important;left:0 !important;top:0 !important;
+                width:202mm !important;max-width:100% !important;margin:0 !important;padding:0 !important;
+                background:#fff !important;z-index:99999 !important;overflow:visible !important;
+                transform-origin:top left !important;
             }
             .cif-off{
-                width:100% !important;
-                max-width:100% !important;
-                border:1.5px solid #000 !important;
-                margin:0 !important;
-                page-break-after:avoid !important;
-                page-break-inside:avoid !important;
-                break-inside:avoid !important;
+                width:100% !important;max-width:100% !important;border:1.5px solid #000 !important;margin:0 !important;
+                page-break-inside:avoid !important;break-inside:avoid !important;
+                page-break-after:avoid !important;page-break-before:avoid !important;
             }
-            .cif-off table{page-break-inside:avoid !important;break-inside:avoid !important}
-            .cif-off tr{page-break-inside:avoid !important}
-            .cif-off-head img{height:48px !important;width:48px !important;visibility:visible !important;display:inline-block !important}
+            .cif-off table,.cif-off tr,.cif-off thead,.cif-off tbody{
+                page-break-inside:avoid !important;break-inside:avoid !important;
+            }
+            .cif-off-head img{height:40px !important;width:40px !important;visibility:visible !important;display:inline-block !important}
             .sidebar,.sidebar-open-btn,.sidebar-toggle,header,.header,.news-ticker,.search-wrap,.footer,
             .cif-actions,#mrCifPanel,.emr-filter,.emr-tabs,.emr-summary-panel,#mrStats,#mrTableWrap,
             button,nav,.menu-btn,.hamburger{display:none !important;visibility:hidden !important;opacity:0 !important}
@@ -8061,9 +8045,7 @@
             if(!sheet){ window.print(); return; }
             document.querySelectorAll('.sidebar-open-btn,.sidebar-toggle').forEach(function(el){ el.style.visibility='hidden'; });
             sheet.innerHTML = cifBuildOfficialHtml(d);
-            sheet.style.display = 'block';
-            sheet.style.transform = 'none';
-            sheet.style.width = '210mm';
+            sheet.style.cssText = 'display:block;position:fixed;left:0;top:0;width:210mm;background:#fff;z-index:99999;transform-origin:top left;transform:none;';
             const imgs = sheet.querySelectorAll('img');
             const waitImgs = Array.prototype.map.call(imgs, function(img){
                 return new Promise(function(res){
@@ -8074,32 +8056,28 @@
                 });
             });
             Promise.all(waitImgs).then(function(){
-                // Fill one A4 page: scale down if too tall, scale up if too short (use bottom space)
                 try{
                     const form = sheet.querySelector('.cif-off');
                     if(form){
-                        // ~A4 printable height with ~5mm margins ≈ 287mm → ~1085px at 96dpi
-                        const targetH = 1085;
-                        const h = form.scrollHeight || form.offsetHeight || 1;
-                        let scale = targetH / h;
-                        // keep readable: not larger than 1.28, not smaller than 0.78
-                        if(scale > 1.28) scale = 1.28;
-                        if(scale < 0.78) scale = 0.78;
-                        // only apply if meaningfully different
-                        if(Math.abs(scale - 1) > 0.02){
-                            sheet.style.transformOrigin = 'top center';
-                            sheet.style.transform = 'scale(' + scale.toFixed(3) + ')';
-                        }
+                        // A4 @ 96dpi ≈ 1123px tall; with 4mm margins ≈ 1090px usable
+                        const maxH = 1050;
+                        const h = form.offsetHeight || form.scrollHeight || 1;
+                        let scale = maxH / h;
+                        if(scale > 1) scale = 1; // never enlarge (causes 2 pages)
+                        if(scale < 0.65) scale = 0.65;
+                        sheet.style.transform = 'scale(' + scale.toFixed(4) + ')';
+                        // also set a fixed max height so browser doesn't paginate overflow
+                        sheet.style.height = Math.ceil(h * scale) + 'px';
+                        sheet.style.overflow = 'hidden';
                     }
                 }catch(eScale){}
                 setTimeout(function(){
                     window.print();
                     setTimeout(function(){
-                        sheet.style.display = 'none';
-                        sheet.style.transform = 'none';
+                        sheet.style.cssText = 'display:none';
                         document.querySelectorAll('.sidebar-open-btn,.sidebar-toggle').forEach(function(el){ el.style.visibility=''; });
-                    }, 600);
-                }, 250);
+                    }, 700);
+                }, 200);
             });
         }
 
