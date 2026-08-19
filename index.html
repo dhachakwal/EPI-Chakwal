@@ -358,20 +358,20 @@
         #cifOfficialSheet{display:none}
         .cif-off{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:210mm;max-width:100%;margin:0 auto;border:1.5px solid #000;box-sizing:border-box}
         .cif-off *{box-sizing:border-box}
-        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #000;padding:3px 5px;gap:4px}
-        .cif-off-head img{height:40px;width:40px;object-fit:contain}
-        .cif-off-head h1{flex:1;text-align:center;font-size:13px;margin:0;font-weight:800}
-        .cif-off table{width:100%;border-collapse:collapse;font-size:8.5px;line-height:1.15;table-layout:fixed}
-        .cif-off td,.cif-off th{border:1px solid #000;padding:2px 3px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
+        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #000;padding:5px 7px;gap:6px}
+        .cif-off-head img{height:50px;width:50px;object-fit:contain}
+        .cif-off-head h1{flex:1;text-align:center;font-size:14.5px;margin:0;font-weight:800}
+        .cif-off table{width:100%;border-collapse:collapse;font-size:9.5px;line-height:1.28;table-layout:fixed}
+        .cif-off td,.cif-off th{border:1px solid #000;padding:4px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
         .cif-off .lab{font-weight:700}
-        .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:8.5px;text-align:left;padding:2px 4px}
-        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:11px;min-width:11px;max-width:11px;padding:1px 0;font-size:7px;letter-spacing:0.3px;line-height:1.05}
-        .cif-off .chk{display:inline-block;width:10px;height:10px;border:1.5px solid #000;margin:0 2px;vertical-align:middle;text-align:center;line-height:9px;font-size:8px;font-weight:900;background:#fff;color:#000}
+        .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:9.5px;text-align:left;padding:4px 5px}
+        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:12px;min-width:12px;max-width:12px;padding:2px 0;font-size:8px;letter-spacing:0.4px;line-height:1.1}
+        .cif-off .chk{display:inline-block;width:11px;height:11px;border:1.5px solid #000;margin:0 2px;vertical-align:middle;text-align:center;line-height:10px;font-size:9px;font-weight:900;background:#fff;color:#000}
         .cif-off .chk.on{background:#000;color:#fff}
         .cif-off .fill{font-weight:600}
-        .cif-off .sp{display:inline-block;margin:0 6px 1px 0;white-space:nowrap}
-        .cif-off .sp2{display:inline-block;margin:0 8px 1px 0;white-space:nowrap}
-        .cif-off-note{font-size:7px;padding:3px 4px;border-top:1px solid #000;line-height:1.2}
+        .cif-off .sp{display:inline-block;margin:0 8px 1px 0;white-space:nowrap}
+        .cif-off .sp2{display:inline-block;margin:0 10px 1px 0;white-space:nowrap}
+        .cif-off-note{font-size:8px;padding:4px 5px;border-top:1px solid #000;line-height:1.25}
         @media print{
             @page{size:A4 portrait;margin:4mm}
             html,body{
@@ -395,7 +395,7 @@
             .cif-off table,.cif-off tr,.cif-off thead,.cif-off tbody{
                 page-break-inside:avoid !important;break-inside:avoid !important;
             }
-            .cif-off-head img{height:40px !important;width:40px !important;visibility:visible !important;display:inline-block !important}
+            .cif-off-head img{height:50px !important;width:50px !important;visibility:visible !important;display:inline-block !important}
             .sidebar,.sidebar-open-btn,.sidebar-toggle,header,.header,.news-ticker,.search-wrap,.footer,
             .cif-actions,#mrCifPanel,.emr-filter,.emr-tabs,.emr-summary-panel,#mrStats,#mrTableWrap,
             button,nav,.menu-btn,.hamburger{display:none !important;visibility:hidden !important;opacity:0 !important}
@@ -8059,12 +8059,13 @@
                 try{
                     const form = sheet.querySelector('.cif-off');
                     if(form){
-                        // A4 @ 96dpi ≈ 1123px tall; with 4mm margins ≈ 1090px usable
-                        const maxH = 1050;
+                        // A4 usable height ~1080px; fill bottom space lightly, never force 2 pages
+                        const targetH = 1080;
                         const h = form.offsetHeight || form.scrollHeight || 1;
-                        let scale = maxH / h;
-                        if(scale > 1) scale = 1; // never enlarge (causes 2 pages)
-                        if(scale < 0.65) scale = 0.65;
+                        let scale = targetH / h;
+                        if(scale > 1.12) scale = 1.12; // mild enlarge to use bottom space
+                        if(scale < 0.70) scale = 0.70;
+                        if(scale > 0.98 && scale < 1.02) scale = 1;
                         sheet.style.transform = 'scale(' + scale.toFixed(4) + ')';
                         // also set a fixed max height so browser doesn't paginate overflow
                         sheet.style.height = Math.ceil(h * scale) + 'px';
