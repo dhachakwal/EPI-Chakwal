@@ -361,8 +361,8 @@
         .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #000;padding:6px 8px;gap:8px}
         .cif-off-head img{height:56px;width:56px;object-fit:contain}
         .cif-off-head h1{flex:1;text-align:center;font-size:16px;margin:0;font-weight:800}
-        .cif-off table{width:100%;border-collapse:collapse;font-size:10.5px;line-height:1.35;table-layout:fixed}
-        .cif-off td,.cif-off th{border:1px solid #000;padding:4px 5px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere;overflow:hidden}
+        .cif-off table{width:100%;border-collapse:collapse;font-size:11px;line-height:1.4;table-layout:fixed}
+        .cif-off td,.cif-off th{border:1px solid #000;padding:5px 6px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
         .cif-off .lab{font-weight:700}
         .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:11px;text-align:left;padding:5px 6px}
         .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:15px;min-width:15px;max-width:15px;padding:3px 0;font-size:9px;letter-spacing:0.6px;line-height:1.15}
@@ -371,12 +371,32 @@
         .cif-off .fill{font-weight:600}
         .cif-off-note{font-size:9px;padding:6px 7px;border-top:1px solid #000;line-height:1.4}
         @media print{
-            @page{size:A4 portrait;margin:5mm 6mm 6mm 6mm}
-            html,body{background:#fff !important;margin:0 !important;padding:0 !important}
+            @page{size:A4 portrait;margin:6mm}
+            html,body{background:#fff !important;margin:0 !important;padding:0 !important;height:auto !important;overflow:visible !important}
             body *{visibility:hidden !important}
             #cifOfficialSheet, #cifOfficialSheet *{visibility:visible !important}
-            #cifOfficialSheet{display:block !important;position:fixed !important;left:0 !important;top:0 !important;right:0 !important;width:100% !important;padding:0 !important;margin:0 !important;background:#fff !important;z-index:99999 !important}
-            .cif-off{width:100%;max-width:100%;border-width:1.5px;margin:0 auto}
+            #cifOfficialSheet{
+                display:block !important;
+                position:absolute !important;
+                left:0 !important;top:0 !important;
+                width:100% !important;
+                height:auto !important;
+                min-height:100% !important;
+                padding:0 !important;margin:0 !important;
+                background:#fff !important;
+                z-index:99999 !important;
+                overflow:visible !important;
+            }
+            .cif-off{
+                width:100% !important;
+                max-width:100% !important;
+                border-width:1.5px;
+                margin:0 auto !important;
+                page-break-inside:avoid;
+            }
+            .cif-off table{page-break-inside:auto}
+            .cif-off tr{page-break-inside:avoid}
+            .cif-off-head img{height:56px !important;width:56px !important;visibility:visible !important;display:inline-block !important}
             .sidebar,.sidebar-open-btn,.sidebar-toggle,header,.header,.news-ticker,.search-wrap,.footer,
             .cif-actions,#mrCifPanel,.emr-filter,.emr-tabs,.emr-summary-panel,#mrStats,#mrTableWrap,
             button,nav,.menu-btn,.hamburger{display:none !important;visibility:hidden !important;opacity:0 !important}
@@ -894,7 +914,7 @@
                                     <input type="hidden" id="cif_epid" value="">
                                 </label>
                                 <label>Cross Notified
-                                    <select id="cif_cross"><option value="">—</option><option>Yes</option><option>No</option></select>
+                                    <select id="cif_cross"><option value="">—</option><option>Yes</option><option selected>No</option></select>
                                 </label>
                                 <label>UNIQUE ID<input type="text" id="cif_uid" placeholder="Auto" readonly style="background:#e8f5e9;font-weight:700"></label>
                                 <label>Year
@@ -923,7 +943,7 @@
                                     </select>
                                 </label>
                                 <label>Reporting UC
-                                    <select id="cif_repUC"><option value="">— Loading UCs…</option></select>
+                                    <select id="cif_repUC" onchange="cifOnRepUcChange()"><option value="">— Loading UCs…</option></select>
                                 </label>
                                 <label>Reporting Tehsil
                                     <select id="cif_repTehsil"><option value="">—</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select>
@@ -947,7 +967,7 @@
                                 <label class="cif-full">Complete Address (Village / Street / Mohallah)<input type="text" id="cif_address"></label>
                                 <label>Near Landmark<input type="text" id="cif_landmark"></label>
                                 <label>UC (patient)
-                                    <select id="cif_uc"><option value="">— Loading UCs…</option></select>
+                                    <select id="cif_uc" onchange="cifOnPatientUcChange()"><option value="">— Loading UCs…</option></select>
                                 </label>
                                 <label>Tehsil (patient)
                                     <select id="cif_tehsil"><option value="">—</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select>
@@ -7073,6 +7093,7 @@
                 if(wrap) wrap.style.display = 'none';
                 if(stats) stats.innerHTML = '';
                 if(typeof cifLoadUcList==='function') cifLoadUcList();
+                if(typeof cifPreloadLogos==='function') cifPreloadLogos();
                 return;
             }
             if(cif) cif.style.display = 'none';
@@ -7520,6 +7541,7 @@
             const fd = document.getElementById('cif_filledDesig'); if(fd) fd.value = 'DSV';
             const fp = document.getElementById('cif_filledPhone'); if(fp) fp.value = '0333-5902949';
             const es = document.getElementById('cif_epidSuffix'); if(es) es.value = '';
+            const cr = document.getElementById('cif_cross'); if(cr) cr.value = 'No';
             cifEditMode = false;
             if(typeof cifOnTravelChange==='function') cifOnTravelChange();
             const st = document.getElementById('cifStatus'); if(st) st.textContent = '';
@@ -7566,6 +7588,58 @@
                     el.readOnly = false;
                     el.style.background = '';
                 }
+            });
+        }
+
+        function cifOnPatientUcChange(){
+            const uc = cifVal('cif_uc');
+            const tehEl = document.getElementById('cif_tehsil');
+            if(!tehEl || !uc) return;
+            const hit = (cifUcList||[]).find(function(x){ return String(x.uc)===uc; });
+            if(hit && hit.tehsil){
+                // match option text
+                const t = hit.tehsil;
+                let found = false;
+                for(let i=0;i<tehEl.options.length;i++){
+                    if(tehEl.options[i].value === t || tehEl.options[i].text === t){
+                        tehEl.value = tehEl.options[i].value;
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found){
+                    // try partial match (Choa Saidan Shah etc.)
+                    for(let i=0;i<tehEl.options.length;i++){
+                        const v = tehEl.options[i].value || '';
+                        if(v && (t.indexOf(v)>=0 || v.indexOf(t)>=0)){ tehEl.value = v; found = true; break; }
+                    }
+                }
+            }
+        }
+        function cifOnRepUcChange(){
+            const uc = cifVal('cif_repUC');
+            const tehEl = document.getElementById('cif_repTehsil');
+            if(!tehEl || !uc) return;
+            const hit = (cifUcList||[]).find(function(x){ return String(x.uc)===uc; });
+            if(hit && hit.tehsil){
+                const t = hit.tehsil;
+                for(let i=0;i<tehEl.options.length;i++){
+                    const v = tehEl.options[i].value || '';
+                    if(v === t || (v && (t.indexOf(v)>=0 || v.indexOf(t)>=0))){ tehEl.value = v; break; }
+                }
+            }
+        }
+        function cifPreloadLogos(){
+            return new Promise(function(resolve){
+                const urls = ['CIF_Left_Logo.jpg','CIF_Right_Logo.png'];
+                let left = urls.length;
+                if(!left){ resolve(); return; }
+                urls.forEach(function(u){
+                    const img = new Image();
+                    img.onload = img.onerror = function(){ left--; if(left<=0) resolve(); };
+                    img.src = u + (u.indexOf('?')>=0?'&':'?') + 't=' + Date.now();
+                });
+                setTimeout(resolve, 2500);
             });
         }
         function cifOnRashOnsetChange(){
@@ -7786,6 +7860,7 @@
             // Official logos from GitHub root (upload these two files)
             const logoL = 'CIF_Left_Logo.jpg';
             const logoR = 'CIF_Right_Logo.png';
+            // logos preloaded via cifPreloadLogos / print wait
             const F = function(v){ return (v && String(v).trim()) ? String(v).trim() : '\u00a0'; };
 
             return ''
@@ -7947,6 +8022,7 @@
         }
         function cifPrint(){
             if(typeof cifOnTravelChange==='function') cifOnTravelChange();
+            if(typeof cifUpdateUniqueId==='function') cifUpdateUniqueId();
             const miss = (typeof cifMissingFields==='function') ? cifMissingFields() : [];
             if(miss.length){
                 const msg = 'The following required fields are missing:\n\n• ' + miss.join('\n• ') + '\n\nDo you still want to print the CIF?';
@@ -7956,16 +8032,29 @@
             if(typeof cifFullEpid==='function') d.epid = cifFullEpid();
             const sheet = document.getElementById('cifOfficialSheet');
             if(!sheet){ window.print(); return; }
-            document.querySelectorAll('.sidebar-open-btn').forEach(function(el){ el.style.visibility='hidden'; });
+            document.querySelectorAll('.sidebar-open-btn,.sidebar-toggle').forEach(function(el){ el.style.visibility='hidden'; });
             sheet.innerHTML = cifBuildOfficialHtml(d);
             sheet.style.display = 'block';
-            setTimeout(function(){
-                window.print();
+            // Wait until logos are loaded so first print shows them
+            const imgs = sheet.querySelectorAll('img');
+            const waitImgs = Array.prototype.map.call(imgs, function(img){
+                return new Promise(function(res){
+                    if(img.complete && img.naturalWidth){ res(); return; }
+                    img.onload = function(){ res(); };
+                    img.onerror = function(){ res(); };
+                    // force reload from cache-bust path already in src
+                    if(!img.complete){ const s=img.src; img.src=''; img.src=s; }
+                });
+            });
+            Promise.all(waitImgs.concat([typeof cifPreloadLogos==='function'?cifPreloadLogos():Promise.resolve()])).then(function(){
                 setTimeout(function(){
-                    sheet.style.display = 'none';
-                    document.querySelectorAll('.sidebar-open-btn').forEach(function(el){ el.style.visibility=''; });
-                }, 500);
-            }, 200);
+                    window.print();
+                    setTimeout(function(){
+                        sheet.style.display = 'none';
+                        document.querySelectorAll('.sidebar-open-btn,.sidebar-toggle').forEach(function(el){ el.style.visibility=''; });
+                    }, 600);
+                }, 300);
+            });
         }
         function mrEpidClick(epid){
             if(!epid) return;
