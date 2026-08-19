@@ -358,49 +358,63 @@
         #cifOfficialSheet{display:none}
         .cif-off{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:210mm;max-width:100%;margin:0 auto;border:2px solid #000;box-sizing:border-box}
         .cif-off *{box-sizing:border-box}
-        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #000;padding:6px 8px;gap:8px}
-        .cif-off-head img{height:56px;width:56px;object-fit:contain}
-        .cif-off-head h1{flex:1;text-align:center;font-size:16px;margin:0;font-weight:800}
-        .cif-off table{width:100%;border-collapse:collapse;font-size:11px;line-height:1.4;table-layout:fixed}
-        .cif-off td,.cif-off th{border:1px solid #000;padding:5px 6px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
+        .cif-off-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #000;padding:4px 6px;gap:6px}
+        .cif-off-head img{height:48px;width:48px;object-fit:contain}
+        .cif-off-head h1{flex:1;text-align:center;font-size:14px;margin:0;font-weight:800}
+        .cif-off table{width:100%;border-collapse:collapse;font-size:9.5px;line-height:1.25;table-layout:fixed}
+        .cif-off td,.cif-off th{border:1px solid #000;padding:3px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere}
         .cif-off .lab{font-weight:700}
-        .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:11px;text-align:left;padding:5px 6px}
-        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:15px;min-width:15px;max-width:15px;padding:3px 0;font-size:9px;letter-spacing:0.6px;line-height:1.15}
-        .cif-off .chk{display:inline-block;width:14px;height:14px;border:2px solid #000;margin:0 3px;vertical-align:middle;text-align:center;line-height:12px;font-size:11px;font-weight:900;flex-shrink:0;background:#fff;color:#000}
-        .cif-off .chk.on{background:#000;color:#fff;box-shadow:inset 0 0 0 2px #000}
+        .cif-off .sec{background:#d9d9d9;font-weight:800;font-size:9.5px;text-align:left;padding:3px 5px}
+        .cif-off .vsec{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;text-align:center;background:#eee;width:13px;min-width:13px;max-width:13px;padding:2px 0;font-size:8px;letter-spacing:0.4px;line-height:1.1}
+        .cif-off .chk{display:inline-block;width:12px;height:12px;border:2px solid #000;margin:0 2px;vertical-align:middle;text-align:center;line-height:10px;font-size:10px;font-weight:900;flex-shrink:0;background:#fff;color:#000}
+        .cif-off .chk.on{background:#000;color:#fff}
         .cif-off .fill{font-weight:600}
-        .cif-off-note{font-size:9px;padding:6px 7px;border-top:1px solid #000;line-height:1.4}
+        .cif-off-note{font-size:8px;padding:4px 5px;border-top:1px solid #000;line-height:1.3}
         @media print{
-            @page{size:A4 portrait;margin:6mm}
-            html,body{background:#fff !important;margin:0 !important;padding:0 !important;height:auto !important;overflow:visible !important}
+            @page{size:A4 portrait;margin:5mm}
+            html,body{
+                background:#fff !important;
+                margin:0 !important;
+                padding:0 !important;
+                width:100% !important;
+                height:auto !important;
+                overflow:visible !important;
+                -webkit-print-color-adjust:exact !important;
+                print-color-adjust:exact !important;
+            }
             body *{visibility:hidden !important}
             #cifOfficialSheet, #cifOfficialSheet *{visibility:visible !important}
             #cifOfficialSheet{
                 display:block !important;
                 position:absolute !important;
-                left:0 !important;top:0 !important;
-                width:100% !important;
-                height:auto !important;
-                min-height:100% !important;
-                padding:0 !important;margin:0 !important;
+                left:0 !important;
+                top:0 !important;
+                width:200mm !important;
+                max-width:100% !important;
+                margin:0 auto !important;
+                padding:0 !important;
                 background:#fff !important;
                 z-index:99999 !important;
                 overflow:visible !important;
+                transform-origin: top center;
             }
             .cif-off{
                 width:100% !important;
                 max-width:100% !important;
-                border-width:1.5px;
-                margin:0 auto !important;
-                page-break-inside:avoid;
+                border:1.5px solid #000 !important;
+                margin:0 !important;
+                page-break-after:avoid !important;
+                page-break-inside:avoid !important;
+                break-inside:avoid !important;
             }
-            .cif-off table{page-break-inside:auto}
-            .cif-off tr{page-break-inside:avoid}
-            .cif-off-head img{height:56px !important;width:56px !important;visibility:visible !important;display:inline-block !important}
+            .cif-off table{page-break-inside:avoid !important;break-inside:avoid !important}
+            .cif-off tr{page-break-inside:avoid !important}
+            .cif-off-head img{height:48px !important;width:48px !important;visibility:visible !important;display:inline-block !important}
             .sidebar,.sidebar-open-btn,.sidebar-toggle,header,.header,.news-ticker,.search-wrap,.footer,
             .cif-actions,#mrCifPanel,.emr-filter,.emr-tabs,.emr-summary-panel,#mrStats,#mrTableWrap,
             button,nav,.menu-btn,.hamburger{display:none !important;visibility:hidden !important;opacity:0 !important}
         }
+
 
     </style>
 </head>
@@ -8035,25 +8049,39 @@
             document.querySelectorAll('.sidebar-open-btn,.sidebar-toggle').forEach(function(el){ el.style.visibility='hidden'; });
             sheet.innerHTML = cifBuildOfficialHtml(d);
             sheet.style.display = 'block';
-            // Wait until logos are loaded so first print shows them
+            sheet.style.transform = 'none';
+            sheet.style.width = '210mm';
             const imgs = sheet.querySelectorAll('img');
             const waitImgs = Array.prototype.map.call(imgs, function(img){
                 return new Promise(function(res){
                     if(img.complete && img.naturalWidth){ res(); return; }
                     img.onload = function(){ res(); };
                     img.onerror = function(){ res(); };
-                    // force reload from cache-bust path already in src
                     if(!img.complete){ const s=img.src; img.src=''; img.src=s; }
                 });
             });
-            Promise.all(waitImgs.concat([typeof cifPreloadLogos==='function'?cifPreloadLogos():Promise.resolve()])).then(function(){
+            Promise.all(waitImgs).then(function(){
+                // Fit entire CIF onto one A4 page (approx 277mm printable height @ 96dpi ≈ 1046px)
+                try{
+                    const form = sheet.querySelector('.cif-off');
+                    if(form){
+                        const maxH = 1040; // ~A4 content height in px
+                        const h = form.scrollHeight || form.offsetHeight;
+                        if(h > maxH){
+                            const scale = Math.max(0.72, Math.min(1, maxH / h));
+                            sheet.style.transformOrigin = 'top center';
+                            sheet.style.transform = 'scale(' + scale.toFixed(3) + ')';
+                        }
+                    }
+                }catch(eScale){}
                 setTimeout(function(){
                     window.print();
                     setTimeout(function(){
                         sheet.style.display = 'none';
+                        sheet.style.transform = 'none';
                         document.querySelectorAll('.sidebar-open-btn,.sidebar-toggle').forEach(function(el){ el.style.visibility=''; });
                     }, 600);
-                }, 300);
+                }, 250);
             });
         }
         function mrEpidClick(epid){
