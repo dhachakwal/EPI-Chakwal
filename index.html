@@ -721,11 +721,7 @@
 
 
 
-            <div class="section-title collapsible-header" id="section-att" onclick="toggleSection(this)">
-                <span>Vaccinators Attendance as Per EMR</span>
-                <span class="section-arrow">▶</span>
-            </div>
-            <div class="section-body" id="section-att-body" style="display:none">
+            <div class="section-title" id="section-att">Vaccinators Attendance as Per EMR</div>
                 <div class="emr-block" style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,.08);margin-bottom:25px">
                     <p class="emr-note"><strong>Source:</strong> EMR Vaccinator Check-In / Check-Out. Names mapped from <em>Total Vaccinators</em> sheet. Timeliness rules: Check-in before 07:45 = Early; after 08:30 = Late. Check-out requires ≥6 hours after check-in; after 4:00 PM = Late Check-Out.</p>
                     <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
@@ -756,7 +752,6 @@
                     </div>
                     <div id="attStatus" class="sweep-loading" style="display:none"></div>
                 </div>
-            </div>
 
             <div class="section-title">Payment Status For NID Worker</div>
             <div class="download-grid" style="grid-template-columns:1fr">
