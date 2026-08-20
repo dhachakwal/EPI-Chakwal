@@ -6839,7 +6839,19 @@
                 return -1;
             }
             return {
-                epid: find(['epid']),
+                // Prefer "EPID No. (...)" — never match "EPID Week of reporting"
+                epid: (function(){
+                    let i = find(['epid no']);
+                    if(i < 0) i = find(['epid no.']);
+                    if(i < 0){
+                        for(let j=0;j<labels.length;j++){
+                            const L = labels[j];
+                            if(L.indexOf('epid')>=0 && L.indexOf('week')<0 && (L.indexOf('no')>=0 || L.indexOf('pak')>=0 || L.indexOf('mr')>=0))
+                                return j;
+                        }
+                    }
+                    return i;
+                })(),
                 name: find(['name of the case'])>=0?find(['name of the case']):find(['name']),
                 father: find(['father']),
                 phone: find(['contact']),
@@ -7576,19 +7588,20 @@
                     const epidStr = String(r.epid||'').trim();
                     const row=[i,r.year,epidStr,r.name,r.father,r.ageMo,r.sex,r.tehsil,r.uc,r.hf,r.rashOnset,r.outcome,r.labMeasles,r.labRubella];
                     exp.push(row);
-                    // Always show EPID text; only CIF-linked cases are clickable
+                    // Always show full EPID text; clickable only if CIF available
                     let clickable = false;
                     try{
-                        if(r._fromCif || r._cif) clickable = true;
-                        else {
+                        if(epidStr && (r._fromCif || r._cif)) clickable = true;
+                        else if(epidStr){
                             const cache = JSON.parse(localStorage.getItem('epi_cif_by_epid')||'{}');
-                            clickable = !!(epidStr && cache[epidStr]);
+                            const k = Object.keys(cache).find(function(x){ return x.toLowerCase()===epidStr.toLowerCase(); });
+                            clickable = !!k;
                         }
                     }catch(e){}
                     let epidTd;
-                    if(!epidStr) epidTd = '<td></td>';
+                    if(!epidStr) epidTd = '<td style="color:#999">—</td>';
                     else if(clickable) epidTd = '<td><a href="#" data-epid="'+epidStr.replace(/"/g,'&quot;')+'" style="color:#0d5c3d;font-weight:700;text-decoration:underline" title="Open CIF for edit">'+epidStr+'</a></td>';
-                    else epidTd = '<td style="font-weight:600">'+epidStr+'</td>';
+                    else epidTd = '<td style="font-weight:600;color:#333">'+epidStr+'</td>';
                     return '<tr><td>'+i+'</td><td>'+(r.year||'')+'</td>'+epidTd+'<td>'+(r.name||'')+'</td><td>'+(r.father||'')+'</td><td>'+(r.ageMo||'')+'</td><td>'+(r.sex||'')+'</td><td>'+(r.tehsil||'')+'</td><td>'+(r.uc||'')+'</td><td>'+(r.hf||'')+'</td><td>'+(r.rashOnset||'')+'</td><td>'+(r.outcome||'')+'</td><td>'+(r.labMeasles||'')+'</td><td>'+(r.labRubella||'')+'</td></tr>';
                 }).join('');
                 mrSetStats([{n:data.length,l:'Cases shown'},{n:base.length,l:'In filters'}]);
