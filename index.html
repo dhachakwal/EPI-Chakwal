@@ -723,9 +723,27 @@
 
             <div class="section-title" id="section-att">Vaccinators Attendance as Per EMR</div>
                 <div class="emr-block" style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,.08);margin-bottom:25px">
-                    <p class="emr-note"><strong>Source:</strong> EMR Vaccinator Check-In / Check-Out. Names mapped from <em>Total Vaccinators</em> sheet. Timeliness rules: Check-in before 07:45 = Early; after 08:30 = Late. Check-out requires ≥6 hours after check-in; after 4:00 PM = Late Check-Out.</p>
+                    <p class="emr-note"><strong>Source:</strong> EMR Vaccinator Check-In / Check-Out. Names from <em>Total Vaccinators</em> (match by Username). Early check-in &lt; 07:45 · Late &gt; 08:30 · Check-out needs ≥6h after check-in · Late check-out after 4:00 PM.</p>
                     <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
+                        <label>Period
+                            <select id="attPeriod" onchange="attOnPeriodChange()">
+                                <option value="day">Selected date</option>
+                                <option value="all">All dates in sheet</option>
+                            </select>
+                        </label>
+                        <label id="attDayLabel">Date
+                            <select id="attDay" onchange="attApply()"><option value="">—</option></select>
+                        </label>
+                        <label>Tehsil
+                            <select id="attTehsil" onchange="attApply()"><option value="">All Tehsils</option></select>
+                        </label>
+                        <label>Vaccinator
+                            <select id="attVacc" onchange="attApply()"><option value="">All Vaccinators</option></select>
+                        </label>
                         <button type="button" class="btn btn-sm" onclick="attLoad()" style="background:#0d5c3d">🔄 Refresh Attendance</button>
+                        <button type="button" class="btn btn-sm" onclick="attExportPdf()" style="background:#6a1b9a">📄 PDF</button>
+                        <button type="button" class="btn btn-sm" onclick="attExportExcel()" style="background:#2e7d32">📊 Excel</button>
+                        <button type="button" class="btn btn-sm" onclick="attExportPng()" style="background:#1565c0">🖼 PNG</button>
                         <span class="sweep-meta" id="attMeta">Not loaded</span>
                     </div>
                     <div class="emr-summary-panel" id="attSummaryPanel">
@@ -6913,12 +6931,15 @@
             return JSON.parse(text.substring(a,b+1));
         }
 
+
         /* ===== Vaccinators Attendance as Per EMR ===== */
         const ATT_SHEET_ID = '1KAuJOL3WuYdp5YA4sD70kofeVkYPP3bJ5Rxro_0MUUc';
-        let attMaster = [];   // {name, username, tehsil, uc, district}
-        let attCheckIn = [];  // {username, name, tehsil, uc, time:Date, status}
-        let attCheckOut = [];
+        let attMaster = [];
+        let attCheckInAll = [];
+        let attCheckOutAll = [];
         let attMode = 'cinStatus';
+        let attPanelFilter = null; // null | checkedIn | notIn | checkedOut | noOut | all
+        let attLastExport = {headers:[], rows:[]};
 
         function attParseGvizCell(c){
             if(!c) return '';
@@ -6929,17 +6950,13 @@
         function attParseDate(v){
             if(v == null || v === '') return null;
             if(Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) return v;
-            if(typeof v === 'number'){
-                // gviz serial sometimes
+            if(typeof v === 'number' && v > 20000 && v < 100000){
                 const d = new Date(Math.round((v - 25569) * 86400 * 1000));
                 if(!isNaN(d.getTime())) return d;
             }
             const s = String(v).trim();
-            // gviz Date(2026,7,19,10,2,0)
             const m = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)/);
-            if(m){
-                return new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
-            }
+            if(m) return new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
             const d = new Date(s);
             return isNaN(d.getTime()) ? null : d;
         }
@@ -6955,11 +6972,23 @@
             const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear()+' '+attFmtTime(d);
         }
-        function attNormUser(u){
-            return String(u==null?'':u).trim().toLowerCase().replace(/\.0$/,'');
+        function attYmd(d){
+            if(!d) return '';
+            const y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate();
+            return y+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;
         }
-        function attNormName(n){
-            return String(n==null?'':n).trim().toLowerCase().replace(/\s+/g,' ');
+        function attNormUser(u){
+            let s = String(u==null?'':u).trim().toLowerCase();
+            if(s.endsWith('.0')) s = s.slice(0,-2);
+            // pure digits → strip leading zeros for match key
+            if(/^\d+$/.test(s)) s = s.replace(/^0+/, '') || '0';
+            return s;
+        }
+        function attDisplayUser(u){
+            let s = String(u==null?'':u).trim();
+            if(s.endsWith('.0')) s = s.slice(0,-2);
+            if(/^\d+$/.test(s) && s.length >= 10 && !s.startsWith('0')) s = '0' + s;
+            return s;
         }
         async function attFetchSheet(name){
             const url = 'https://docs.google.com/spreadsheets/d/'+ATT_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(name);
@@ -6990,23 +7019,22 @@
             const iTeh = ix(['tehsil']);
             const iUc = ix(['union council (uc)','union council','uc']);
             const iDist = ix(['district']);
-            const iTime = ix(kind==='out' ? ['check-out time','checkout time','check out time','time'] : ['check-in time','checkin time','check in time','time']);
+            const iTime = ix(kind==='out' ? ['check-out time','checkout time','check out time'] : (kind==='in' ? ['check-in time','checkin time','check in time'] : ['time']));
             const iStat = ix(['status']);
             const out = [];
             rows.forEach(function(r){
                 const cells = (r.c||[]).map(attParseGvizCell);
                 const name = iName>=0 ? String(cells[iName]||'').trim() : '';
-                const user = iUser>=0 ? String(cells[iUser]==null?'':cells[iUser]).trim() : '';
+                let user = iUser>=0 ? String(cells[iUser]==null?'':cells[iUser]).trim() : '';
+                if(user.endsWith('.0')) user = user.slice(0,-2);
                 if(!name && !user) return;
                 if(String(name).toLowerCase()==='vaccinator name') return;
-                let timeRaw = iTime>=0 ? cells[iTime] : '';
-                // gviz may put date object in .v
                 let time = null;
                 if(iTime>=0 && r.c && r.c[iTime]){
                     const c = r.c[iTime];
                     time = attParseDate(c.v != null ? c.v : c.f);
                 }
-                if(!time) time = attParseDate(timeRaw);
+                if(!time && iTime>=0) time = attParseDate(cells[iTime]);
                 out.push({
                     name: name,
                     username: user,
@@ -7014,51 +7042,101 @@
                     uc: iUc>=0 ? String(cells[iUc]||'').trim() : '',
                     district: iDist>=0 ? String(cells[iDist]||'').trim() : 'Chakwal',
                     time: time,
-                    status: iStat>=0 ? String(cells[iStat]||'').trim() : ''
+                    status: iStat>=0 ? String(cells[iStat]||'').trim() : '',
+                    ymd: time ? attYmd(time) : ''
                 });
             });
             return out;
         }
-        function attMasterNameFor(row){
-            // Prefer master sheet name by username, else by name match
-            const u = attNormUser(row.username);
-            const n = attNormName(row.name);
-            let hit = null;
-            if(u) hit = attMaster.find(function(m){ return attNormUser(m.username)===u; });
-            if(!hit && n) hit = attMaster.find(function(m){ return attNormName(m.name)===n; });
-            if(hit) return hit;
-            return {name: row.name, username: row.username, tehsil: row.tehsil, uc: row.uc, district: row.district};
-        }
-        function attFindIn(list, master){
+        /** PRIMARY match = Username (OR codes + mobile). Name is display only from master. */
+        function attFindIn(list, master, dayYmd){
             const u = attNormUser(master.username);
-            const n = attNormName(master.name);
-            let hits = [];
-            if(u) hits = list.filter(function(x){ return attNormUser(x.username)===u; });
-            if(!hits.length && n) hits = list.filter(function(x){ return attNormName(x.name)===n; });
-            // latest by time
+            if(!u) return null;
+            let hits = list.filter(function(x){
+                if(attNormUser(x.username) !== u) return false;
+                if(dayYmd && x.ymd && x.ymd !== dayYmd) return false;
+                return true;
+            });
             hits.sort(function(a,b){
                 const ta=a.time?a.time.getTime():0, tb=b.time?b.time.getTime():0;
                 return tb-ta;
             });
             return hits[0] || null;
         }
+        function attSelectedDay(){
+            const mode = (document.getElementById('attPeriod')||{}).value || 'day';
+            if(mode === 'all') return '';
+            return (document.getElementById('attDay')||{}).value || '';
+        }
+        function attFillFilters(){
+            const days = {};
+            attCheckInAll.concat(attCheckOutAll).forEach(function(x){
+                if(x.ymd) days[x.ymd]=1;
+            });
+            const dayKeys = Object.keys(days).sort().reverse();
+            const daySel = document.getElementById('attDay');
+            if(daySel){
+                const cur = daySel.value;
+                daySel.innerHTML = dayKeys.map(function(d){
+                    return '<option value="'+d+'">'+d.split('-').reverse().join('-')+'</option>';
+                }).join('') || '<option value="">No dates</option>';
+                if(cur && days[cur]) daySel.value = cur;
+                else if(dayKeys.length) daySel.value = dayKeys[0]; // latest day default
+            }
+            const tehsils = {};
+            attMaster.forEach(function(m){ if(m.tehsil) tehsils[m.tehsil]=1; });
+            const tSel = document.getElementById('attTehsil');
+            if(tSel){
+                const cur = tSel.value;
+                tSel.innerHTML = '<option value="">All Tehsils</option>'+Object.keys(tehsils).sort().map(function(t){
+                    return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+                }).join('');
+                if(cur && tehsils[cur]) tSel.value = cur;
+            }
+            const vSel = document.getElementById('attVacc');
+            if(vSel){
+                const cur = vSel.value;
+                vSel.innerHTML = '<option value="">All Vaccinators</option>'+attMaster.map(function(m){
+                    return '<option value="'+String(m.name).replace(/"/g,'&quot;')+'">'+m.name+'</option>';
+                }).join('');
+                if(cur) vSel.value = cur;
+            }
+        }
+        function attOnPeriodChange(){
+            const mode = (document.getElementById('attPeriod')||{}).value || 'day';
+            const lab = document.getElementById('attDayLabel');
+            if(lab) lab.style.display = mode==='all' ? 'none' : '';
+            attApply();
+        }
+        function attMasterFiltered(){
+            const t = (document.getElementById('attTehsil')||{}).value || '';
+            const v = (document.getElementById('attVacc')||{}).value || '';
+            return attMaster.filter(function(m){
+                if(t && m.tehsil !== t) return false;
+                if(v && m.name !== v) return false;
+                return true;
+            });
+        }
         async function attLoad(){
             const st = document.getElementById('attStatus');
             const meta = document.getElementById('attMeta');
-            if(st){ st.style.display='block'; st.textContent='Loading attendance sheets…'; }
+            if(st){ st.style.display='block'; st.textContent='Loading attendance…'; }
             try{
-                const masterData = await attFetchSheet('Total Vaccinators ');
-                attMaster = attRowsFrom(masterData, 'master').map(function(r){
+                // parallel fetch — faster
+                const pack = await Promise.all([
+                    attFetchSheet('Total Vaccinators '),
+                    attFetchSheet('Chek-In'),
+                    attFetchSheet('Check-Out')
+                ]);
+                attMaster = attRowsFrom(pack[0], 'master').map(function(r){
                     return {name:r.name, username:r.username, tehsil:r.tehsil, uc:r.uc, district:r.district};
                 }).filter(function(r){ return r.name; });
-                // typo sheet name on purpose
-                const inData = await attFetchSheet('Chek-In');
-                attCheckIn = attRowsFrom(inData, 'in');
-                const outData = await attFetchSheet('Check-Out');
-                attCheckOut = attRowsFrom(outData, 'out');
-                if(meta) meta.textContent = 'Vaccinators: '+attMaster.length+' · Check-In: '+attCheckIn.length+' · Check-Out: '+attCheckOut.length+' · '+new Date().toLocaleString();
+                attCheckInAll = attRowsFrom(pack[1], 'in');
+                attCheckOutAll = attRowsFrom(pack[2], 'out');
+                attFillFilters();
+                if(meta) meta.textContent = 'Vaccinators: '+attMaster.length+' · Check-In rows: '+attCheckInAll.length+' · Check-Out rows: '+attCheckOutAll.length+' · '+new Date().toLocaleString();
                 if(st){ st.style.display='none'; st.textContent=''; }
-                attUpdateSummary();
+                attPanelFilter = null;
                 attApply();
             }catch(e){
                 console.error(e);
@@ -7066,37 +7144,47 @@
                 if(meta) meta.textContent = 'Load failed';
             }
         }
-        function attUpdateSummary(){
+        function attClickPanel(key){
+            attPanelFilter = (attPanelFilter === key) ? null : key;
+            attApply();
+        }
+        function attUpdateSummary(masters, day){
             const grid = document.getElementById('attSummaryGrid');
             const upto = document.getElementById('attDataUpto');
-            let checkedIn = 0, notIn = 0, checkedOut = 0, noOut = 0;
-            attMaster.forEach(function(m){
-                const cin = attFindIn(attCheckIn, m);
-                const cout = attFindIn(attCheckOut, m);
+            let checkedIn=0, notIn=0, checkedOut=0, noOut=0;
+            masters.forEach(function(m){
+                const cin = attFindIn(attCheckInAll, m, day);
+                const cout = attFindIn(attCheckOutAll, m, day);
                 if(cin && cin.time) checkedIn++; else notIn++;
-                if(cin && cin.time && !(cout && cout.time)) noOut++;
                 if(cout && cout.time) checkedOut++;
+                if(!(cout && cout.time)) noOut++;
             });
             if(upto){
                 let maxT = null;
-                attCheckIn.concat(attCheckOut).forEach(function(x){
+                const dayF = day;
+                attCheckInAll.concat(attCheckOutAll).forEach(function(x){
+                    if(dayF && x.ymd !== dayF) return;
                     if(x.time && (!maxT || x.time>maxT)) maxT = x.time;
                 });
-                upto.textContent = maxT ? ('Latest: '+attFmtDT(maxT)) : '—';
+                upto.textContent = (day ? ('Date: '+day+' · ') : '') + (maxT ? ('Latest: '+attFmtDT(maxT)) : '—');
             }
             if(!grid) return;
-            grid.innerHTML = [
-                {n:attMaster.length, l:'Total Vaccinators'},
-                {n:checkedIn, l:'Checked In'},
-                {n:notIn, l:'Not Check-In'},
-                {n:checkedOut, l:'Checked Out'},
-                {n:noOut, l:'No Check-Out'}
-            ].map(function(it){
-                return '<div class="emr-sum-item"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+            const items = [
+                {n:masters.length, l:'Total Vaccinators', key:'all'},
+                {n:checkedIn, l:'Checked In', key:'checkedIn'},
+                {n:notIn, l:'Not Check-In', key:'notIn', red:true},
+                {n:checkedOut, l:'Checked Out', key:'checkedOut'},
+                {n:noOut, l:'Not Checked-Out', key:'noOut', red:true}
+            ];
+            grid.innerHTML = items.map(function(it){
+                const active = attPanelFilter===it.key ? 'border:2px solid #0d5c3d;box-shadow:0 0 0 2px rgba(13,92,61,.2)' : '';
+                const col = it.red ? 'color:#c62828;' : '';
+                return '<div class="emr-sum-item" style="cursor:pointer;'+active+col+'" onclick="attClickPanel(\''+it.key+'\')"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
         }
         function attSwitch(mode){
             attMode = mode;
+            attPanelFilter = null;
             document.querySelectorAll('#attTabs .emr-tab').forEach(function(btn){
                 btn.classList.toggle('active', btn.getAttribute('data-att')===mode);
             });
@@ -7109,89 +7197,179 @@
                 return '<div class="emr-stat" style="'+(it.red?'color:#c62828;font-weight:700;':'')+'"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
             }).join('');
         }
-        function attRender(headers, rowsHtml){
+        function attRender(headers, rowsHtml, expRows){
             const head = document.getElementById('attHead');
             const body = document.getElementById('attBody');
             if(head) head.innerHTML = '<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
             if(body) body.innerHTML = rowsHtml || '<tr><td colspan="'+headers.length+'">No rows</td></tr>';
+            attLastExport = {headers: headers, rows: expRows||[]};
         }
         function attApply(){
             if(!attMaster.length){
-                attRender(['Info'], '<tr><td>Click Refresh Attendance to load sheets.</td></tr>');
+                attRender(['Info'], '<tr><td>Click Refresh Attendance to load sheets.</td></tr>', []);
                 return;
             }
+            const day = attSelectedDay();
+            let masters = attMasterFiltered();
+            attUpdateSummary(masters, day);
+
+            // panel filter
+            if(attPanelFilter && attPanelFilter !== 'all'){
+                masters = masters.filter(function(m){
+                    const cin = attFindIn(attCheckInAll, m, day);
+                    const cout = attFindIn(attCheckOutAll, m, day);
+                    if(attPanelFilter==='checkedIn') return !!(cin&&cin.time);
+                    if(attPanelFilter==='notIn') return !(cin&&cin.time);
+                    if(attPanelFilter==='checkedOut') return !!(cout&&cout.time);
+                    if(attPanelFilter==='noOut') return !(cout&&cout.time);
+                    return true;
+                });
+            }
+
             if(attMode === 'cinStatus'){
-                let notIn=0, ok=0;
-                const rows=[];
-                let i=0;
-                attMaster.forEach(function(m){
-                    const cin = attFindIn(attCheckIn, m);
+                let notIn=0, ok=0; const rows=[]; const exp=[]; let i=0;
+                masters.forEach(function(m){
+                    const cin = attFindIn(attCheckInAll, m, day);
                     i++;
+                    const userDisp = attDisplayUser(m.username);
                     if(cin && cin.time){
                         ok++;
-                        rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+(m.username||'')+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+attFmtDT(cin.time)+'</td><td style="color:#2e7d32;font-weight:700">Checked In</td></tr>');
+                        exp.push([i,m.name,userDisp,m.tehsil,m.uc,attFmtDT(cin.time),'Checked In']);
+                        rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+userDisp+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+attFmtDT(cin.time)+'</td><td style="color:#2e7d32;font-weight:700">Checked In</td></tr>');
                     } else {
                         notIn++;
-                        rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+(m.username||'')+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>—</td><td style="color:#c62828;font-weight:700">Not Check-In</td></tr>');
+                        exp.push([i,m.name,userDisp,m.tehsil,m.uc,'—','Not Check-In']);
+                        rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+userDisp+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>—</td><td style="color:#c62828;font-weight:700">Not Check-In</td></tr>');
                     }
                 });
-                attSetStats([{n:ok,l:'Checked In'},{n:notIn,l:'Not Check-In',red:true},{n:attMaster.length,l:'Total'}]);
-                attRender(['Sr','Vaccinator Name','Username','Tehsil','UC','Check-In Time','Status'], rows.join(''));
+                attSetStats([{n:ok,l:'Checked In'},{n:notIn,l:'Not Check-In',red:true},{n:masters.length,l:'Total'}]);
+                attRender(['Sr','Vaccinator Name','Username','Tehsil','UC','Check-In Time','Status'], rows.join(''), exp);
             }
             else if(attMode === 'cinTime'){
-                // Early < 07:45, Late > 08:30
-                const rows=[]; let i=0, early=0, late=0;
-                attMaster.forEach(function(m){
-                    const cin = attFindIn(attCheckIn, m);
+                const early=[], late=[];
+                masters.forEach(function(m){
+                    const cin = attFindIn(attCheckInAll, m, day);
                     if(!cin || !cin.time) return;
                     const mins = cin.time.getHours()*60 + cin.time.getMinutes();
-                    let flag='', style='';
-                    if(mins < 7*60+45){ flag='Early Check-In'; style='color:#1565c0;font-weight:700'; early++; }
-                    else if(mins >= 8*60+31){ flag='Late Check-In'; style='color:#c62828;font-weight:700'; late++; }
-                    else return; // on-time not listed
-                    i++;
-                    rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+attFmtDT(cin.time)+'</td><td style="'+style+'">'+flag+' · '+attFmtTime(cin.time)+'</td></tr>');
+                    const rec = {m:m, cin:cin, mins:mins};
+                    if(mins < 7*60+45) early.push(rec);
+                    else if(mins >= 8*60+31) late.push(rec);
                 });
-                attSetStats([{n:early,l:'Early Check-In'},{n:late,l:'Late Check-In',red:true}]);
-                attRender(['Sr','Vaccinator Name','Tehsil','UC','Check-In Time','Timeliness'], rows.join('')||'<tr><td colspan="6">No early/late check-ins</td></tr>');
+                early.sort(function(a,b){ return a.mins-b.mins; }); // earliest first
+                late.sort(function(a,b){ return a.mins-b.mins; });
+                const ordered = early.concat(late);
+                const rows=[]; const exp=[]; let i=0;
+                ordered.forEach(function(rec){
+                    i++;
+                    const flag = rec.mins < 7*60+45 ? 'Early Check-In' : 'Late Check-In';
+                    const style = rec.mins < 7*60+45 ? 'color:#1565c0;font-weight:700' : 'color:#c62828;font-weight:700';
+                    exp.push([i,rec.m.name,rec.m.tehsil,rec.m.uc,attFmtDT(rec.cin.time),flag+' · '+attFmtTime(rec.cin.time)]);
+                    rows.push('<tr><td>'+i+'</td><td>'+rec.m.name+'</td><td>'+(rec.m.tehsil||'')+'</td><td>'+(rec.m.uc||'')+'</td><td>'+attFmtDT(rec.cin.time)+'</td><td style="'+style+'">'+flag+' · '+attFmtTime(rec.cin.time)+'</td></tr>');
+                });
+                attSetStats([{n:early.length,l:'Early Check-In'},{n:late.length,l:'Late Check-In',red:true}]);
+                attRender(['Sr','Vaccinator Name','Tehsil','UC','Check-In Time','Timeliness'], rows.join('')||'<tr><td colspan="6">No early/late check-ins</td></tr>', exp);
             }
             else if(attMode === 'coutStatus'){
-                // Checked in but no check-out
-                const rows=[]; let i=0;
-                attMaster.forEach(function(m){
-                    const cin = attFindIn(attCheckIn, m);
-                    const cout = attFindIn(attCheckOut, m);
-                    if(!(cin && cin.time)) return;
-                    if(cout && cout.time) return;
+                // All vaccinators: checked-out vs not (whether or not checked-in)
+                let ok=0, no=0; const rows=[]; const exp=[]; let i=0;
+                masters.forEach(function(m){
+                    const cin = attFindIn(attCheckInAll, m, day);
+                    const cout = attFindIn(attCheckOutAll, m, day);
                     i++;
-                    rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+(m.username||'')+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+attFmtDT(cin.time)+'</td><td style="color:#c62828;font-weight:700">No Check-Out</td></tr>');
+                    const userDisp = attDisplayUser(m.username);
+                    if(cout && cout.time){
+                        ok++;
+                        exp.push([i,m.name,userDisp,m.tehsil,m.uc,cin&&cin.time?attFmtDT(cin.time):'—',attFmtDT(cout.time),'Checked Out']);
+                        rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+userDisp+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(cin&&cin.time?attFmtDT(cin.time):'—')+'</td><td>'+attFmtDT(cout.time)+'</td><td style="color:#2e7d32;font-weight:700">Checked Out</td></tr>');
+                    } else {
+                        no++;
+                        exp.push([i,m.name,userDisp,m.tehsil,m.uc,cin&&cin.time?attFmtDT(cin.time):'—','—','Not Checked-Out']);
+                        rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+userDisp+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(cin&&cin.time?attFmtDT(cin.time):'—')+'</td><td>—</td><td style="color:#c62828;font-weight:700">Not Checked-Out</td></tr>');
+                    }
                 });
-                attSetStats([{n:i,l:'Checked In without Check-Out',red:true}]);
-                attRender(['Sr','Vaccinator Name','Username','Tehsil','UC','Check-In Time','Status'], rows.join('')||'<tr><td colspan="7">All checked-in vaccinators have check-out</td></tr>');
+                attSetStats([{n:ok,l:'Checked Out'},{n:no,l:'Not Checked-Out',red:true},{n:masters.length,l:'Total'}]);
+                attRender(['Sr','Vaccinator Name','Username','Tehsil','UC','Check-In Time','Check-Out Time','Status'], rows.join(''), exp);
             }
             else if(attMode === 'coutTime'){
-                // Early: checkout before 6 hours after check-in
-                // Late: checkout after 4:00 PM
-                const rows=[]; let i=0, early=0, late=0;
-                attMaster.forEach(function(m){
-                    const cin = attFindIn(attCheckIn, m);
-                    const cout = attFindIn(attCheckOut, m);
-                    if(!(cin && cin.time) || !(cout && cout.time)) return;
-                    const gapMs = cout.time.getTime() - cin.time.getTime();
-                    const gapHrs = gapMs / 3600000;
+                const list=[];
+                masters.forEach(function(m){
+                    const cin = attFindIn(attCheckInAll, m, day);
+                    const cout = attFindIn(attCheckOutAll, m, day);
+                    if(!(cin&&cin.time) || !(cout&&cout.time)) return;
+                    const gapHrs = (cout.time.getTime()-cin.time.getTime())/3600000;
                     const outMins = cout.time.getHours()*60 + cout.time.getMinutes();
-                    const flags = [];
-                    let style = '';
-                    if(gapHrs < 6){ flags.push('Early Check-Out'); style='color:#c62828;font-weight:700'; early++; }
-                    if(outMins >= 16*60){ flags.push('Late Check-Out'); style='color:#c62828;font-weight:700'; late++; }
+                    const flags=[];
+                    if(gapHrs < 6) flags.push('Early Check-Out');
+                    if(outMins >= 16*60) flags.push('Late Check-Out');
                     if(!flags.length) return;
+                    list.push({m:m,cin:cin,cout:cout,gapHrs:gapHrs,flags:flags});
+                });
+                list.sort(function(a,b){ return b.gapHrs - a.gapHrs; }); // largest gap first
+                const rows=[]; const exp=[]; let i=0, early=0, late=0;
+                list.forEach(function(rec){
                     i++;
-                    const gapTxt = (gapHrs>=0 ? gapHrs.toFixed(1)+'h gap' : '');
-                    rows.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+attFmtDT(cin.time)+'</td><td>'+attFmtDT(cout.time)+'</td><td>'+gapTxt+'</td><td style="'+style+'">'+flags.join(' · ')+' · '+attFmtTime(cout.time)+'</td></tr>');
+                    if(rec.flags.indexOf('Early Check-Out')>=0) early++;
+                    if(rec.flags.indexOf('Late Check-Out')>=0) late++;
+                    const gapTxt = rec.gapHrs.toFixed(1)+'h';
+                    exp.push([i,rec.m.name,rec.m.tehsil,rec.m.uc,attFmtDT(rec.cin.time),attFmtDT(rec.cout.time),gapTxt,rec.flags.join(' · ')+' · '+attFmtTime(rec.cout.time)]);
+                    rows.push('<tr><td>'+i+'</td><td>'+rec.m.name+'</td><td>'+(rec.m.tehsil||'')+'</td><td>'+(rec.m.uc||'')+'</td><td>'+attFmtDT(rec.cin.time)+'</td><td>'+attFmtDT(rec.cout.time)+'</td><td>'+gapTxt+'</td><td style="color:#c62828;font-weight:700">'+rec.flags.join(' · ')+' · '+attFmtTime(rec.cout.time)+'</td></tr>');
                 });
                 attSetStats([{n:early,l:'Early Check-Out',red:true},{n:late,l:'Late Check-Out',red:true}]);
-                attRender(['Sr','Vaccinator Name','Tehsil','UC','Check-In','Check-Out','Gap','Timeliness'], rows.join('')||'<tr><td colspan="8">No early/late check-outs</td></tr>');
+                attRender(['Sr','Vaccinator Name','Tehsil','UC','Check-In','Check-Out','Gap','Timeliness'], rows.join('')||'<tr><td colspan="8">No early/late check-outs</td></tr>', exp);
             }
+        }
+        function attExportPdf(){
+            if(typeof window.jspdf==='undefined'){ alert('jsPDF missing'); return; }
+            const headers = (attLastExport.headers||[]).slice();
+            const rows = (attLastExport.rows||[]).slice();
+            if(!headers.length || !rows.length){ alert('No table data to export.'); return; }
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: headers.length>6?'landscape':'portrait', unit:'mm', format:'a4' });
+            const margin=10, pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+            const usable=pageW-margin*2;
+            let y=margin;
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(13); pdf.setTextColor(13,92,61);
+            pdf.text('EPI District Chakwal — Vaccinators Attendance', margin, y); y+=7;
+            pdf.setFontSize(10); pdf.text((document.querySelector('#attTabs .emr-tab.active')||{}).textContent||attMode, margin, y); y+=6;
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(80,80,80);
+            pdf.text('Generated: '+new Date().toLocaleString()+' | Rows: '+rows.length, margin, y); y+=6;
+            const colW = headers.map(function(){ return usable/headers.length; });
+            function headerRow(){
+                pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
+                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
+                let x=margin; headers.forEach(function(h,i){ pdf.text(String(h).substring(0,18), x+1, y+4.5); x+=colW[i]; });
+                y+=7; pdf.setTextColor(30,30,30); pdf.setFont('helvetica','normal');
+            }
+            headerRow();
+            rows.forEach(function(row,ri){
+                if(y>pageH-margin-6){ pdf.addPage(); y=margin; headerRow(); }
+                if(ri%2){ pdf.setFillColor(232,245,233); pdf.rect(margin,y,usable,6,'F'); }
+                let x=margin;
+                row.forEach(function(c,i){ pdf.text(String(c==null?'':c).substring(0,22), x+1, y+4); x+=colW[i]; });
+                y+=6;
+            });
+            pdf.save('Vaccinators_Attendance_'+attMode+'_'+Date.now()+'.pdf');
+        }
+        function attExportExcel(){
+            const headers = attLastExport.headers||[];
+            const rows = attLastExport.rows||[];
+            if(!headers.length){ alert('No data'); return; }
+            let csv = headers.join(',')+'\n';
+            rows.forEach(function(r){
+                csv += r.map(function(c){ return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'; }).join(',')+'\n';
+            });
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+            a.download='Vaccinators_Attendance_'+attMode+'.csv'; a.click();
+        }
+        async function attExportPng(){
+            const wrap = document.getElementById('attTableWrap');
+            if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
+            try{
+                const canvas = await html2canvas(wrap, {scale:2, backgroundColor:'#fff'});
+                const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
+                a.download='Vaccinators_Attendance_'+attMode+'.png'; a.click();
+            }catch(e){ alert('PNG failed: '+(e.message||e)); }
         }
 
         async function loadMrData(){
