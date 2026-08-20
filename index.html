@@ -6990,26 +6990,44 @@
             if(/^\d+$/.test(s) && s.length >= 10 && !s.startsWith('0')) s = '0' + s;
             return s;
         }
-        async function attFetchSheet(name){
-            const url = 'https://docs.google.com/spreadsheets/d/'+ATT_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(name);
+        /** XLSX export keeps OR usernames (gviz blanks them). */
+        async function attFetchWorkbook(){
+            const url = 'https://docs.google.com/spreadsheets/d/'+ATT_SHEET_ID+'/export?format=xlsx&_='+Date.now();
             const res = await fetch(url);
-            if(!res.ok) throw new Error('HTTP '+res.status+' '+name);
-            const text = await res.text();
-            const a=text.indexOf('{'), b=text.lastIndexOf('}');
-            return JSON.parse(text.substring(a,b+1));
+            if(!res.ok) throw new Error('HTTP '+res.status+' (xlsx export)');
+            const buf = await res.arrayBuffer();
+            if(typeof XLSX === 'undefined') throw new Error('SheetJS (XLSX) library missing');
+            return XLSX.read(buf, { type: 'array', cellDates: true });
         }
-        function attRowsFrom(data, kind){
-            const cols = (data.table && data.table.cols) || [];
-            const rows = (data.table && data.table.rows) || [];
-            const labels = cols.map(function(c){ return String((c&&c.label)||'').toLowerCase().trim(); });
+        function attSheetRows(wb, preferNames, kind){
+            let sheetName = null;
+            const names = wb.SheetNames || [];
+            for(let i=0;i<preferNames.length;i++){
+                const want = preferNames[i].toLowerCase().trim();
+                const hit = names.find(function(n){ return String(n).toLowerCase().trim() === want; });
+                if(hit){ sheetName = hit; break; }
+            }
+            if(!sheetName){
+                // fuzzy contains
+                for(let i=0;i<preferNames.length;i++){
+                    const want = preferNames[i].toLowerCase().replace(/\s+/g,'');
+                    const hit = names.find(function(n){ return String(n).toLowerCase().replace(/\s+/g,'').indexOf(want)>=0; });
+                    if(hit){ sheetName = hit; break; }
+                }
+            }
+            if(!sheetName) throw new Error('Sheet not found: '+preferNames.join('/'));
+            const ws = wb.Sheets[sheetName];
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+            if(!aoa.length) return [];
+            const headers = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
             function ix(cands){
-                for(let i=0;i<cands.length;i++){
-                    const j = labels.indexOf(cands[i]);
+                for(let c=0;c<cands.length;c++){
+                    const j = headers.indexOf(cands[c]);
                     if(j>=0) return j;
                 }
-                for(let i=0;i<labels.length;i++){
-                    for(let k=0;k<cands.length;k++){
-                        if(labels[i].indexOf(cands[k])>=0) return i;
+                for(let i=0;i<headers.length;i++){
+                    for(let c=0;c<cands.length;c++){
+                        if(headers[i].indexOf(cands[c])>=0) return i;
                     }
                 }
                 return -1;
@@ -7019,44 +7037,72 @@
             const iTeh = ix(['tehsil']);
             const iUc = ix(['union council (uc)','union council','uc']);
             const iDist = ix(['district']);
-            const iTime = ix(kind==='out' ? ['check-out time','checkout time','check out time'] : (kind==='in' ? ['check-in time','checkin time','check in time'] : ['time']));
+            const iTime = ix(kind==='out'
+                ? ['check-out time','checkout time','check out time']
+                : (kind==='in' ? ['check-in time','checkin time','check in time'] : ['time']));
             const iStat = ix(['status']);
             const out = [];
-            rows.forEach(function(r){
-                const cells = (r.c||[]).map(attParseGvizCell);
-                const name = iName>=0 ? String(cells[iName]||'').trim() : '';
-                let user = iUser>=0 ? String(cells[iUser]==null?'':cells[iUser]).trim() : '';
+            for(let r=1;r<aoa.length;r++){
+                const row = aoa[r]||[];
+                const name = iName>=0 ? String(row[iName]||'').trim() : '';
+                let user = iUser>=0 ? String(row[iUser]==null?'':row[iUser]).trim() : '';
                 if(user.endsWith('.0')) user = user.slice(0,-2);
-                if(!name && !user) return;
-                if(String(name).toLowerCase()==='vaccinator name') return;
+                if(!name && !user) continue;
+                if(name.toLowerCase()==='vaccinator name') continue;
                 let time = null;
-                if(iTime>=0 && r.c && r.c[iTime]){
-                    const c = r.c[iTime];
-                    time = attParseDate(c.v != null ? c.v : c.f);
+                if(iTime>=0 && row[iTime]!=='' && row[iTime]!=null){
+                    // raw:false gives strings; also try Date
+                    time = attParseDate(row[iTime]);
+                    if(!time && typeof row[iTime]==='number') time = attParseDate(row[iTime]);
                 }
-                if(!time && iTime>=0) time = attParseDate(cells[iTime]);
+                // retry with raw cell if needed
                 out.push({
                     name: name,
                     username: user,
-                    tehsil: iTeh>=0 ? String(cells[iTeh]||'').trim() : '',
-                    uc: iUc>=0 ? String(cells[iUc]||'').trim() : '',
-                    district: iDist>=0 ? String(cells[iDist]||'').trim() : 'Chakwal',
+                    tehsil: iTeh>=0 ? String(row[iTeh]||'').trim() : '',
+                    uc: iUc>=0 ? String(row[iUc]||'').trim() : '',
+                    district: iDist>=0 ? String(row[iDist]||'').trim() : 'Chakwal',
                     time: time,
-                    status: iStat>=0 ? String(cells[iStat]||'').trim() : '',
+                    status: iStat>=0 ? String(row[iStat]||'').trim() : '',
                     ymd: time ? attYmd(time) : ''
                 });
-            });
+            }
+            // Second pass: dates from raw sheet if missing
+            if(iTime>=0){
+                const ref = XLSX.utils.decode_range(ws['!ref']||'A1');
+                for(let i=0;i<out.length;i++){
+                    if(out[i].time) continue;
+                    const addr = XLSX.utils.encode_cell({r: i+1, c: iTime});
+                    const cell = ws[addr];
+                    if(cell && cell.v != null){
+                        let t = null;
+                        if(cell.t === 'd' && cell.v instanceof Date) t = cell.v;
+                        else t = attParseDate(cell.v);
+                        if(t){ out[i].time = t; out[i].ymd = attYmd(t); }
+                    }
+                }
+            }
             return out;
         }
-        /** PRIMARY match = Username (OR codes + mobile). Name is display only from master. */
+        /** PRIMARY match = Username (OR codes + mobile). Fallback = exact name. */
         function attFindIn(list, master, dayYmd){
             const u = attNormUser(master.username);
-            if(!u) return null;
-            let hits = list.filter(function(x){
-                if(attNormUser(x.username) !== u) return false;
-                if(dayYmd && x.ymd && x.ymd !== dayYmd) return false;
-                return true;
-            });
+            const n = String(master.name||'').trim().toLowerCase();
+            let hits = [];
+            if(u){
+                hits = list.filter(function(x){
+                    if(attNormUser(x.username) !== u) return false;
+                    if(dayYmd && x.ymd && x.ymd !== dayYmd) return false;
+                    return true;
+                });
+            }
+            if(!hits.length && n){
+                hits = list.filter(function(x){
+                    if(String(x.name||'').trim().toLowerCase() !== n) return false;
+                    if(dayYmd && x.ymd && x.ymd !== dayYmd) return false;
+                    return true;
+                });
+            }
             hits.sort(function(a,b){
                 const ta=a.time?a.time.getTime():0, tb=b.time?b.time.getTime():0;
                 return tb-ta;
@@ -7120,21 +7166,17 @@
         async function attLoad(){
             const st = document.getElementById('attStatus');
             const meta = document.getElementById('attMeta');
-            if(st){ st.style.display='block'; st.textContent='Loading attendance…'; }
+            if(st){ st.style.display='block'; st.textContent='Loading attendance (xlsx)…'; }
             try{
-                // parallel fetch — faster
-                const pack = await Promise.all([
-                    attFetchSheet('Total Vaccinators '),
-                    attFetchSheet('Chek-In'),
-                    attFetchSheet('Check-Out')
-                ]);
-                attMaster = attRowsFrom(pack[0], 'master').map(function(r){
-                    return {name:r.name, username:r.username, tehsil:r.tehsil, uc:r.uc, district:r.district};
-                }).filter(function(r){ return r.name; });
-                attCheckInAll = attRowsFrom(pack[1], 'in');
-                attCheckOutAll = attRowsFrom(pack[2], 'out');
+                const wb = await attFetchWorkbook();
+                attMaster = attSheetRows(wb, ['Total Vaccinators ', 'Total Vaccinators', 'Vaccinators'], 'master')
+                    .map(function(r){ return {name:r.name, username:r.username, tehsil:r.tehsil, uc:r.uc, district:r.district}; })
+                    .filter(function(r){ return r.name; });
+                attCheckInAll = attSheetRows(wb, ['Chek-In', 'Check-In', 'Check In', 'Checkin'], 'in');
+                attCheckOutAll = attSheetRows(wb, ['Check-Out', 'Check Out', 'Checkout'], 'out');
+                // Ensure times parsed — raw pass with cellDates
                 attFillFilters();
-                if(meta) meta.textContent = 'Vaccinators: '+attMaster.length+' · Check-In rows: '+attCheckInAll.length+' · Check-Out rows: '+attCheckOutAll.length+' · '+new Date().toLocaleString();
+                if(meta) meta.textContent = 'Vaccinators: '+attMaster.length+' · Check-In: '+attCheckInAll.length+' · Check-Out: '+attCheckOutAll.length+' · OR usernames included · '+new Date().toLocaleString();
                 if(st){ st.style.display='none'; st.textContent=''; }
                 attPanelFilter = null;
                 attApply();
