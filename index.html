@@ -618,10 +618,10 @@
                     <button type="button" class="emr-tab" data-emr="tehsil" onclick="emrSwitch('tehsil')">2. Tehsil Summary</button>
                     <button type="button" class="emr-tab" data-emr="antigen" onclick="emrSwitch('antigen')">3. Antigen Summary</button>
                     <button type="button" class="emr-tab" data-emr="tehsilAg" onclick="emrSwitch('tehsilAg')">4. Tehsil-wise Antigen</button>
-                    <button type="button" class="emr-tab" data-emr="phone" onclick="emrSwitch('phone')">5. Missing Phone</button>
-                    <button type="button" class="emr-tab" data-emr="father" onclick="emrSwitch('father')">6. Missing Father</button>
+                    <button type="button" class="emr-tab" data-emr="phone" onclick="emrSwitch('phone')">5. Missing Phone Number</button>
+                    <button type="button" class="emr-tab" data-emr="father" onclick="emrSwitch('father')">6. Missing Father Name</button>
                     <button type="button" class="emr-tab" data-emr="map" onclick="emrSwitch('map')">7. Geo Map Links</button>
-                    <button type="button" class="emr-tab" data-emr="late" onclick="emrSwitch('late')">8. Late Entry</button>
+                    <button type="button" class="emr-tab" data-emr="late" onclick="emrSwitch('late')">8. Late Entries Status</button>
                     <button type="button" class="emr-tab" data-emr="dropout" onclick="emrSwitch('dropout')">9. Drop-out</button>
                     <button type="button" class="emr-tab" data-emr="targets" onclick="emrSwitch('targets')">10. Targets vs Coverage</button>
                     <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
@@ -4187,9 +4187,14 @@
                 const u = emrUpdatedObj(r);
                 if(u.date) set[emrYmdFromDate(u.date)] = true;
             });
-            const days = Object.keys(set).sort().reverse(); // newest first for UX
+            const days = Object.keys(set).sort().reverse(); // newest first in dropdown
             const daysAsc = Object.keys(set).sort();
-            function fill(sel, preferFirst, preferLast){
+            // Month-to-date default: 1st of current calendar month → today
+            const now = new Date();
+            const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
+            const monthStart = y + '-' + (m<10?'0':'')+m + '-01';
+            const todayYmd = y + '-' + (m<10?'0':'')+m + '-' + (d<10?'0':'')+d;
+            function fill(sel){
                 if(!sel) return;
                 const cur = sel.value;
                 sel.innerHTML = '';
@@ -4200,22 +4205,37 @@
                 days.forEach(function(ymd){
                     sel.innerHTML += '<option value="'+ymd+'">'+formatYmdLong(ymd)+'</option>';
                 });
+                // keep user choice if still valid
                 if(cur && set[cur]) sel.value = cur;
-                else if(preferLast && daysAsc.length) sel.value = daysAsc[daysAsc.length-1];
-                else if(preferFirst && daysAsc.length) sel.value = daysAsc[0];
-                else sel.value = days[0];
             }
             const from = document.getElementById('emrDayFrom');
             const to = document.getElementById('emrDayTo');
-            fill(from, true, false);  // default earliest
-            fill(to, false, true);    // default latest
-            // If only one wave of data, from=min to=max of available
+            fill(from);
+            fill(to);
             if(daysAsc.length){
-                if(from && !from.value) from.value = daysAsc[0];
-                if(to && !to.value) to.value = daysAsc[daysAsc.length-1];
-                // Prefer full span on first load
-                if(from) from.value = daysAsc[0];
-                if(to) to.value = daysAsc[daysAsc.length-1];
+                // Default From = first day of this month that exists in data, else first available >= monthStart, else earliest
+                let defFrom = monthStart;
+                if(!set[defFrom]){
+                    defFrom = daysAsc.find(function(x){ return x >= monthStart; }) || daysAsc[0];
+                }
+                // Default To = today if in data, else latest available date <= today, else latest
+                let defTo = todayYmd;
+                if(!set[defTo]){
+                    const le = daysAsc.filter(function(x){ return x <= todayYmd; });
+                    defTo = le.length ? le[le.length-1] : daysAsc[daysAsc.length-1];
+                }
+                // Only force default when selecting Date range freshly (empty or full-span all data)
+                const wasFullSpan = from && to && from.value === daysAsc[0] && to.value === daysAsc[daysAsc.length-1];
+                const wasEmpty = from && !from.value;
+                if(wasEmpty || wasFullSpan || !(from && from.value && set[from.value])){
+                    if(from) from.value = defFrom;
+                }
+                if(wasEmpty || wasFullSpan || !(to && to.value && set[to.value])){
+                    if(to) to.value = defTo;
+                }
+                // Ensure values always set
+                if(from && !from.value) from.value = defFrom;
+                if(to && !to.value) to.value = defTo;
             }
         }
         function emrOnDayRangeChange(){
@@ -4488,7 +4508,7 @@
 
                 // Missing phone - ALL
                 newPage();
-                title('5. Missing Phone (full list)', 12);
+                title('5. Missing Phone Number (full list)', 12);
                 const missP = data.filter(function(r){ return emrPhoneMissing(emrCell(r, EMR_COLS.phone)); });
                 sub('Total: '+missP.length);
                 drawTable(['Sr','Tehsil','UC','Name','Father','MR'], missP.map(function(r,i){
@@ -4519,7 +4539,7 @@
 
                 // Late entry
                 newPage();
-                title('8. Late Entry (after 2:00 PM, latest first)', 12);
+                title('8. Late Entries Status (after 2:00 PM, latest first)', 12);
                 const late = data.filter(function(r){
                     const u = emrUpdatedObj(r);
                     if(u.hour == null) return false;
@@ -4529,7 +4549,7 @@
                     return ((ub.hour||0)*60+(ub.minute||0)) - ((ua.hour||0)*60+(ua.minute||0));
                 });
                 sub('Total after 2 PM: '+late.length);
-                drawTable(['Sr','Time','Tehsil','UC','Name','Flag'], late.map(function(r,i){
+                drawTable(['Sr','Entry Time','Tehsil','UC','Name','Flag'], late.map(function(r,i){
                     const u = emrUpdatedObj(r);
                     const mins = (u.hour||0)*60+(u.minute||0);
                     return [i+1, emrFormat12h(u), emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), mins>=16*60?'After 4 PM':'After 2 PM'];
@@ -4605,8 +4625,8 @@
         function emrTabTitle(){
             const map = {
                 uc:'1. UC-wise Entries', tehsil:'2. Tehsil Summary', antigen:'3. Antigen Summary',
-                tehsilAg:'4. Tehsil-wise Antigen', phone:'5. Missing Phone', father:'6. Missing Father',
-                map:'7. Geo Map Links', late:'8. Late Entry', dropout:'9. Drop-out',
+                tehsilAg:'4. Tehsil-wise Antigen', phone:'5. Missing Phone Number', father:'6. Missing Father Name',
+                map:'7. Geo Map Links', late:'8. Late Entries Status', dropout:'9. Drop-out',
                 targets:'10. Targets vs Coverage', defaulter:'11. Defaulter Children Vaccinated',
                 overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children',
                 ucAg:'14. UC-wise Antigen Entries Status'
@@ -4619,10 +4639,10 @@
                 tehsil:"Tehsil Summary Data",
                 antigen:"Antigen Summary Data",
                 tehsilAg:"Tehsil-wise Antigen Data",
-                phone:"Missing Phone Data",
-                father:"Missing Father Data",
+                phone:"Missing Phone Number Data",
+                father:"Missing Father Name Data",
                 map:"Geo Map Links Data",
-                late:"Late Entry Data",
+                late:"Late Entries Status Data",
                 dropout:"Drop-out Data",
                 targets:"Targets vs Coverage Data",
                 defaulter:"Defaulter Children Vaccinated Data",
@@ -4731,6 +4751,8 @@
             if(h === 'hep-b' || h === 'hepb') return 0.55;
             if(h === 'bcg' || h.indexOf('opv')>=0 || h.indexOf('penta')>=0 || h.indexOf('pcv')>=0 || h.indexOf('rota')>=0 || h.indexOf('ipv')>=0 || h.indexOf('mr')>=0 || h === 'dtp' || h === 'tcv') return 0.7;
             if(h === 'phone' || h === 'mr number' || h === 'mr') return 1.15;
+            if(h === 'time' || h.indexOf('entry time')>=0 || h === 'updated' || h.indexOf('date time')>=0 || h.indexOf('last updated')>=0) return 2.2;
+            if(h.indexOf('flag')>=0 || h.indexOf('after')>=0) return 1.2;
             return 1.0;
         }
         function pdfBuildColWidths(headers, rows, usable){
@@ -4758,6 +4780,7 @@
                 else if(h === 'hep-b') min = 9;
                 else if(h === 'sr') min = 7;
                 else if(h === 'tehsil') min = 16;
+                else if(h === 'time' || h.indexOf('entry time')>=0 || h.indexOf('last updated')>=0) min = 32;
                 return Math.max(min, w);
             });
             sum = colW.reduce(function(a,b){ return a+b; },0) || 1;
@@ -4792,8 +4815,9 @@
             try{
                 const { jsPDF } = window.jspdf;
                 const ncols = headers.length;
-                // Landscape for wide tables
-                const landscape = ncols > 6;
+                // Landscape for wide tables + Late Entries / Missing Father Name / Missing Phone
+                const forceLand = (emrMode === 'late' || emrMode === 'father' || emrMode === 'phone');
+                const landscape = forceLand || ncols > 6;
                 const pdf = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
                 const pageW = pdf.internal.pageSize.getWidth();
                 const pageH = pdf.internal.pageSize.getHeight();
@@ -6187,7 +6211,7 @@
                         : '<span>'+t12+'</span>';
                     return '<tr><td>'+i+'</td><td class="emr-late-red">'+t12+'</td><td>'+emrCell(r,EMR_COLS.tehsil)+'</td><td>'+emrCell(r,EMR_COLS.uc)+'</td><td>'+emrCell(r,EMR_COLS.name)+'</td><td class="emr-late-red">'+flag+'</td></tr>';
                 }).join('');
-                emrRenderTable(['Sr','Time (12h)','Tehsil','UC','Child Name','Flag'], rowsHtml, ['Sr','Time','Tehsil','UC','Name','Flag'], exp, ['Total', list.length+' late entries','','','','']);
+                emrRenderTable(['Sr','Entry Time','Tehsil','UC','Child Name','Flag'], rowsHtml, ['Sr','Entry Time','Tehsil','UC','Name','Flag'], exp, ['Total', list.length+' late entries','','','','']);
             }
             else if(emrMode === 'dropout'){
                 const tSel = (document.getElementById('emrTehsil')||{}).value || '';
