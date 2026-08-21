@@ -74,8 +74,8 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 <script>
 /* ========== CONFIG ========== */
 /* Deploy Apps Script (Location_AppsScript.gs) → Web app → Anyone → paste /exec URL below */
-const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPLACEHOLDER/exec';
-const MASTER_SHEET_ID = '1KAuJOL3WuYdp5YA4sD70kofeVkYPP3bJ5Rxro_0MUUc';
+const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwz4qathg1QI9fWsVyZWEvg2c119qGjDbPhehkQMR6H-JUHGrQsp8Ro42JkorDGDOj9w/exec';
+const MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
 
 let master = []; // {tehsil, uc, name, username}
 let lastLoc = null; // {lat, lng, accuracy, maps}
@@ -101,7 +101,7 @@ async function loadMaster(){
     if(!res.ok) throw new Error('Sheet load HTTP '+res.status);
     const buf = await res.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
-    let sheetName = wb.SheetNames.find(function(n){ return /total\s*vaccinator/i.test(n); }) || wb.SheetNames[0];
+    let sheetName = wb.SheetNames.find(function(n){ return /all\s*vaccinator|total\s*vaccinator/i.test(n); }) || wb.SheetNames[0];
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
     if(!aoa.length) throw new Error('Empty sheet');
     const H = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
