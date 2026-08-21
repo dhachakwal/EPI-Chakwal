@@ -633,8 +633,9 @@
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
                     <button type="button" class="btn btn-sm" id="emrDownloadBtn" onclick="emrDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
                     <button type="button" class="btn btn-sm" id="emrTabPdfBtn" onclick="emrExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
+                    <button type="button" class="btn btn-sm" id="emrTabPngBtn" onclick="emrExportTabPng()" style="background:#00838f">🖼 PNG (This Tab)</button>
                     <button type="button" class="btn btn-sm" id="emrPdfBtn" onclick="emrExportFullPdf()" style="background:#c62828">📄 Full EMR PDF (All Tabs)</button>
-                    <span style="font-size:12px;color:#666" id="emrDownloadHint">Excel / PDF (This Tab) = open tab · Full PDF = all sections</span>
+                    <span style="font-size:12px;color:#666" id="emrDownloadHint">Excel / PDF / PNG (This Tab) = open tab · Full PDF = all sections</span>
                 </div>
 
                 <div class="emr-stats" id="emrStats"></div>
@@ -4956,6 +4957,65 @@
             if(btn) btn.textContent = old || '📄 PDF (This Tab)';
         }
 
+        async function emrExportTabPng(){
+            if(typeof html2canvas === 'undefined'){
+                alert('html2canvas library missing. Please refresh the page.');
+                return;
+            }
+            const btn = document.getElementById('emrTabPngBtn');
+            const old = btn ? btn.textContent : '';
+            if(btn){ btn.disabled = true; btn.textContent = 'Preparing PNG…'; }
+            try{
+                // Capture visible report area: stats + optional cards/charts + table
+                const parts = [];
+                const stats = document.getElementById('emrStats');
+                const extra = document.getElementById('emrExtraVisual');
+                const chart = document.getElementById('emrChartWrap');
+                const table = document.getElementById('emrTableWrap');
+                if(stats && stats.innerHTML.trim()) parts.push(stats);
+                if(extra && extra.style.display !== 'none' && extra.innerHTML.trim()) parts.push(extra);
+                if(chart && chart.style.display !== 'none') parts.push(chart);
+                if(table && table.style.display !== 'none') parts.push(table);
+                if(!parts.length){
+                    alert('No visible tab content to capture. Open a report tab first.');
+                    return;
+                }
+                // Wrapper so one PNG includes all visible parts
+                const wrap = document.createElement('div');
+                wrap.id = 'emrPngCaptureWrap';
+                wrap.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;padding:16px;width:1100px;z-index:-1;';
+                const title = document.createElement('div');
+                title.style.cssText = 'font-weight:700;color:#0d5c3d;font-size:16px;margin-bottom:8px;font-family:Segoe UI,Arial,sans-serif';
+                const tabTitle = (typeof emrTabTitle==='function') ? emrTabTitle() : ('Tab: '+(emrMode||''));
+                const period = (typeof emrPeriodLabel==='function') ? emrPeriodLabel() : '';
+                title.textContent = 'EPI Chakwal — Outreach · '+tabTitle+(period?(' · '+period):'');
+                wrap.appendChild(title);
+                parts.forEach(function(el){
+                    const clone = el.cloneNode(true);
+                    clone.style.display = 'block';
+                    wrap.appendChild(clone);
+                });
+                document.body.appendChild(wrap);
+                const canvas = await html2canvas(wrap, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: 1100
+                });
+                document.body.removeChild(wrap);
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                const base = (typeof emrExportFileBase==='function') ? emrExportFileBase() : ('Outreach_'+(emrMode||'tab'));
+                a.download = base + '.png';
+                a.click();
+            }catch(e){
+                console.error(e);
+                alert('PNG failed: '+(e.message||e));
+            }finally{
+                if(btn){ btn.disabled = false; btn.textContent = old || '🖼 PNG (This Tab)'; }
+            }
+        }
         function emrDownloadExcel(){
             if(typeof XLSX === 'undefined'){
                 alert('Excel library load nahi hui. Page refresh karein.');
