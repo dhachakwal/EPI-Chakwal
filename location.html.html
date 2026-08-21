@@ -18,8 +18,9 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(1
 .brand h1{font-size:18px;color:#0d5c3d;margin:8px 0 2px;font-weight:800}
 .brand p{font-size:12px;color:#666;line-height:1.35}
 label{display:block;font-size:13px;font-weight:600;color:#0d5c3d;margin:12px 0 5px}
-select{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
-select:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
+select,input[type="text"]{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
+select:focus,input[type="text"]:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
+input[type="text"]::placeholder{color:#999;font-size:13.5px}
 .btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
 .btn-loc{background:linear-gradient(135deg,#0d5c3d,#1a8a5c);color:#fff}
 .btn-loc:disabled{opacity:.55;cursor:not-allowed}
@@ -55,11 +56,15 @@ select:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,
     <label for="vacc">Vaccinator</label>
     <select id="vacc" disabled><option value="">Select UC first</option></select>
 
+    <label for="kitStation">Kit Station Name</label>
+    <input type="text" id="kitStation" placeholder="e.g. H.H Nazia, Bethak Noor Khan" autocomplete="off">
+
     <div class="note">
       <strong>Steps</strong><br>
       1) Select Tehsil → UC → your name<br>
-      2) Tap <strong>Get My Location</strong> and allow location access<br>
-      3) Tap <strong>Submit Location</strong>
+      2) Enter the <strong>Kit Station Name</strong> where you will vaccinate today (e.g. H.H Nazia, Bethak Noor Khan)<br>
+      3) Tap <strong>Get My Location</strong> and allow location access<br>
+      4) Tap <strong>Submit Location</strong>
     </div>
 
     <button type="button" class="btn btn-loc" id="btnLoc" onclick="getLocation()">📍 Get My Location</button>
@@ -242,6 +247,8 @@ function submitLoc(){
   showErr('');
   const v = selectedVacc();
   if(!v){ showErr('Please select a vaccinator.'); return; }
+  const kit = (document.getElementById('kitStation')||{}).value || '';
+  if(!String(kit).trim()){ showErr('Please enter Kit Station Name (e.g. H.H Nazia, Bethak Noor Khan).'); return; }
   if(!lastLoc){ showErr('Please get your location first.'); return; }
 
   const btn = document.getElementById('btnSub');
@@ -254,6 +261,7 @@ function submitLoc(){
     username: v.username||'',
     tehsil: v.tehsil,
     uc: v.uc,
+    kitStation: String(kit).trim(),
     lat: String(lastLoc.lat),
     lng: String(lastLoc.lng),
     accuracy: String(Math.round(lastLoc.accuracy||0)),
@@ -315,6 +323,8 @@ function resetForm(){
   document.getElementById('btnLoc').disabled = false;
   document.getElementById('btnLoc').innerHTML = '📍 Get My Location';
   document.getElementById('teh').value = '';
+  const kitEl = document.getElementById('kitStation');
+  if(kitEl) kitEl.value = '';
   onTehsil();
 }
 
