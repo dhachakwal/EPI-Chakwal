@@ -772,6 +772,44 @@
                     <div id="attStatus" class="sweep-loading" style="display:none"></div>
                 </div>
 
+            <div class="section-title" id="section-loc">Vaccinators Field Location Check-In</div>
+                <div class="emr-block" style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,.08);margin-bottom:25px">
+                    <p class="emr-note"><strong>Source:</strong> Live GPS submissions from <a href="location.html" target="_blank" rel="noopener"><code>location.html</code></a> · Master list: All Vaccinators · Sheet tab: <em>Location</em></p>
+                    <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
+                        <label>Date
+                            <select id="locDay" onchange="locApply()"><option value="">All dates</option></select>
+                        </label>
+                        <label>Tehsil
+                            <select id="locTehsil" onchange="locApply()"><option value="">All Tehsils</option></select>
+                        </label>
+                        <button type="button" class="btn btn-sm" onclick="locLoad()" style="background:#0d5c3d">🔄 Refresh Locations</button>
+                        <a class="btn btn-sm" href="location.html" target="_blank" rel="noopener" style="background:#1565c0;text-decoration:none;color:#fff;display:inline-block;padding:8px 12px;border-radius:8px">📍 Open Check-In Page</a>
+                        <span class="sweep-meta" id="locMeta">Not loaded</span>
+                    </div>
+                    <div class="emr-summary-panel" id="locSummaryPanel">
+                        <div class="emr-summary-head">
+                            <h3>Location Summary</h3>
+                            <div class="emr-summary-meta" id="locDataUpto">—</div>
+                        </div>
+                        <div class="emr-summary-grid" id="locSummaryGrid">
+                            <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                        </div>
+                    </div>
+                    <div class="emr-tabs" id="locTabs">
+                        <button type="button" class="emr-tab active" data-loc="submitted" onclick="locSwitch('submitted')">1. Submitted Locations</button>
+                        <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">2. Not Submitted (Pending)</button>
+                        <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
+                    </div>
+                    <div id="locStats" class="emr-stats" style="margin:10px 0"></div>
+                    <div class="emr-table-wrap" id="locTableWrap">
+                        <table class="emr-table">
+                            <thead id="locHead"></thead>
+                            <tbody id="locBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="locStatus" class="sweep-loading" style="display:none"></div>
+                </div>
+
             <div class="section-title">Payment Status For NID Worker</div>
             <div class="download-grid" style="grid-template-columns:1fr">
                 <div class="download-card">
@@ -6991,6 +7029,248 @@
             return JSON.parse(text.substring(a,b+1));
         }
 
+
+
+        /* ===== Field Location Check-In (location.html → Sheet Location) ===== */
+        const LOC_DASH_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
+        let locMaster = [];
+        let locRows = [];
+        let locMode = 'submitted';
+
+        function locNormUser(u){
+            let s = String(u==null?'':u).trim().toLowerCase();
+            if(s.endsWith('.0')) s = s.slice(0,-2);
+            if(/^\d+$/.test(s)) s = s.replace(/^0+/, '') || '0';
+            return s;
+        }
+        function locDispUser(u){
+            let s = String(u==null?'':u).trim();
+            if(s.endsWith('.0')) s = s.slice(0,-2);
+            if(/^\d+$/.test(s) && s.length>=10 && !s.startsWith('0')) s = '0'+s;
+            return s;
+        }
+        function locParseDate(v){
+            if(v==null||v==='') return null;
+            if(Object.prototype.toString.call(v)==='[object Date]' && !isNaN(v)) return v;
+            const s = String(v).trim();
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        function locYmd(d){
+            if(!d) return '';
+            const y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate();
+            return y+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;
+        }
+        function locFmt(d){
+            if(!d) return '';
+            const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            let h=d.getHours(), mi=d.getMinutes();
+            const ap=h>=12?'PM':'AM'; h=h%12; if(!h) h=12;
+            return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear()+' '+h+':'+(mi<10?'0':'')+mi+' '+ap;
+        }
+        async function locFetchWb(){
+            const url = 'https://docs.google.com/spreadsheets/d/'+LOC_DASH_SHEET_ID+'/export?format=xlsx&_='+Date.now();
+            const res = await fetch(url);
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            const buf = await res.arrayBuffer();
+            if(typeof XLSX==='undefined') throw new Error('XLSX missing');
+            return XLSX.read(buf, {type:'array', cellDates:true});
+        }
+        function locAoa(wb, prefer){
+            const names = wb.SheetNames||[];
+            let sn = null;
+            for(let i=0;i<prefer.length;i++){
+                const w = prefer[i].toLowerCase().trim();
+                sn = names.find(function(n){ return String(n).toLowerCase().trim()===w; });
+                if(sn) break;
+            }
+            if(!sn){
+                for(let i=0;i<prefer.length;i++){
+                    const w = prefer[i].toLowerCase().replace(/\s+/g,'');
+                    sn = names.find(function(n){ return String(n).toLowerCase().replace(/\s+/g,'').indexOf(w)>=0; });
+                    if(sn) break;
+                }
+            }
+            if(!sn) return {headers:[], rows:[]};
+            const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:false});
+            if(!aoa.length) return {headers:[], rows:[]};
+            return {headers:(aoa[0]||[]).map(function(h){return String(h||'').toLowerCase().trim();}), rows:aoa.slice(1), sheet:sn};
+        }
+        function locIx(headers, cands){
+            for(let c=0;c<cands.length;c++){
+                const j=headers.indexOf(cands[c]); if(j>=0) return j;
+            }
+            for(let i=0;i<headers.length;i++){
+                for(let c=0;c<cands.length;c++){ if(headers[i].indexOf(cands[c])>=0) return i; }
+            }
+            return -1;
+        }
+        async function locLoad(){
+            const st=document.getElementById('locStatus');
+            const meta=document.getElementById('locMeta');
+            if(st){ st.style.display='block'; st.textContent='Loading locations…'; }
+            try{
+                const wb = await locFetchWb();
+                const masterPack = locAoa(wb, ['All Vaccinators','Total Vaccinators','Vaccinators']);
+                const H=masterPack.headers, R=masterPack.rows;
+                const iT=locIx(H,['tehsil']), iU=locIx(H,['union council','uc']), iN=locIx(H,['vaccinator name','name']), iUser=locIx(H,['username']);
+                locMaster = [];
+                R.forEach(function(row){
+                    const name = iN>=0?String(row[iN]||'').trim():'';
+                    if(!name) return;
+                    locMaster.push({
+                        name:name,
+                        username:iUser>=0?String(row[iUser]==null?'':row[iUser]).replace(/\.0$/,'').trim():'',
+                        tehsil:iT>=0?String(row[iT]||'').trim():'',
+                        uc:iU>=0?String(row[iU]||'').trim():''
+                    });
+                });
+                const locPack = locAoa(wb, ['Location','Locations','Field Location']);
+                locRows = [];
+                if(locPack.rows && locPack.rows.length){
+                    const L=locPack.headers;
+                    const jTs=locIx(L,['timestamp','time']), jN=locIx(L,['name']), jU=locIx(L,['username']),
+                          jT=locIx(L,['tehsil']), jUc=locIx(L,['uc','union']), jLat=locIx(L,['lat']), jLng=locIx(L,['long','lng']),
+                          jAcc=locIx(L,['accuracy']), jMap=locIx(L,['maps','map']);
+                    locPack.rows.forEach(function(row){
+                        const name=jN>=0?String(row[jN]||'').trim():'';
+                        if(!name) return;
+                        let ts = jTs>=0 ? locParseDate(row[jTs]) : null;
+                        // excel serial
+                        if(!ts && jTs>=0 && row[jTs]!=='') ts = locParseDate(row[jTs]);
+                        const lat=jLat>=0?row[jLat]:'';
+                        const lng=jLng>=0?row[jLng]:'';
+                        let maps=jMap>=0?String(row[jMap]||'').trim():'';
+                        if(!maps && lat!=='' && lng!=='') maps='https://www.google.com/maps?q='+lat+','+lng;
+                        locRows.push({
+                            ts:ts, ymd:ts?locYmd(ts):'',
+                            name:name,
+                            username:jU>=0?String(row[jU]==null?'':row[jU]).replace(/\.0$/,'').trim():'',
+                            tehsil:jT>=0?String(row[jT]||'').trim():'',
+                            uc:jUc>=0?String(row[jUc]||'').trim():'',
+                            lat:lat, lng:lng, accuracy:jAcc>=0?row[jAcc]:'', maps:maps
+                        });
+                    });
+                }
+                // filters
+                const days={};
+                locRows.forEach(function(r){ if(r.ymd) days[r.ymd]=1; });
+                const daySel=document.getElementById('locDay');
+                if(daySel){
+                    const keys=Object.keys(days).sort().reverse();
+                    const cur=daySel.value;
+                    daySel.innerHTML='<option value="">All dates</option>'+keys.map(function(d){return '<option value="'+d+'">'+d+'</option>';}).join('');
+                    if(cur && days[cur]) daySel.value=cur;
+                    else if(keys.length) daySel.value=keys[0];
+                }
+                const tehs={};
+                locMaster.forEach(function(m){ if(m.tehsil) tehs[m.tehsil]=1; });
+                const tSel=document.getElementById('locTehsil');
+                if(tSel){
+                    const cur=tSel.value;
+                    tSel.innerHTML='<option value="">All Tehsils</option>'+Object.keys(tehs).sort().map(function(t){return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';}).join('');
+                    if(cur && tehs[cur]) tSel.value=cur;
+                }
+                if(meta) meta.textContent = 'Master: '+locMaster.length+' · Location rows: '+locRows.length+(locPack.sheet?' · Tab: '+locPack.sheet:' · (no Location tab yet)')+' · '+new Date().toLocaleString();
+                if(st){ st.style.display='none'; }
+                locApply();
+            }catch(e){
+                console.error(e);
+                if(st){ st.style.display='block'; st.textContent='Location load failed: '+(e.message||e); }
+                if(meta) meta.textContent='Load failed';
+            }
+        }
+        function locSwitch(mode){
+            locMode=mode;
+            document.querySelectorAll('#locTabs .emr-tab').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-loc')===mode);
+            });
+            locApply();
+        }
+        function locHasSubmit(m, day){
+            const u=locNormUser(m.username);
+            const n=String(m.name||'').trim().toLowerCase();
+            const hits=locRows.filter(function(r){
+                if(day && r.ymd && r.ymd!==day) return false;
+                if(u && locNormUser(r.username)===u) return true;
+                if(n && String(r.name||'').trim().toLowerCase()===n) return true;
+                return false;
+            });
+            hits.sort(function(a,b){ return (b.ts?b.ts.getTime():0)-(a.ts?a.ts.getTime():0); });
+            return hits[0]||null;
+        }
+        function locApply(){
+            const day=(document.getElementById('locDay')||{}).value||'';
+            const teh=(document.getElementById('locTehsil')||{}).value||'';
+            let masters=locMaster.filter(function(m){ return !teh || m.tehsil===teh; });
+            let submitted=0, pending=0;
+            masters.forEach(function(m){ if(locHasSubmit(m, day)) submitted++; else pending++; });
+            const grid=document.getElementById('locSummaryGrid');
+            const upto=document.getElementById('locDataUpto');
+            if(upto){
+                let maxT=null;
+                locRows.forEach(function(r){ if(day&&r.ymd!==day) return; if(r.ts&&(!maxT||r.ts>maxT)) maxT=r.ts; });
+                upto.textContent=(day?('Date: '+day+' · '):'')+(maxT?('Latest: '+locFmt(maxT)):('Location rows: '+locRows.length));
+            }
+            if(grid){
+                grid.innerHTML=[
+                    {n:masters.length,l:'Total Vaccinators'},
+                    {n:submitted,l:'Submitted'},
+                    {n:pending,l:'Not Submitted'}
+                ].map(function(it){
+                    const red=it.l.indexOf('Not')>=0?'color:#c62828;':'';
+                    return '<div class="emr-sum-item" style="'+red+'"><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+                }).join('');
+            }
+            const stats=document.getElementById('locStats');
+            const head=document.getElementById('locHead');
+            const body=document.getElementById('locBody');
+            if(!locMaster.length){
+                if(head) head.innerHTML='<tr><th>Info</th></tr>';
+                if(body) body.innerHTML='<tr><td>Click Refresh Locations</td></tr>';
+                return;
+            }
+            if(locMode==='submitted'){
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Time</th><th>Lat</th><th>Long</th><th>Map</th></tr>';
+                let i=0, html='';
+                masters.forEach(function(m){
+                    const hit=locHasSubmit(m, day);
+                    if(!hit) return;
+                    i++;
+                    const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
+                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||hit.tehsil||'')+'</td><td>'+(m.uc||hit.uc||'')+'</td><td>'+locFmt(hit.ts)+'</td><td>'+(hit.lat||'')+'</td><td>'+(hit.lng||'')+'</td><td>'+map+'</td></tr>';
+                });
+                if(body) body.innerHTML=html||'<tr><td colspan="9">Is date / filter me koi location submit nahi</td></tr>';
+            }
+            else if(locMode==='pending'){
+                if(stats) stats.innerHTML='<div class="emr-stat" style="color:#c62828"><div class="n">'+pending+'</div><div class="l">Not Submitted</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Status</th></tr>';
+                let i=0, html='';
+                masters.forEach(function(m){
+                    if(locHasSubmit(m, day)) return;
+                    i++;
+                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="color:#c62828;font-weight:700">Not Submitted</td></tr>';
+                });
+                if(body) body.innerHTML=html||'<tr><td colspan="6">Sab ne location bhej di</td></tr>';
+            }
+            else {
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div><div class="emr-stat" style="color:#c62828"><div class="n">'+pending+'</div><div class="l">Pending</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Status</th><th>Last Time</th><th>Map</th></tr>';
+                let i=0, html='';
+                masters.forEach(function(m){
+                    i++;
+                    const hit=locHasSubmit(m, day);
+                    if(hit){
+                        const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
+                        html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="color:#2e7d32;font-weight:700">Submitted</td><td>'+locFmt(hit.ts)+'</td><td>'+map+'</td></tr>';
+                    } else {
+                        html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="color:#c62828;font-weight:700">Not Submitted</td><td>—</td><td>—</td></tr>';
+                    }
+                });
+                if(body) body.innerHTML=html;
+            }
+        }
 
         /* ===== Vaccinators Attendance as Per EMR ===== */
         const ATT_SHEET_ID = '1KAuJOL3WuYdp5YA4sD70kofeVkYPP3bJ5Rxro_0MUUc';
