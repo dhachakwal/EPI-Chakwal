@@ -74,7 +74,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 <script>
 /* ========== CONFIG ========== */
 /* Deploy Apps Script (Location_AppsScript.gs) → Web app → Anyone → paste /exec URL below */
-const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwz4qathg1QI9fWsVyZWEvg2c119qGjDbPhehkQMR6H-JUHGrQsp8Ro42JkorDGDOj9w/exec';
+const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpvbjMy9ROsWd6iEg144CbaDyJDByW7XBbYw_6cbAEC_HwR00C_DdBxUNeXGmkD1VTeg/exec';
 const MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
 
 let master = []; // {tehsil, uc, name, username}
@@ -237,7 +237,7 @@ async function submitLoc(){
   if(!v){ showStatus('Vaccinator select karein.', 'err'); return; }
   if(!lastLoc){ showStatus('Pehle Get My Location karein.', 'err'); return; }
   if(!LOC_SCRIPT_URL || LOC_SCRIPT_URL.indexOf('PLACEHOLDER')>=0){
-    showStatus('Submit setup pending: Admin ko Apps Script Web App URL lagani hogi (location.html me LOC_SCRIPT_URL). Location mil chuki hai — Maps: '+lastLoc.maps, 'err');
+    showStatus('Submit setup pending: Apps Script URL missing.', 'err');
     return;
   }
   const btn = document.getElementById('btnSub');
@@ -249,20 +249,44 @@ async function submitLoc(){
     username: v.username||'',
     tehsil: v.tehsil,
     uc: v.uc,
-    lat: lastLoc.lat,
-    lng: lastLoc.lng,
-    accuracy: lastLoc.accuracy,
+    lat: String(lastLoc.lat),
+    lng: String(lastLoc.lng),
+    accuracy: String(lastLoc.accuracy),
     maps: lastLoc.maps
   };
   try{
+    // 1) JSON POST (Apps Script)
     await fetch(LOC_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
-      headers: {'Content-Type':'text/plain'},
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(payload)
     });
-    // no-cors → opaque; assume ok if no throw
-    showStatus('Location submit ho gayi. Shukriya, '+v.name+'.', 'ok');
+    // 2) Also form-POST via hidden iframe (backup — e.parameter)
+    let iframe = document.getElementById('locHiddenFrame');
+    if(!iframe){
+      iframe = document.createElement('iframe');
+      iframe.name = 'locHiddenFrame';
+      iframe.id = 'locHiddenFrame';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = LOC_SCRIPT_URL;
+    form.target = 'locHiddenFrame';
+    form.style.display = 'none';
+    Object.keys(payload).forEach(function(k){
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = k;
+      inp.value = payload[k]==null?'':String(payload[k]);
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function(){ try{ form.remove(); }catch(e){} }, 2000);
+    showStatus('Location submit ho gayi. Sheet me "Location" tab check karein. Shukriya, '+v.name+'.', 'ok');
     btn.innerHTML = '✅ Submitted';
   }catch(e){
     showStatus('Submit fail: '+(e.message||e), 'err');
