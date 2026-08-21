@@ -80,7 +80,7 @@ input[type="text"]::placeholder{color:#999;font-size:13.5px}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4H1Q1eT5GNZ9OtnOHAxbQ-gvlaS0oMYgYPSKmRFUKX4in0J4609otDe_PXjhIKc_u/exec';
+const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyeYd2z5z8HBN27YlO-KzyziFM-k6Hc3kwYF6SG4AkfTmQus0F-D2oyI9cHerzZM5x-A/exec';
 const MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
 const CACHE_KEY = 'epi_loc_master_v1';
 
@@ -258,7 +258,7 @@ function submitLoc(){
   const payload = {
     timestamp: new Date().toISOString(),
     name: v.name,
-    username: v.username||'',
+    username: String(v.username||''),
     tehsil: v.tehsil,
     uc: v.uc,
     kitStation: String(kit).trim(),
@@ -268,47 +268,66 @@ function submitLoc(){
     maps: lastLoc.maps
   };
 
-  // Fast path: single no-cors POST (no waiting for response)
+  // ONE submit only (JSON body) — avoids duplicate sheet rows
+  // mode:no-cors cannot read response; success UI after short delay
+  function markOk(){
+    btn.className = 'btn btn-done';
+    btn.innerHTML = 'Location Submitted<span class="thank">Thank You, '+v.name+'</span>';
+    document.getElementById('urduOk').style.display = 'block';
+    document.getElementById('btnLoc').disabled = true;
+  }
+  function markFail(msg){
+    btn.disabled = false;
+    btn.className = 'btn btn-sub';
+    btn.innerHTML = '✅ Submit Location';
+    showErr(msg || 'Submit failed. Check internet / Apps Script deploy (Anyone access).');
+  }
+
   try{
     fetch(LOC_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
+      redirect: 'follow',
       headers: {'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(payload),
       keepalive: true
+    }).then(function(){
+      // no-cors → opaque response; assume OK if no network throw
+      setTimeout(markOk, 400);
+    }).catch(function(){
+      // Fallback: form POST with same fields + data JSON
+      try{
+        let iframe = document.getElementById('locHiddenFrame');
+        if(!iframe){
+          iframe = document.createElement('iframe');
+          iframe.name = 'locHiddenFrame';
+          iframe.id = 'locHiddenFrame';
+          iframe.style.cssText = 'display:none;width:0;height:0;border:0';
+          document.body.appendChild(iframe);
+        }
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = LOC_SCRIPT_URL;
+        form.target = 'locHiddenFrame';
+        form.style.display = 'none';
+        Object.keys(payload).forEach(function(k){
+          const inp = document.createElement('input');
+          inp.type = 'hidden'; inp.name = k; inp.value = payload[k];
+          form.appendChild(inp);
+        });
+        const dataInp = document.createElement('input');
+        dataInp.type = 'hidden'; dataInp.name = 'data'; dataInp.value = JSON.stringify(payload);
+        form.appendChild(dataInp);
+        document.body.appendChild(form);
+        form.submit();
+        setTimeout(function(){ try{ form.remove(); }catch(e){} markOk(); }, 800);
+      }catch(e2){
+        markFail('Submit failed: '+(e2.message||e2));
+      }
     });
-  }catch(e){}
-
-  // Backup form POST (async, non-blocking)
-  try{
-    let iframe = document.getElementById('locHiddenFrame');
-    if(!iframe){
-      iframe = document.createElement('iframe');
-      iframe.name = 'locHiddenFrame';
-      iframe.id = 'locHiddenFrame';
-      iframe.style.cssText = 'display:none;width:0;height:0;border:0';
-      document.body.appendChild(iframe);
-    }
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = LOC_SCRIPT_URL;
-    form.target = 'locHiddenFrame';
-    form.style.display = 'none';
-    Object.keys(payload).forEach(function(k){
-      const inp = document.createElement('input');
-      inp.type = 'hidden'; inp.name = k; inp.value = payload[k];
-      form.appendChild(inp);
-    });
-    document.body.appendChild(form);
-    form.submit();
-    setTimeout(function(){ try{ form.remove(); }catch(e){} }, 1500);
-  }catch(e){}
-
-  // Instant success UI
-  btn.className = 'btn btn-done';
-  btn.innerHTML = 'Location Submitted<span class="thank">Thank You, '+v.name+'</span>';
-  document.getElementById('urduOk').style.display = 'block';
-  document.getElementById('btnLoc').disabled = true;
+  }catch(e){
+    markFail('Submit failed: '+(e.message||e));
+  }
 }
 
 function resetForm(){
