@@ -9,6 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
         html,body{margin:0;padding:0;background:#f0f7f4;color:#333;border:0;-webkit-user-select:text!important;user-select:text!important}
@@ -743,6 +745,7 @@
                         <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">2. Not Submitted (Pending)</button>
                         <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
                         <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">4. Late Location Submit</button>
+                        <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
                             <button type="button" class="btn btn-sm" onclick="locExportPdf()" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
@@ -755,6 +758,14 @@
                             <thead id="locHead"></thead>
                             <tbody id="locBody"></tbody>
                         </table>
+                    </div>
+                    <div id="locMapWrap" style="display:none">
+                        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px;font-size:12px;color:#444">
+                            <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1a8a5c;margin-right:4px;vertical-align:middle"></span>Submitted (fresh, &lt; 3 hrs)</span>
+                            <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#9e9e9e;margin-right:4px;vertical-align:middle"></span>Stale (&gt; 3 hrs old)</span>
+                            <span id="locMapCount" style="margin-left:auto;font-weight:700;color:#0d5c3d"></span>
+                        </div>
+                        <div id="locMapEl" style="height:520px;border-radius:12px;overflow:hidden;border:1px solid #c8e6c9"></div>
                     </div>
                     <div id="locStatus" class="sweep-loading" style="display:none"></div>
                 </div><!-- /emrModuleLocation -->
@@ -7321,11 +7332,30 @@
                 locLoading = false;
             }
         }
+        let locMapAutoTimer = null;
         function locSwitch(mode){
             locMode=mode;
             document.querySelectorAll('#locTabs .emr-tab').forEach(function(b){
                 b.classList.toggle('active', b.getAttribute('data-loc')===mode);
             });
+            const tableWrap=document.getElementById('locTableWrap');
+            const mapWrap=document.getElementById('locMapWrap');
+            const statsEl=document.getElementById('locStats');
+            if(mode==='map'){
+                if(tableWrap) tableWrap.style.display='none';
+                if(mapWrap) mapWrap.style.display='block';
+                if(statsEl) statsEl.style.display='none';
+                if(!locMapAutoTimer){
+                    locMapAutoTimer = setInterval(function(){
+                        if(locMode==='map') locLoad(true);
+                    }, 120000); // refresh every 2 minutes while map tab is open
+                }
+            } else {
+                if(tableWrap) tableWrap.style.display='';
+                if(mapWrap) mapWrap.style.display='none';
+                if(statsEl) statsEl.style.display='';
+                if(locMapAutoTimer){ clearInterval(locMapAutoTimer); locMapAutoTimer=null; }
+            }
             locApply();
         }
         function locHitsFor(m, day){
