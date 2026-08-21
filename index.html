@@ -7378,11 +7378,43 @@
 
             if(!locLeafletMap){
                 locLeafletMap = L.map(el, { scrollWheelZoom: true, zoomControl: true });
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                // Base layers
+                const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '&copy; OpenStreetMap'
-                }).addTo(locLeafletMap);
+                });
+                const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri'
+                });
+                const hybrid = L.layerGroup([
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: 'Tiles &copy; Esri'
+                    }),
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; CARTO',
+                        opacity: 0.9
+                    })
+                ]);
+                const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 17,
+                    attribution: '&copy; OpenTopoMap'
+                });
+                streets.addTo(locLeafletMap);
                 locLeafletLayer = L.layerGroup().addTo(locLeafletMap);
+                // Layer switcher — top-right
+                L.control.layers(
+                    {
+                        'Streets': streets,
+                        'Satellite': satellite,
+                        'Hybrid': hybrid,
+                        'Terrain': topo
+                    },
+                    null,
+                    { position: 'topright', collapsed: false }
+                ).addTo(locLeafletMap);
             }
             setTimeout(function(){ try{ locLeafletMap.invalidateSize(); }catch(e){} }, 80);
 
