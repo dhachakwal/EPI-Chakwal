@@ -7283,7 +7283,8 @@
                 if(locPack.rows && locPack.rows.length){
                     const L=locPack.headers;
                     const jTs=locIx(L,['timestamp','time']), jN=locIx(L,['name']), jU=locIx(L,['username']),
-                          jT=locIx(L,['tehsil']), jUc=locIx(L,['uc','union']), jLat=locIx(L,['lat']), jLng=locIx(L,['long','lng']),
+                          jT=locIx(L,['tehsil']), jUc=locIx(L,['uc','union']), jKit=locIx(L,['kit station','kitstation','kit']),
+                          jLat=locIx(L,['lat']), jLng=locIx(L,['long','lng']),
                           jAcc=locIx(L,['accuracy']), jMap=locIx(L,['maps','map']);
                     locPack.rows.forEach(function(row){
                         const name=jN>=0?String(row[jN]||'').trim():'';
@@ -7299,6 +7300,7 @@
                             username:jU>=0?String(row[jU]==null?'':row[jU]).replace(/\.0$/,'').trim():'',
                             tehsil:jT>=0?String(row[jT]||'').trim():'',
                             uc:jUc>=0?String(row[jUc]||'').trim():'',
+                            kitStation:jKit>=0?String(row[jKit]||'').trim():'',
                             lat:lat, lng:lng, accuracy:jAcc>=0?row[jAcc]:'', maps:maps
                         });
                     });
@@ -7424,7 +7426,7 @@
                     if(body) body.innerHTML=html||'<tr><td colspan="9">Koi location submit nahi</td></tr>';
                     locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Times Submitted','Day-wise','Last Time','Map'], rows:exp, title:'Submitted Locations (All dates)'};
                 } else {
-                    if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Time</th><th>Late?</th><th>Lat</th><th>Long</th><th>Map</th></tr>';
+                    if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>Time</th><th>Late?</th><th>Lat</th><th>Long</th><th>Map</th></tr>';
                     let i=0, html='', exp=[];
                     masters.forEach(function(m){
                         const hit=locHasSubmit(m, day);
@@ -7432,11 +7434,11 @@
                         i++;
                         const late=locIsLate(hit.ts);
                         const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
-                        html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||hit.tehsil||'')+'</td><td>'+(m.uc||hit.uc||'')+'</td><td>'+locFmt(hit.ts)+'</td><td style="font-weight:700;color:'+(late?'#c62828':'#2e7d32')+'">'+(late?'Late':'On time')+'</td><td>'+(hit.lat||'')+'</td><td>'+(hit.lng||'')+'</td><td>'+map+'</td></tr>';
-                        exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||hit.tehsil||'',m.uc||hit.uc||'',locFmt(hit.ts),late?'Late':'On time',hit.lat||'',hit.lng||'',hit.maps||'']);
+                        html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||hit.tehsil||'')+'</td><td>'+(m.uc||hit.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td>'+locFmt(hit.ts)+'</td><td style="font-weight:700;color:'+(late?'#c62828':'#2e7d32')+'">'+(late?'Late':'On time')+'</td><td>'+(hit.lat||'')+'</td><td>'+(hit.lng||'')+'</td><td>'+map+'</td></tr>';
+                        exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||hit.tehsil||'',m.uc||hit.uc||'',hit.kitStation||'',locFmt(hit.ts),late?'Late':'On time',hit.lat||'',hit.lng||'',hit.maps||'']);
                     });
-                    if(body) body.innerHTML=html||'<tr><td colspan="10">Is date / filter me koi location submit nahi</td></tr>';
-                    locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Time','Late?','Lat','Long','Map'], rows:exp, title:'Submitted Locations — '+locYmdLabel(day)};
+                    if(body) body.innerHTML=html||'<tr><td colspan="11">Is date / filter me koi location submit nahi</td></tr>';
+                    locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Late?','Lat','Long','Map'], rows:exp, title:'Submitted Locations — '+locYmdLabel(day)};
                 }
             }
             else if(locMode==='pending'){
@@ -7458,7 +7460,7 @@
                 if(stats) stats.innerHTML=
                     '<div class="emr-stat" style="cursor:pointer;color:#c62828" onclick="locClickStat(\'late\')"><div class="n">'+lateCount+'</div><div class="l">Late (>09:30 AM)</div></div>'+
                     '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>';
-                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Time</th><th>Minutes Late</th><th>Lat</th><th>Long</th><th>Map</th></tr>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>Time</th><th>Minutes Late</th><th>Lat</th><th>Long</th><th>Map</th></tr>';
                 let i=0, html='', exp=[];
                 masters.forEach(function(m){
                     const hits = locHitsFor(m, day).filter(function(h){ return locIsLate(h.ts); });
@@ -7468,11 +7470,11 @@
                     i++;
                     const mins = hit.ts ? (hit.ts.getHours()*60 + hit.ts.getMinutes() - LOC_LATE_MINS) : 0;
                     const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
-                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="color:#c62828;font-weight:700">'+locFmt(hit.ts)+'</td><td style="color:#c62828;font-weight:800">'+mins+' min</td><td>'+(hit.lat||'')+'</td><td>'+(hit.lng||'')+'</td><td>'+map+'</td></tr>';
-                    exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||'',m.uc||'',locFmt(hit.ts),mins+' min',hit.lat||'',hit.lng||'',hit.maps||'']);
+                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td style="color:#c62828;font-weight:700">'+locFmt(hit.ts)+'</td><td style="color:#c62828;font-weight:800">'+mins+' min</td><td>'+(hit.lat||'')+'</td><td>'+(hit.lng||'')+'</td><td>'+map+'</td></tr>';
+                    exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||'',m.uc||'',hit.kitStation||'',locFmt(hit.ts),mins+' min',hit.lat||'',hit.lng||'',hit.maps||'']);
                 });
-                if(body) body.innerHTML=html||'<tr><td colspan="10">Is filter me koi late submission nahi (09:30 AM ke baad)</td></tr>';
-                locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Time','Minutes Late','Lat','Long','Map'], rows:exp, title:'Late Location Submit (>09:30 AM)'+(day?' — '+locYmdLabel(day):'')};
+                if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi late submission nahi (09:30 AM ke baad)</td></tr>';
+                locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Minutes Late','Lat','Long','Map'], rows:exp, title:'Late Location Submit (>09:30 AM)'+(day?' — '+locYmdLabel(day):'')};
             }
             else {
                 // all status
