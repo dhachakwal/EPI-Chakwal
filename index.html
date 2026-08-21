@@ -7295,8 +7295,8 @@
                     const L=locPack.headers;
                     const jTs=locIx(L,['timestamp','time']), jN=locIx(L,['name']), jU=locIx(L,['username']),
                           jT=locIx(L,['tehsil']), jUc=locIx(L,['uc','union']), jKit=locIx(L,['kit station','kitstation','kit']),
-                          jLat=locIx(L,['lat']), jLng=locIx(L,['long','lng']),
-                          jAcc=locIx(L,['accuracy']), jMap=locIx(L,['maps','map']);
+                          jLat=locIx(L,['latitude','lat']), jLng=locIx(L,['longitude','long','lng']),
+                          jAcc=locIx(L,['accuracy']), jMap=locIx(L,['maps_link','maps','map']);
                     locPack.rows.forEach(function(row){
                         const name=jN>=0?String(row[jN]||'').trim():'';
                         if(!name) return;
@@ -7363,7 +7363,8 @@
                 const lat = locParseCoord(r.lat);
                 const lng = locParseCoord(r.lng);
                 if(isNaN(lat) || isNaN(lng)) return;
-                if(lat < 20 || lat > 40 || lng < 60 || lng > 80) return;
+                // Allow wider South Asia bounds (some devices report wrong GPS)
+                if(lat < 10 || lat > 42 || lng < 55 || lng > 85) return;
                 const key = (locNormUser(r.username) || String(r.name||'').trim().toLowerCase());
                 if(!key) return;
                 const t = r.ts ? r.ts.getTime() : 0;
