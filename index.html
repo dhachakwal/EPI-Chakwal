@@ -562,6 +562,15 @@
                 <span id="emrSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
             </div>
             <div class="emr-card" id="emrCard">
+                <!-- Top module switcher: Outreach | Attendance | Location -->
+                <div class="emr-tabs" id="emrModuleTabs" style="margin-bottom:14px;border-bottom:2px solid #c8e6c9;padding-bottom:10px">
+                    <button type="button" class="emr-tab active" data-module="outreach" onclick="emrSwitchModule('outreach')">📋 Outreach Reports</button>
+                    <button type="button" class="emr-tab" data-module="attendance" onclick="emrSwitchModule('attendance')">⏱ Vaccinators Attendance</button>
+                    <button type="button" class="emr-tab" data-module="location" onclick="emrSwitchModule('location')">📍 Field Location Check-In</button>
+                </div>
+
+                <!-- ===== MODULE: OUTREACH ===== -->
+                <div id="emrModuleOutreach">
                 <p class="emr-note"><strong>Source:</strong> EMR Outreach Immunization Report. Filters and reports in PHMIS style. Each month is a separate sheet (e.g. July-2026, Aug-2026). Search covers all months; Period filters reports.</p>
                 <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
 
@@ -651,6 +660,104 @@
                         <tbody id="emrBody"></tbody>
                     </table>
                 </div>
+                </div><!-- /emrModuleOutreach -->
+
+                <!-- ===== MODULE: ATTENDANCE ===== -->
+                <div id="emrModuleAttendance" style="display:none">
+                    <p class="emr-note"><strong>Source:</strong> EMR Vaccinator Check-In / Check-Out. Names from <em>Total Vaccinators</em> (match by Username). Early check-in &lt; 07:45 · Late &gt; 08:30 · Check-out needs ≥6h after check-in · Late check-out after 4:00 PM.</p>
+                    <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
+                        <label>Period
+                            <select id="attPeriod" onchange="attOnPeriodChange()">
+                                <option value="day">Selected date</option>
+                                <option value="all">All dates in sheet</option>
+                            </select>
+                        </label>
+                        <label id="attDayLabel">Date
+                            <select id="attDay" onchange="attApply()"><option value="">—</option></select>
+                        </label>
+                        <label>Tehsil
+                            <select id="attTehsil" onchange="attApply()"><option value="">All Tehsils</option></select>
+                        </label>
+                        <label>Vaccinator
+                            <select id="attVacc" onchange="attApply()"><option value="">All Vaccinators</option></select>
+                        </label>
+                        <button type="button" class="btn btn-sm" onclick="attLoad()" style="background:#0d5c3d">🔄 Refresh Attendance</button>
+                        <button type="button" class="btn btn-sm" onclick="attExportPdf()" style="background:#6a1b9a">📄 PDF</button>
+                        <button type="button" class="btn btn-sm" onclick="attExportExcel()" style="background:#2e7d32">📊 Excel</button>
+                        <button type="button" class="btn btn-sm" onclick="attExportPng()" style="background:#1565c0">🖼 PNG</button>
+                        <span class="sweep-meta" id="attMeta">Not loaded</span>
+                    </div>
+                    <div class="emr-summary-panel" id="attSummaryPanel">
+                        <div class="emr-summary-head">
+                            <h3>Attendance Summary</h3>
+                            <div class="emr-summary-meta" id="attDataUpto">—</div>
+                        </div>
+                        <div class="emr-summary-grid" id="attSummaryGrid">
+                            <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                        </div>
+                    </div>
+                    <div class="emr-tabs" id="attTabs">
+                        <button type="button" class="emr-tab active" data-att="cinStatus" onclick="attSwitch('cinStatus')">1. Check-In Status</button>
+                        <button type="button" class="emr-tab" data-att="cinTime" onclick="attSwitch('cinTime')">2. Check-In Timeliness</button>
+                        <button type="button" class="emr-tab" data-att="coutStatus" onclick="attSwitch('coutStatus')">3. Check-Out Status</button>
+                        <button type="button" class="emr-tab" data-att="coutTime" onclick="attSwitch('coutTime')">4. Check-Out Timeliness</button>
+                    </div>
+                    <div id="attStats" class="emr-stats" style="margin:10px 0"></div>
+                    <div class="emr-table-wrap" id="attTableWrap">
+                        <table class="emr-table">
+                            <thead id="attHead"></thead>
+                            <tbody id="attBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="attStatus" class="sweep-loading" style="display:none"></div>
+                </div><!-- /emrModuleAttendance -->
+
+                <!-- ===== MODULE: LOCATION ===== -->
+                <div id="emrModuleLocation" style="display:none">
+                    <p class="emr-note"><strong>Source:</strong> Live GPS submissions from <a href="location.html" target="_blank" rel="noopener"><code>location.html</code></a> · Master list: All Vaccinators · Sheet tab: <em>Location</em> · Late = after <strong>09:30 AM</strong></p>
+                    <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
+                        <label>Date
+                            <select id="locDay" onchange="locOnDayChange()"><option value="">All dates</option></select>
+                        </label>
+                        <label>Tehsil
+                            <select id="locTehsil" onchange="locOnTehsilChange()"><option value="">All Tehsils</option></select>
+                        </label>
+                        <label>UC
+                            <select id="locUC" onchange="locApply()"><option value="">All UCs</option></select>
+                        </label>
+                        <button type="button" class="btn btn-sm" onclick="locLoad(true)" style="background:#0d5c3d">🔄 Refresh Locations</button>
+                        <a class="btn btn-sm" href="location.html" target="_blank" rel="noopener" style="background:#1565c0;text-decoration:none;color:#fff;display:inline-block;padding:8px 12px;border-radius:8px">📍 Open Check-In Page</a>
+                        <span class="sweep-meta" id="locMeta">Not loaded</span>
+                    </div>
+                    <div class="emr-summary-panel" id="locSummaryPanel">
+                        <div class="emr-summary-head">
+                            <h3>Location Summary</h3>
+                            <div class="emr-summary-meta" id="locDataUpto">—</div>
+                        </div>
+                        <div class="emr-summary-grid" id="locSummaryGrid">
+                            <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                        </div>
+                    </div>
+                    <div class="emr-tabs" id="locTabs" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                        <button type="button" class="emr-tab active" data-loc="submitted" onclick="locSwitch('submitted')">1. Submitted Locations</button>
+                        <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">2. Not Submitted (Pending)</button>
+                        <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
+                        <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">4. Late Location Submit</button>
+                        <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
+                            <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
+                            <button type="button" class="btn btn-sm" onclick="locExportPdf()" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
+                            <button type="button" class="btn btn-sm" onclick="locExportPng()" style="background:#6a1b9a;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">🖼 PNG</button>
+                        </span>
+                    </div>
+                    <div id="locStats" class="emr-stats" style="margin:10px 0"></div>
+                    <div class="emr-table-wrap" id="locTableWrap">
+                        <table class="emr-table">
+                            <thead id="locHead"></thead>
+                            <tbody id="locBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="locStatus" class="sweep-loading" style="display:none"></div>
+                </div><!-- /emrModuleLocation -->
             </div>
 
 
@@ -721,103 +828,6 @@
             </div>
 
 
-
-            <div class="section-title" id="section-att">Vaccinators Attendance as Per EMR</div>
-                <div class="emr-block" style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,.08);margin-bottom:25px">
-                    <p class="emr-note"><strong>Source:</strong> EMR Vaccinator Check-In / Check-Out. Names from <em>Total Vaccinators</em> (match by Username). Early check-in &lt; 07:45 · Late &gt; 08:30 · Check-out needs ≥6h after check-in · Late check-out after 4:00 PM.</p>
-                    <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
-                        <label>Period
-                            <select id="attPeriod" onchange="attOnPeriodChange()">
-                                <option value="day">Selected date</option>
-                                <option value="all">All dates in sheet</option>
-                            </select>
-                        </label>
-                        <label id="attDayLabel">Date
-                            <select id="attDay" onchange="attApply()"><option value="">—</option></select>
-                        </label>
-                        <label>Tehsil
-                            <select id="attTehsil" onchange="attApply()"><option value="">All Tehsils</option></select>
-                        </label>
-                        <label>Vaccinator
-                            <select id="attVacc" onchange="attApply()"><option value="">All Vaccinators</option></select>
-                        </label>
-                        <button type="button" class="btn btn-sm" onclick="attLoad()" style="background:#0d5c3d">🔄 Refresh Attendance</button>
-                        <button type="button" class="btn btn-sm" onclick="attExportPdf()" style="background:#6a1b9a">📄 PDF</button>
-                        <button type="button" class="btn btn-sm" onclick="attExportExcel()" style="background:#2e7d32">📊 Excel</button>
-                        <button type="button" class="btn btn-sm" onclick="attExportPng()" style="background:#1565c0">🖼 PNG</button>
-                        <span class="sweep-meta" id="attMeta">Not loaded</span>
-                    </div>
-                    <div class="emr-summary-panel" id="attSummaryPanel">
-                        <div class="emr-summary-head">
-                            <h3>Attendance Summary</h3>
-                            <div class="emr-summary-meta" id="attDataUpto">—</div>
-                        </div>
-                        <div class="emr-summary-grid" id="attSummaryGrid">
-                            <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
-                        </div>
-                    </div>
-                    <div class="emr-tabs" id="attTabs">
-                        <button type="button" class="emr-tab active" data-att="cinStatus" onclick="attSwitch('cinStatus')">1. Check-In Status</button>
-                        <button type="button" class="emr-tab" data-att="cinTime" onclick="attSwitch('cinTime')">2. Check-In Timeliness</button>
-                        <button type="button" class="emr-tab" data-att="coutStatus" onclick="attSwitch('coutStatus')">3. Check-Out Status</button>
-                        <button type="button" class="emr-tab" data-att="coutTime" onclick="attSwitch('coutTime')">4. Check-Out Timeliness</button>
-                    </div>
-                    <div id="attStats" class="emr-stats" style="margin:10px 0"></div>
-                    <div class="emr-table-wrap" id="attTableWrap">
-                        <table class="emr-table">
-                            <thead id="attHead"></thead>
-                            <tbody id="attBody"></tbody>
-                        </table>
-                    </div>
-                    <div id="attStatus" class="sweep-loading" style="display:none"></div>
-                </div>
-
-            <div class="section-title" id="section-loc">Vaccinators Field Location Check-In</div>
-                <div class="emr-block" style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,.08);margin-bottom:25px">
-                    <p class="emr-note"><strong>Source:</strong> Live GPS submissions from <a href="location.html" target="_blank" rel="noopener"><code>location.html</code></a> · Master list: All Vaccinators · Sheet tab: <em>Location</em> · Late = after <strong>09:30 AM</strong></p>
-                    <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
-                        <label>Date
-                            <select id="locDay" onchange="locOnDayChange()"><option value="">All dates</option></select>
-                        </label>
-                        <label>Tehsil
-                            <select id="locTehsil" onchange="locOnTehsilChange()"><option value="">All Tehsils</option></select>
-                        </label>
-                        <label>UC
-                            <select id="locUC" onchange="locApply()"><option value="">All UCs</option></select>
-                        </label>
-                        <button type="button" class="btn btn-sm" onclick="locLoad(true)" style="background:#0d5c3d">🔄 Refresh Locations</button>
-                        <a class="btn btn-sm" href="location.html" target="_blank" rel="noopener" style="background:#1565c0;text-decoration:none;color:#fff;display:inline-block;padding:8px 12px;border-radius:8px">📍 Open Check-In Page</a>
-                        <span class="sweep-meta" id="locMeta">Not loaded</span>
-                    </div>
-                    <div class="emr-summary-panel" id="locSummaryPanel">
-                        <div class="emr-summary-head">
-                            <h3>Location Summary</h3>
-                            <div class="emr-summary-meta" id="locDataUpto">—</div>
-                        </div>
-                        <div class="emr-summary-grid" id="locSummaryGrid">
-                            <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
-                        </div>
-                    </div>
-                    <div class="emr-tabs" id="locTabs" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                        <button type="button" class="emr-tab active" data-loc="submitted" onclick="locSwitch('submitted')">1. Submitted Locations</button>
-                        <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">2. Not Submitted (Pending)</button>
-                        <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
-                        <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">4. Late Location Submit</button>
-                        <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
-                            <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
-                            <button type="button" class="btn btn-sm" onclick="locExportPdf()" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
-                            <button type="button" class="btn btn-sm" onclick="locExportPng()" style="background:#6a1b9a;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">🖼 PNG</button>
-                        </span>
-                    </div>
-                    <div id="locStats" class="emr-stats" style="margin:10px 0"></div>
-                    <div class="emr-table-wrap" id="locTableWrap">
-                        <table class="emr-table">
-                            <thead id="locHead"></thead>
-                            <tbody id="locBody"></tbody>
-                        </table>
-                    </div>
-                    <div id="locStatus" class="sweep-loading" style="display:none"></div>
-                </div>
 
             <div class="section-title">Payment Status For NID Worker</div>
             <div class="download-grid" style="grid-template-columns:1fr">
@@ -2296,7 +2306,9 @@
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
                 {type:'section', title:'Urban Sweep-up Activity', desc:'Live reports, graphs, remaining UCs', action:'scroll', target:'Urban Sweep-up'},
-                {type:'section', title:'Child Immunization (EMR) — Outreach', desc:'Outreach entries, filters, antigen reports', action:'scroll', target:'Child Immunization'},
+                {type:'section', title:'Child Immunization (EMR) — Outreach', desc:'Outreach reports, Attendance, Field Location Check-In', action:'scroll', target:'Child Immunization'},
+                {type:'section', title:'Vaccinators Attendance', desc:'EMR check-in / check-out status (inside Outreach)', action:'scroll', target:'Child Immunization'},
+                {type:'section', title:'Field Location Check-In', desc:'GPS location submits, late after 09:30 (inside Outreach)', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Measles-Rubella (MR) Surveillance', desc:'Case line list, lab, EPID search', action:'scroll', target:'Measles-Rubella'},
                 {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
                 {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
@@ -4397,11 +4409,33 @@
 
         function emrSwitch(mode){
             emrMode = mode;
-            document.querySelectorAll('.emr-tab').forEach(function(b){
+            document.querySelectorAll('#emrTabs .emr-tab').forEach(function(b){
                 b.classList.toggle('active', b.getAttribute('data-emr')===mode);
             });
             if(mode === 'late') emrLateFilter = 'after2';
             emrApply();
+        }
+        let emrModule = 'outreach';
+        function emrSwitchModule(mod){
+            emrModule = mod || 'outreach';
+            document.querySelectorAll('#emrModuleTabs .emr-tab').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-module')===emrModule);
+            });
+            const o = document.getElementById('emrModuleOutreach');
+            const a = document.getElementById('emrModuleAttendance');
+            const l = document.getElementById('emrModuleLocation');
+            if(o) o.style.display = emrModule==='outreach' ? '' : 'none';
+            if(a) a.style.display = emrModule==='attendance' ? '' : 'none';
+            if(l) l.style.display = emrModule==='location' ? '' : 'none';
+            // lazy load when module opened
+            try{
+                if(emrModule==='attendance' && typeof attLoad==='function'){
+                    if(typeof attMaster==='undefined' || !attMaster || !attMaster.length) attLoad();
+                }
+                if(emrModule==='location' && typeof locEnsureLoaded==='function'){
+                    locEnsureLoaded();
+                }
+            }catch(e){}
         }
 
         function emrSetStats(items){
@@ -7568,16 +7602,18 @@
                 }
             }
         }
-        // Hook section open for fast paint
+        // Hook section open for fast paint (Location now inside EMR Outreach)
         (function(){
             const orig = window.toggleSectionHeader;
             if(typeof orig === 'function'){
                 window.toggleSectionHeader = function(header){
                     orig(header);
                     try{
-                        if(header && header.id === 'section-loc'){
+                        if(header && header.id === 'section-emr'){
                             const body = header.nextElementSibling;
-                            if(body && body.classList.contains('open')) locEnsureLoaded();
+                            if(body && body.classList.contains('open')){
+                                if(typeof emrModule!=='undefined' && emrModule==='location') locEnsureLoaded();
+                            }
                         }
                     }catch(e){}
                 };
