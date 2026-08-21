@@ -7333,6 +7333,101 @@
             }
         }
         let locMapAutoTimer = null;
+        let locLeafletMap = null;
+        let locLeafletLayer = null;
+        function locParseCoord(v){
+            if(v==null || v==='') return NaN;
+            if(typeof v === 'number') return v;
+            const s = String(v).trim().replace(/,/g,'');
+            const n = parseFloat(s);
+            return isNaN(n) ? NaN : n;
+        }
+        function locRenderMap(){
+            const el = document.getElementById('locMapEl');
+            const countEl = document.getElementById('locMapCount');
+            if(!el) return;
+            if(typeof L === 'undefined'){
+                el.innerHTML = '<div style="padding:24px;text-align:center;color:#c62828">Leaflet map library not loaded. Refresh the page.</div>';
+                if(countEl) countEl.textContent = '';
+                return;
+            }
+            const day = (document.getElementById('locDay')||{}).value || '';
+            const teh = (document.getElementById('locTehsil')||{}).value || '';
+            const uc = (document.getElementById('locUC')||{}).value || '';
+            // One pin per vaccinator: latest submit for selected day (or overall latest)
+            const byKey = {};
+            locRows.forEach(function(r){
+                if(day && r.ymd && r.ymd !== day) return;
+                if(teh && r.tehsil && r.tehsil !== teh) return;
+                if(uc && r.uc && r.uc !== uc) return;
+                const lat = locParseCoord(r.lat);
+                const lng = locParseCoord(r.lng);
+                if(isNaN(lat) || isNaN(lng)) return;
+                if(lat < 20 || lat > 40 || lng < 60 || lng > 80) return;
+                const key = (locNormUser(r.username) || String(r.name||'').trim().toLowerCase());
+                if(!key) return;
+                const t = r.ts ? r.ts.getTime() : 0;
+                if(!byKey[key] || t > byKey[key].t){
+                    byKey[key] = { r:r, lat:lat, lng:lng, t:t };
+                }
+            });
+            const points = Object.keys(byKey).map(function(k){ return byKey[k]; });
+            const now = Date.now();
+            const FRESH_MS = 3 * 60 * 60 * 1000;
+
+            if(!locLeafletMap){
+                locLeafletMap = L.map(el, { scrollWheelZoom: true, zoomControl: true });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(locLeafletMap);
+                locLeafletLayer = L.layerGroup().addTo(locLeafletMap);
+            }
+            setTimeout(function(){ try{ locLeafletMap.invalidateSize(); }catch(e){} }, 80);
+
+            locLeafletLayer.clearLayers();
+            const bounds = [];
+            points.forEach(function(p){
+                const r = p.r;
+                const age = p.t ? (now - p.t) : Infinity;
+                const fresh = age <= FRESH_MS;
+                const color = fresh ? '#1a8a5c' : '#9e9e9e';
+                const marker = L.circleMarker([p.lat, p.lng], {
+                    radius: 9,
+                    color: '#fff',
+                    weight: 2,
+                    fillColor: color,
+                    fillOpacity: 0.92
+                });
+                const late = locIsLate(r.ts);
+                const maps = r.maps || ('https://www.google.com/maps?q='+p.lat+','+p.lng);
+                const html = '<div style="min-width:180px;font-size:13px;line-height:1.45">'
+                    + '<strong style="color:#0d5c3d">'+String(r.name||'')+'</strong><br>'
+                    + (r.username ? ('User: '+locDispUser(r.username)+'<br>') : '')
+                    + (r.tehsil ? (r.tehsil+(r.uc?' · '+r.uc:'')+'<br>') : '')
+                    + (r.kitStation ? ('Kit: '+r.kitStation+'<br>') : '')
+                    + 'Time: '+locFmt(r.ts)+(late?' <span style="color:#c62828;font-weight:700">Late</span>':'')+'<br>'
+                    + '<a href="'+maps+'" target="_blank" rel="noopener">Open in Google Maps</a>'
+                    + '</div>';
+                marker.bindPopup(html);
+                marker.addTo(locLeafletLayer);
+                bounds.push([p.lat, p.lng]);
+            });
+
+            if(countEl){
+                const dayLbl = day ? locYmdLabel(day) : 'All dates';
+                countEl.textContent = points.length + ' pin(s) · ' + dayLbl;
+            }
+
+            if(bounds.length === 1){
+                locLeafletMap.setView(bounds[0], 14);
+            } else if(bounds.length > 1){
+                try{ locLeafletMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 }); }
+                catch(e){ locLeafletMap.setView([32.93, 72.85], 10); }
+            } else {
+                locLeafletMap.setView([32.93, 72.85], 10);
+            }
+        }
         function locSwitch(mode){
             locMode=mode;
             document.querySelectorAll('#locTabs .emr-tab').forEach(function(b){
@@ -7431,6 +7526,11 @@
                 return;
             }
             const allDatesMode = !day;
+
+            if(locMode==='map'){
+                locRenderMap();
+                return;
+            }
 
             if(locMode==='submitted'){
                 if(stats) stats.innerHTML=
