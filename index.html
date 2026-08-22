@@ -5290,20 +5290,22 @@
             // Store for detail click
             window._emrSearchMatches = matched;
             window._emrLastListLabel = qn.length ? ('Search '+q) : 'Search Results';
-
+            emrRenderChildMatchList(matched, window._emrLastListLabel);
+        }
+        function emrRenderChildMatchList(matched, label){
+            window._emrSearchMatches = matched || [];
+            window._emrLastListLabel = label || 'Results';
             const body = document.getElementById('emrChildModalBody');
             const status = document.getElementById('emrChildModalStatus');
             const modal = document.getElementById('emrChildModal');
             if(!body || !modal) return;
-
+            matched = matched || [];
             if(!matched.length){
                 body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">Is filter / search pe koi child nahi mila.</div>';
-                if(status) status.textContent = '0 results · ' + emrPeriodLabel();
+                if(status) status.textContent = '0 results · ' + (label||'') + ' · ' + emrPeriodLabel();
                 modal.classList.add('active');
                 return;
             }
-
-            // List table — click Name for full card
             const max = Math.min(matched.length, 500);
             let table = '<div style="font-size:12.5px;color:#555;margin-bottom:8px">Click a <strong>name</strong> to open the full vaccination detail. Showing <strong>'+max+'</strong> of <strong>'+matched.length+'</strong></div>';
             table += '<div style="overflow-x:auto;max-height:60vh;border:1px solid #c8e6c9;border-radius:10px">';
@@ -5331,7 +5333,7 @@
             }
             table += '</tbody></table></div>';
             body.innerHTML = table;
-            if(status) status.textContent = matched.length + ' result(s) · ' + emrPeriodLabel() + ' · filters applied';
+            if(status) status.textContent = matched.length + ' result(s) · ' + (label||'') + ' · ' + emrPeriodLabel();
             modal.classList.add('active');
         }
         function emrShowChildDetail(idx){
@@ -5341,12 +5343,31 @@
             const body = document.getElementById('emrChildModalBody');
             const status = document.getElementById('emrChildModalStatus');
             if(!body) return;
-            const back = '<div style="margin-bottom:10px"><button type="button" class="btn btn-sm btn-outline" onclick="emrOpenSearchPopup()" style="border-color:#0d5c3d;color:#0d5c3d">← Back to list</button></div>';
+            const back = '<div style="margin-bottom:10px"><button type="button" class="btn btn-sm btn-outline" onclick="emrRenderChildMatchList(window._emrSearchMatches, window._emrLastListLabel)" style="border-color:#0d5c3d;color:#0d5c3d">← Back to list</button></div>';
             body.innerHTML = back + '<div id="emrSearchCard0">'+emrBuildChildCardHtml(r)+'</div>';
             if(status) status.textContent = 'Detail · ' + (emrCell(r,EMR_COLS.name)||'') + ' · PNG/Copy available above';
-            // scroll top of modal
             const modalBox = body.parentNode;
             if(modalBox) modalBox.scrollTop = 0;
+        }
+        /** Open children missing a specific antigen in a UC (from Dose Diff tab) */
+        function emrDoseDiffOpenMissing(tehsil, uc, missKey, missLabel, groupKeysCsv, ageLabel){
+            const ym = emrGetReportMonth();
+            const groupKeys = String(groupKeysCsv||'').split(',').filter(Boolean);
+            const data = typeof emrFiltered === 'function' ? emrFiltered() : (emrRows||[]);
+            const matched = data.filter(function(r){
+                if(tehsil && emrCell(r, EMR_COLS.tehsil) !== tehsil) return false;
+                if(uc && emrCell(r, EMR_COLS.uc) !== uc) return false;
+                // Has at least one dose from the same age group this period
+                let anyGroup = false;
+                for(let i=0;i<groupKeys.length;i++){
+                    if(emrHasDoseThisMonth(r, groupKeys[i], ym)){ anyGroup = true; break; }
+                }
+                if(!anyGroup) return false;
+                // Missing the clicked antigen this period
+                return !emrHasDoseThisMonth(r, missKey, ym);
+            });
+            const label = (missLabel||missKey)+' missing · '+uc+(ageLabel?(' · '+ageLabel):'');
+            emrRenderChildMatchList(matched, label);
         }
         
         async function emrCaptureSearchCanvas(){
@@ -6668,20 +6689,23 @@
                                 const v = vals[g.keys.indexOf(p)];
                                 return p[1]+': '+v;
                             }).join(' · ');
-                        // Missing = below max (shortfall only — not repeated in Administered)
-                        const missing = g.keys.filter(function(p,i){ return vals[i] < maxV; })
+                        // Missing items for click + export text
+                        const missItems = g.keys.filter(function(p,i){ return vals[i] < maxV; })
                             .map(function(p){
                                 const v = vals[g.keys.indexOf(p)];
-                                const short = maxV - v;
-                                return p[1]+' (−'+short+')';
-                            }).join(', ');
+                                return { key:p[0], label:p[1], short: maxV - v };
+                            });
+                        const missingTxt = missItems.map(function(m){ return m.label+' (−'+m.short+')'; }).join(', ');
+                        const groupKeysCsv = g.keys.map(function(p){ return p[0]; }).join(',');
                         issueRows.push({
                             tehsil: x.tehsil,
                             uc: x.uc,
                             group: g.name,
                             diff: maxV - minV,
                             administered: administered || '—',
-                            missing: missing || '—'
+                            missing: missingTxt || '—',
+                            missItems: missItems,
+                            groupKeysCsv: groupKeysCsv
                         });
                     });
                 });
@@ -6702,12 +6726,20 @@
                 const headers = ['Sr','Tehsil','UC','Age','Doses Administered','Missing Antigen','Difference'];
                 const exp = [];
                 let i = 0;
+                function escAttr(s){
+                    return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+                }
                 const rowsHtml = issueRows.map(function(r){
                     i++;
                     exp.push([i, r.tehsil, r.uc, r.group, r.administered, r.missing, r.diff]);
+                    const missHtml = (r.missItems||[]).map(function(m){
+                        return '<a href="javascript:void(0)" onclick="emrDoseDiffOpenMissing(\''+escAttr(r.tehsil)+'\',\''+escAttr(r.uc)+'\',\''+escAttr(m.key)+'\',\''+escAttr(m.label)+'\',\''+escAttr(r.groupKeysCsv)+'\',\''+escAttr(r.group)+'\')" '
+                            + 'style="color:#c62828;font-weight:800;text-decoration:underline;margin-right:8px;cursor:pointer" title="Open children missing '+escAttr(m.label)+'">'
+                            + m.label+' (−'+m.short+')</a>';
+                    }).join(' ') || '—';
                     return '<tr><td>'+i+'</td><td>'+r.tehsil+'</td><td><strong>'+r.uc+'</strong></td><td>'+r.group+'</td>'
                         + '<td style="text-align:left;font-size:12px;color:#0d5c3d;font-weight:600">'+r.administered+'</td>'
-                        + '<td style="color:#c62828;font-weight:700;text-align:left">'+r.missing+'</td>'
+                        + '<td style="text-align:left">'+missHtml+'</td>'
                         + '<td style="color:#c62828;font-weight:800">'+r.diff+'</td></tr>';
                 }).join('') || '<tr><td colspan="7" style="text-align:center;color:#2e7d32;padding:16px">All UCs: same-dose groups are equal for this period. No difference found.</td></tr>';
                 emrRenderTable(headers, rowsHtml, headers, exp, null);
@@ -6720,7 +6752,7 @@
                         + '• <strong>10 weeks:</strong> OPV-2 = Penta-2 = PCV13-2 = Rota-2<br>'
                         + '• <strong>14 weeks:</strong> OPV-3 = Penta-3 = PCV13-3 = IPV-1<br>'
                         + '• <strong>9 months:</strong> MR-1 = TCV = IPV-2<br>'
-                        + '<strong>Doses Administered</strong> = highest count (matched) · <strong>Missing Antigen</strong> = shortfall only (alag list).</div>';
+                        + '<strong>Doses Administered</strong> = highest count (matched) · <strong>Missing Antigen</strong> = shortfall (click name → children list → full card).</div>';
                 }
             }
 
