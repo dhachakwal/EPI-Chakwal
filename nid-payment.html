@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NID Worker Payment Status | EPI Chakwal</title>
+<link rel="icon" href="favicon.png.png" type="image/png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(160deg,#e8f5e9 0%,#f0f7f4 45%,#e3f2fd 100%);min-height:100vh;color:#222}
+.wrap{max-width:480px;margin:0 auto;padding:18px 14px 36px}
+.brand{text-align:center;padding:8px 0 4px}
+.brand img{height:68px;width:68px;object-fit:contain;border-radius:10px}
+.brand h1{font-size:18px;color:#0d5c3d;margin:8px 0 2px;font-weight:800}
+.brand p{font-size:12.5px;color:#666;line-height:1.4}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(13,92,61,.12);padding:22px 18px;margin-top:12px}
+label{display:block;font-size:13px;font-weight:600;color:#0d5c3d;margin:12px 0 5px}
+select,input[type="text"]{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
+select:focus,input[type="text"]:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:14px;background:linear-gradient(135deg,#0d5c3d,#1a8a5c);color:#fff}
+.btn:hover{background:#09402b}
+.note{font-size:12.5px;color:#555;margin-top:12px;line-height:1.5;background:#f7faf8;border-radius:8px;padding:10px 12px;border:1px solid #e0eee4}
+.result-card{background:#fff;border:1px solid #1a8a5c;border-left:6px solid #0d5c3d;border-radius:10px;padding:16px;margin-top:16px;text-align:left}
+.result-row{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:14px;border-bottom:1px dashed #e0e0e0;padding-bottom:6px}
+.result-row:last-child{border-bottom:none;margin-bottom:0}
+.result-label{font-weight:600;color:#555}
+.result-value{font-weight:700;color:#0d5c3d;text-align:right}
+.status-badge{font-size:16px;font-weight:900;color:#0d5c3d;background:#e8f5e9;padding:4px 12px;border-radius:6px}
+.msg{text-align:center;margin-top:14px;font-size:14px}
+.msg.err{color:#b03030}
+.msg.ok{color:#0d5c3d}
+.back{display:inline-block;margin-top:16px;font-size:13px;color:#0d5c3d;font-weight:600;text-decoration:none}
+.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="favicon.png.png" alt="EPI" onerror="this.style.display='none'">
+    <h1>NID Worker Payment Status</h1>
+    <p>EPI District Chakwal · Campaign payment verification</p>
+  </div>
+
+  <div class="card">
+    <label for="fileSelect">Campaign / File</label>
+    <select id="fileSelect">
+      <option value="NID-I_Feb_2026.xlsx">NID-I Feb 2026</option>
+      <option value="NID-II_April_2026.xlsx">NID-II April 2026</option>
+    </select>
+
+    <label for="nidSearchQuery">CNIC or Account Number</label>
+    <input type="text" id="nidSearchQuery" placeholder="Enter CNIC or Account Number" autocomplete="off"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();performNidSearch();}">
+
+    <button type="button" class="btn" onclick="performNidSearch()">Search Payment Status 🔍</button>
+
+    <div class="note">
+      Select campaign, enter <strong>CNIC</strong> or <strong>Account Number</strong>, then search.
+      This page is shareable — workers do not need the main dashboard password.
+    </div>
+
+    <div id="nidSearchResult"></div>
+  </div>
+
+  <div style="text-align:center">
+    <a class="back" href="index.html">← Back to EPI Dashboard</a>
+  </div>
+</div>
+
+<script>
+function cleanString(s){ return s ? s.toString().replace(/[^a-zA-Z0-9]/g,'').toLowerCase() : ''; }
+function getProp(row, keys){
+  for(let p in row){
+    const ck = p.replace(/\s+/g,'').toLowerCase();
+    for(let k of keys){
+      if(ck === k.replace(/\s+/g,'').toLowerCase()) return row[p];
+    }
+  }
+  return 'N/A';
+}
+function performNidSearch(){
+  const file = document.getElementById('fileSelect').value;
+  const q = document.getElementById('nidSearchQuery').value.trim();
+  const res = document.getElementById('nidSearchResult');
+  if(!q){
+    res.innerHTML = '<div class="msg err">CNIC ya Account Number darj karein</div>';
+    return;
+  }
+  res.innerHTML = '<div class="msg ok">Searching…</div>';
+  fetch(file).then(function(r){
+    if(!r.ok) throw new Error('File not found ('+r.status+'). Ensure '+file+' is uploaded next to this page.');
+    return r.arrayBuffer();
+  }).then(function(data){
+    if(typeof XLSX === 'undefined') throw new Error('Excel library missing');
+    const wb = XLSX.read(data, {type:'array'});
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
+    let found = null;
+    const cq = cleanString(q);
+    for(let i=0;i<json.length;i++){
+      const row = json[i];
+      for(let k in row){
+        if(cleanString(row[k]) === cq){ found = row; break; }
+      }
+      if(found) break;
+    }
+    if(found){
+      res.innerHTML =
+        '<div class="result-card">'+
+          '<div class="result-row"><span class="result-label">Worker Name</span><span class="result-value">'+getProp(found,['CustomerName','Worker Name','WorkerName'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Tehsil</span><span class="result-value">'+getProp(found,['Tehsil'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">UC</span><span class="result-value">'+getProp(found,['UC','Union Council'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Position</span><span class="result-value">'+getProp(found,['Position','Designation'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Payment Method</span><span class="result-value">'+getProp(found,['PaymentMode','Payment Method'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Amount</span><span class="result-value">Rs. '+getProp(found,['Amount'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Payment Code</span><span class="result-value">'+getProp(found,['XpinDraftNo','Payment Code','Xpin'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Status</span><span class="status-badge">'+getProp(found,['Status'])+'</span></div>'+
+        '</div>';
+    } else {
+      res.innerHTML = '<div class="msg err">Koi record nahi mila</div>';
+    }
+  }).catch(function(e){
+    res.innerHTML = '<div class="msg err">Error: '+(e.message||e)+'</div>';
+  });
+}
+</script>
+</body>
+</html>
