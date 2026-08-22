@@ -8479,36 +8479,63 @@
             if(!headers.length || !rows.length){ alert('No table data to export.'); return; }
             const base = attExportFileBase();
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: headers.length>6?'landscape':'portrait', unit:'mm', format:'a4' });
-            const margin=8, pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+            // Always landscape for Timeliness (and any table with 5+ cols) so data fits clearly
+            const forceLandscape = (attMode==='cinTime' || attMode==='coutTime' || headers.length>=5);
+            const pdf = new jsPDF({ orientation: forceLandscape?'landscape':'portrait', unit:'mm', format:'a4' });
+            const margin=7, pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
             const usable=pageW-margin*2;
             let y=margin;
-            pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
-            pdf.text('EPI District Chakwal — Vaccinators Attendance', margin, y); y+=6;
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(13,92,61);
+            pdf.text('EPI District Chakwal — Vaccinators Attendance', margin, y); y+=5;
             pdf.setFontSize(9); pdf.setTextColor(40,40,40);
-            pdf.text(base, margin, y); y+=5;
+            pdf.text(base, margin, y); y+=4.5;
             pdf.setFont('helvetica','normal'); pdf.setFontSize(7.5); pdf.setTextColor(80,80,80);
-            pdf.text('Rows: '+rows.length, margin, y); y+=5;
-            const colW = headers.map(function(){ return usable/headers.length; });
+            pdf.text('Rows: '+rows.length+' · Generated: '+new Date().toLocaleString(), margin, y); y+=5;
+
+            // Weighted column widths — Sr narrow, Name/UC wider, times medium
+            function attColWeight(h){
+                const s = String(h||'').toLowerCase().trim();
+                if(s==='sr' || s==='sr.' || s==='#' || s==='no' || s==='s.no') return 0.35;
+                if(s.indexOf('vaccinator')>=0 || s==='name' || s.indexOf('name')>=0) return 1.7;
+                if(s.indexOf('username')>=0 || s==='user') return 1.15;
+                if(s.indexOf('tehsil')>=0) return 1.1;
+                if(s==='uc' || s.indexOf('union')>=0) return 1.25;
+                if(s.indexOf('status')>=0 || s.indexOf('remark')>=0 || s.indexOf('category')>=0) return 1.2;
+                if(s.indexOf('time')>=0 || s.indexOf('check')>=0) return 1.05;
+                if(s.indexOf('late')>=0 || s.indexOf('early')>=0 || s.indexOf('min')>=0) return 0.9;
+                return 1;
+            }
+            const weights = headers.map(attColWeight);
+            const wSum = weights.reduce(function(a,b){ return a+b; }, 0) || 1;
+            const colW = weights.map(function(w){ return usable * (w / wSum); });
+
             function cellText(c, colIdx){
                 let t = String(c==null?'':c);
-                const maxChars = Math.max(4, Math.floor(colW[colIdx]/1.7));
+                // ~2.2 chars per mm at 6.5pt
+                const maxChars = Math.max(3, Math.floor(colW[colIdx] / 1.55));
                 if(t.length > maxChars) t = t.substring(0, maxChars-1)+'…';
                 return t;
             }
             function headerRow(){
-                pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,6.5,'F');
-                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
-                let x=margin; headers.forEach(function(h,i){ pdf.text(cellText(h,i), x+0.8, y+4.2); x+=colW[i]; });
-                y+=6.5; pdf.setTextColor(30,30,30); pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5);
+                pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,6.2,'F');
+                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.4);
+                let x=margin;
+                headers.forEach(function(h,i){
+                    pdf.text(cellText(h,i), x+0.6, y+4);
+                    x+=colW[i];
+                });
+                y+=6.2; pdf.setTextColor(30,30,30); pdf.setFont('helvetica','normal'); pdf.setFontSize(6.3);
             }
             headerRow();
-            const rowH = 5.5;
+            const rowH = 5.2;
             rows.forEach(function(row,ri){
                 if(y>pageH-margin-rowH){ pdf.addPage(); y=margin; headerRow(); }
                 if(ri%2){ pdf.setFillColor(232,245,233); pdf.rect(margin,y,usable,rowH,'F'); }
                 let x=margin;
-                row.forEach(function(c,i){ pdf.text(cellText(c,i), x+0.8, y+3.8); x+=colW[i]; });
+                row.forEach(function(c,i){
+                    pdf.text(cellText(c,i), x+0.6, y+3.5);
+                    x+=colW[i];
+                });
                 y+=rowH;
             });
             pdf.save(base+'.pdf');
