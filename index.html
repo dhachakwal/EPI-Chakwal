@@ -652,8 +652,8 @@
                     <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
                     <button type="button" class="emr-tab" data-emr="overdue" onclick="emrSwitch('overdue')">12. Overdue Children (Not Vaccinated)</button>
                     <button type="button" class="emr-tab" data-emr="duplicate" onclick="emrSwitch('duplicate')">13. Duplicate Children</button>
-                    <button type="button" class="emr-tab" data-emr="doseDiff" onclick="emrSwitch('doseDiff')">14. Difference Between Same Doses</button>
                     <button type="button" class="emr-tab" data-emr="ucAg" onclick="emrSwitch('ucAg')">14. UC-wise Antigen Entries Status</button>
+                    <button type="button" class="emr-tab" data-emr="doseDiff" onclick="emrSwitch('doseDiff')">15. Difference Between Same Doses</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -4821,8 +4821,8 @@
                 map:'7. Geo Map Links', late:'8. Late Entries Status', dropout:'9. Drop-out',
                 targets:'10. Targets vs Coverage', defaulter:'11. Defaulter Children Vaccinated',
                 overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children',
-                doseDiff:'14. Difference Between Same Doses',
-                ucAg:'14. UC-wise Antigen Entries Status'
+                ucAg:'14. UC-wise Antigen Entries Status',
+                doseDiff:'15. Difference Between Same Doses'
             };
             return map[emrMode] || ('Tab: '+emrMode);
         }
@@ -6632,10 +6632,10 @@
                 // Same-visit dose groups that should match UC-wise
                 const ym = emrGetReportMonth();
                 const DOSE_GROUPS = [
-                    {name:'Group 1 (6 weeks)', keys:[['opvI','OPV-1'],['pentaI','Penta-1'],['pneumoI','PCV13-1'],['rota1','Rota-1']]},
-                    {name:'Group 2 (10 weeks)', keys:[['opvII','OPV-2'],['pentaII','Penta-2'],['pneumoII','PCV13-2'],['rota2','Rota-2']]},
-                    {name:'Group 3 (14 weeks)', keys:[['opvIII','OPV-3'],['pentaIII','Penta-3'],['pneumoIII','PCV13-3'],['ipv','IPV-1']]},
-                    {name:'Group 4 (9 months)', keys:[['measlesI','MR-1'],['tcv','TCV'],['ipv2','IPV-2']]}
+                    {name:'6 weeks', keys:[['opvI','OPV-1'],['pentaI','Penta-1'],['pneumoI','PCV13-1'],['rota1','Rota-1']]},
+                    {name:'10 weeks', keys:[['opvII','OPV-2'],['pentaII','Penta-2'],['pneumoII','PCV13-2'],['rota2','Rota-2']]},
+                    {name:'14 weeks', keys:[['opvIII','OPV-3'],['pentaIII','Penta-3'],['pneumoIII','PCV13-3'],['ipv','IPV-1']]},
+                    {name:'9 months', keys:[['measlesI','MR-1'],['tcv','TCV'],['ipv2','IPV-2']]}
                 ];
                 const map = {};
                 data.forEach(function(r){
@@ -6663,16 +6663,20 @@
                         const maxV = Math.max.apply(null, vals);
                         if(maxV === minV) return; // equal — no issue
                         const detail = g.keys.map(function(p,i){ return p[1]+': '+vals[i]; }).join(' · ');
+                        // Antigens below the max count = relatively "short / missing" doses
+                        const missing = g.keys.filter(function(p,i){ return vals[i] < maxV; })
+                            .map(function(p,i){
+                                const v = vals[g.keys.indexOf(p)];
+                                const short = maxV - v;
+                                return p[1]+' (−'+short+')';
+                            }).join(', ');
                         issueRows.push({
                             tehsil: x.tehsil,
                             uc: x.uc,
                             group: g.name,
-                            min: minV,
-                            max: maxV,
                             diff: maxV - minV,
                             detail: detail,
-                            vals: vals,
-                            labels: g.keys.map(function(p){ return p[1]; })
+                            missing: missing || '—'
                         });
                     });
                 });
@@ -6690,28 +6694,28 @@
                     {n: Object.keys(ucSet).length, l:'UCs with issue'},
                     {n: emrPeriodLabel(), l:'Period'}
                 ]);
-                const headers = ['Sr','Tehsil','UC','Dose Group','Counts (should be equal)','Min','Max','Difference'];
+                const headers = ['Sr','Tehsil','UC','Age','Doses Administered','Missing Antigen','Difference'];
                 const exp = [];
                 let i = 0;
                 const rowsHtml = issueRows.map(function(r){
                     i++;
-                    exp.push([i, r.tehsil, r.uc, r.group, r.detail, r.min, r.max, r.diff]);
+                    exp.push([i, r.tehsil, r.uc, r.group, r.detail, r.missing, r.diff]);
                     return '<tr><td>'+i+'</td><td>'+r.tehsil+'</td><td><strong>'+r.uc+'</strong></td><td>'+r.group+'</td>'
                         + '<td style="text-align:left;font-size:12px">'+r.detail+'</td>'
-                        + '<td>'+r.min+'</td><td>'+r.max+'</td>'
+                        + '<td style="color:#c62828;font-weight:700;text-align:left">'+r.missing+'</td>'
                         + '<td style="color:#c62828;font-weight:800">'+r.diff+'</td></tr>';
-                }).join('') || '<tr><td colspan="8" style="text-align:center;color:#2e7d32;padding:16px">All UCs: same-dose groups are equal for this period. No difference found.</td></tr>';
+                }).join('') || '<tr><td colspan="7" style="text-align:center;color:#2e7d32;padding:16px">All UCs: same-dose groups are equal for this period. No difference found.</td></tr>';
                 emrRenderTable(headers, rowsHtml, headers, exp, null);
                 const extra = document.getElementById('emrExtraVisual');
                 if(extra){
                     extra.style.display = 'block';
                     extra.innerHTML = '<div style="font-size:12.5px;color:#555;padding:8px 4px;line-height:1.55">'
                         + '<strong>Rule:</strong> Same session antigens must match UC-wise.<br>'
-                        + '• <strong>Group 1:</strong> OPV-1 = Penta-1 = PCV13-1 = Rota-1<br>'
-                        + '• <strong>Group 2:</strong> OPV-2 = Penta-2 = PCV13-2 = Rota-2<br>'
-                        + '• <strong>Group 3:</strong> OPV-3 = Penta-3 = PCV13-3 = IPV-1<br>'
-                        + '• <strong>Group 4:</strong> MR-1 = TCV = IPV-2<br>'
-                        + 'Sirf un UCs ki list jahan koi group mismatch hai.</div>';
+                        + '• <strong>6 weeks:</strong> OPV-1 = Penta-1 = PCV13-1 = Rota-1<br>'
+                        + '• <strong>10 weeks:</strong> OPV-2 = Penta-2 = PCV13-2 = Rota-2<br>'
+                        + '• <strong>14 weeks:</strong> OPV-3 = Penta-3 = PCV13-3 = IPV-1<br>'
+                        + '• <strong>9 months:</strong> MR-1 = TCV = IPV-2<br>'
+                        + '<strong>Missing Antigen</strong> = jo dose max se kam hai (shortfall). Sirf mismatch wali UCs.</div>';
                 }
             }
 
