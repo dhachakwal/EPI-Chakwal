@@ -15,7 +15,7 @@
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
         html,body{margin:0;padding:0;background:#f0f7f4;color:#333;border:0;-webkit-user-select:text!important;user-select:text!important}
         body{min-height:100%}
-        p,span,div,td,th,li,h1,h2,h3,h4,label,strong{-webkit-user-select:text!important;user-select:text!important}
+        p,span,div,td,th,li,h1,h2,h3,h4,label,strong,.section-title,.collapsible-header{-webkit-user-select:text!important;user-select:text!important}
         button,.btn,.section-arrow,.emr-tab,.sweep-tab{-webkit-user-select:none;user-select:none}
         .news-ticker{background:#0d5c3d;color:#fff;padding:8px 0;overflow:hidden;white-space:nowrap;margin:0;position:relative;z-index:5}
         .ticker-content{display:inline-block;padding-left:100%;animation:ticker 80s linear infinite;font-size:15px}
@@ -652,6 +652,7 @@
                     <button type="button" class="emr-tab" data-emr="defaulter" onclick="emrSwitch('defaulter')">11. Defaulter Children Vaccinated</button>
                     <button type="button" class="emr-tab" data-emr="overdue" onclick="emrSwitch('overdue')">12. Overdue Children (Not Vaccinated)</button>
                     <button type="button" class="emr-tab" data-emr="duplicate" onclick="emrSwitch('duplicate')">13. Duplicate Children</button>
+                    <button type="button" class="emr-tab" data-emr="doseDiff" onclick="emrSwitch('doseDiff')">14. Difference Between Same Doses</button>
                     <button type="button" class="emr-tab" data-emr="ucAg" onclick="emrSwitch('ucAg')">14. UC-wise Antigen Entries Status</button>
                 </div>
 
@@ -759,6 +760,7 @@
                         <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">2. Not Submitted (Pending)</button>
                         <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
                         <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">4. Late Location Submit</button>
+                        <button type="button" class="emr-tab" data-loc="multi" onclick="locSwitch('multi')">5. Multiple Submits</button>
                         <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
@@ -1957,9 +1959,17 @@
                     else parent.appendChild(body);
 
                     titleEl.style.cursor = 'pointer';
+                    titleEl.addEventListener('mousedown', function(){
+                        titleEl._selStart = true;
+                    });
                     titleEl.addEventListener('click', function(e){
                         if(e.target && (e.target.closest && e.target.closest('button'))) return;
                         if(e.target && e.target.tagName === 'BUTTON') return;
+                        // Text select/copy: do not toggle open/close
+                        try{
+                            const sel = window.getSelection && window.getSelection();
+                            if(sel && String(sel.toString()||'').trim().length > 0) return;
+                        }catch(errSel){}
                         e.preventDefault();
                         toggleSectionHeader(titleEl);
                     });
@@ -4811,6 +4821,7 @@
                 map:'7. Geo Map Links', late:'8. Late Entries Status', dropout:'9. Drop-out',
                 targets:'10. Targets vs Coverage', defaulter:'11. Defaulter Children Vaccinated',
                 overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children',
+                doseDiff:'14. Difference Between Same Doses',
                 ucAg:'14. UC-wise Antigen Entries Status'
             };
             return map[emrMode] || ('Tab: '+emrMode);
@@ -4830,6 +4841,7 @@
                 defaulter:"Defaulter Children Vaccinated Data",
                 overdue:"Overdue Children Data",
                 duplicate:"Duplicate Children's Data",
+                doseDiff:"Difference Between Same Doses",
                 ucAg:"UC-wise Antigen Entries Status"
             };
             return map[emrMode] || ((emrMode||'EMR')+' Data');
@@ -6202,7 +6214,7 @@
 
             // Clear extra visual cards unless antigen / tehsilAg will fill them
             const extra = document.getElementById('emrExtraVisual');
-            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter' && emrMode !== 'overdue' && emrMode !== 'duplicate'){
+            if(extra && emrMode !== 'antigen' && emrMode !== 'tehsilAg' && emrMode !== 'targets' && emrMode !== 'defaulter' && emrMode !== 'overdue' && emrMode !== 'duplicate' && emrMode !== 'doseDiff'){
                 extra.style.display = 'none';
                 extra.innerHTML = '';
             }
@@ -6613,6 +6625,93 @@
                 if(extra){
                     extra.style.display = 'block';
                     extra.innerHTML = '<div style="font-size:12.5px;color:#555;padding:8px 4px">Duplicate match on <strong>Name + Father Name + UC + Address</strong> (normalized). CNIC is not in EMR OutReach sheet columns, so CNIC not used. Same Period/Tehsil/UC filters apply.</div>';
+                }
+            }
+
+            else if(emrMode === 'doseDiff'){
+                // Same-visit dose groups that should match UC-wise
+                const ym = emrGetReportMonth();
+                const DOSE_GROUPS = [
+                    {name:'Group 1 (6 weeks)', keys:[['opvI','OPV-1'],['pentaI','Penta-1'],['pneumoI','PCV13-1'],['rota1','Rota-1']]},
+                    {name:'Group 2 (10 weeks)', keys:[['opvII','OPV-2'],['pentaII','Penta-2'],['pneumoII','PCV13-2'],['rota2','Rota-2']]},
+                    {name:'Group 3 (14 weeks)', keys:[['opvIII','OPV-3'],['pentaIII','Penta-3'],['pneumoIII','PCV13-3'],['ipv','IPV-1']]},
+                    {name:'Group 4 (9 months)', keys:[['measlesI','MR-1'],['tcv','TCV'],['ipv2','IPV-2']]}
+                ];
+                const map = {};
+                data.forEach(function(r){
+                    const t = emrCell(r, EMR_COLS.tehsil) || '—';
+                    const u = emrCell(r, EMR_COLS.uc) || '—';
+                    const k = t+'||'+u;
+                    if(!map[k]){
+                        map[k] = {tehsil:t, uc:u, ag:{}};
+                        DOSE_GROUPS.forEach(function(g){
+                            g.keys.forEach(function(p){ map[k].ag[p[0]] = 0; });
+                        });
+                    }
+                    DOSE_GROUPS.forEach(function(g){
+                        g.keys.forEach(function(p){
+                            if(emrHasDoseThisMonth(r, p[0], ym)) map[k].ag[p[0]]++;
+                        });
+                    });
+                });
+                const issueRows = [];
+                Object.keys(map).forEach(function(k){
+                    const x = map[k];
+                    DOSE_GROUPS.forEach(function(g){
+                        const vals = g.keys.map(function(p){ return x.ag[p[0]]||0; });
+                        const minV = Math.min.apply(null, vals);
+                        const maxV = Math.max.apply(null, vals);
+                        if(maxV === minV) return; // equal — no issue
+                        const detail = g.keys.map(function(p,i){ return p[1]+': '+vals[i]; }).join(' · ');
+                        issueRows.push({
+                            tehsil: x.tehsil,
+                            uc: x.uc,
+                            group: g.name,
+                            min: minV,
+                            max: maxV,
+                            diff: maxV - minV,
+                            detail: detail,
+                            vals: vals,
+                            labels: g.keys.map(function(p){ return p[1]; })
+                        });
+                    });
+                });
+                issueRows.sort(function(a,b){
+                    const ra = emrTehsilRank(a.tehsil), rb = emrTehsilRank(b.tehsil);
+                    if(ra !== rb) return ra - rb;
+                    if(String(a.uc).toLowerCase() < String(b.uc).toLowerCase()) return -1;
+                    if(String(a.uc).toLowerCase() > String(b.uc).toLowerCase()) return 1;
+                    return b.diff - a.diff;
+                });
+                const ucSet = {};
+                issueRows.forEach(function(r){ ucSet[r.tehsil+'||'+r.uc]=1; });
+                emrSetStats([
+                    {n: issueRows.length.toLocaleString(), l:'Mismatch rows'},
+                    {n: Object.keys(ucSet).length, l:'UCs with issue'},
+                    {n: emrPeriodLabel(), l:'Period'}
+                ]);
+                const headers = ['Sr','Tehsil','UC','Dose Group','Counts (should be equal)','Min','Max','Difference'];
+                const exp = [];
+                let i = 0;
+                const rowsHtml = issueRows.map(function(r){
+                    i++;
+                    exp.push([i, r.tehsil, r.uc, r.group, r.detail, r.min, r.max, r.diff]);
+                    return '<tr><td>'+i+'</td><td>'+r.tehsil+'</td><td><strong>'+r.uc+'</strong></td><td>'+r.group+'</td>'
+                        + '<td style="text-align:left;font-size:12px">'+r.detail+'</td>'
+                        + '<td>'+r.min+'</td><td>'+r.max+'</td>'
+                        + '<td style="color:#c62828;font-weight:800">'+r.diff+'</td></tr>';
+                }).join('') || '<tr><td colspan="8" style="text-align:center;color:#2e7d32;padding:16px">All UCs: same-dose groups are equal for this period. No difference found.</td></tr>';
+                emrRenderTable(headers, rowsHtml, headers, exp, null);
+                const extra = document.getElementById('emrExtraVisual');
+                if(extra){
+                    extra.style.display = 'block';
+                    extra.innerHTML = '<div style="font-size:12.5px;color:#555;padding:8px 4px;line-height:1.55">'
+                        + '<strong>Rule:</strong> Same session antigens must match UC-wise.<br>'
+                        + '• <strong>Group 1:</strong> OPV-1 = Penta-1 = PCV13-1 = Rota-1<br>'
+                        + '• <strong>Group 2:</strong> OPV-2 = Penta-2 = PCV13-2 = Rota-2<br>'
+                        + '• <strong>Group 3:</strong> OPV-3 = Penta-3 = PCV13-3 = IPV-1<br>'
+                        + '• <strong>Group 4:</strong> MR-1 = TCV = IPV-2<br>'
+                        + 'Sirf un UCs ki list jahan koi group mismatch hai.</div>';
                 }
             }
 
@@ -7784,7 +7883,8 @@
                     if(body) body.innerHTML=html||'<tr><td colspan="9">Koi location submit nahi</td></tr>';
                     locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Times Submitted','Day-wise','Last Time','Map'], rows:exp, title:'Submitted Locations (All dates)'};
                 } else {
-                    if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>Time</th><th>Late?</th><th>Lat</th><th>Long</th><th>Map</th></tr>';
+                    // Day mode: no Lat/Long columns (faster, cleaner report)
+                    if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>Time</th><th>Late?</th><th>Map</th></tr>';
                     let i=0, html='', exp=[];
                     masters.forEach(function(m){
                         const hit=locHasSubmit(m, day);
@@ -7792,12 +7892,37 @@
                         i++;
                         const late=locIsLate(hit.ts);
                         const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
-                        html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||hit.tehsil||'')+'</td><td>'+(m.uc||hit.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td>'+locFmt(hit.ts)+'</td><td style="font-weight:700;color:'+(late?'#c62828':'#2e7d32')+'">'+(late?'Late':'On time')+'</td><td>'+(hit.lat||'')+'</td><td>'+(hit.lng||'')+'</td><td>'+map+'</td></tr>';
-                        exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||hit.tehsil||'',m.uc||hit.uc||'',hit.kitStation||'',locFmt(hit.ts),late?'Late':'On time',hit.lat||'',hit.lng||'',hit.maps||'']);
+                        html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||hit.tehsil||'')+'</td><td>'+(m.uc||hit.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td>'+locFmt(hit.ts)+'</td><td style="font-weight:700;color:'+(late?'#c62828':'#2e7d32')+'">'+(late?'Late':'On time')+'</td><td>'+map+'</td></tr>';
+                        exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||hit.tehsil||'',m.uc||hit.uc||'',hit.kitStation||'',locFmt(hit.ts),late?'Late':'On time',hit.maps||'']);
                     });
-                    if(body) body.innerHTML=html||'<tr><td colspan="11">Is date / filter me koi location submit nahi</td></tr>';
-                    locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Late?','Lat','Long','Map'], rows:exp, title:'Submitted Locations — '+locYmdLabel(day)};
+                    if(body) body.innerHTML=html||'<tr><td colspan="9">Is date / filter me koi location submit nahi</td></tr>';
+                    locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Late?','Map'], rows:exp, title:'Submitted Locations — '+locYmdLabel(day)};
                 }
+            }
+            else if(locMode==='multi'){
+                // Vaccinators / UCs with 2+ location submits (selected day or all dates)
+                if(head) head.innerHTML='<tr><th>Sr</th><th>UC</th><th>Vaccinator Name</th><th>Kit Station 1</th><th>Map Location 1</th><th>Time &amp; Date 1</th><th>Kit Station 2</th><th>Map Location 2</th><th>Time &amp; Date 2</th><th>Total Submits</th></tr>';
+                let i=0, html='', exp=[], multiCount=0;
+                masters.forEach(function(m){
+                    const hits = locHitsFor(m, day); // newest first
+                    if(hits.length < 2) return;
+                    multiCount++;
+                    i++;
+                    // chronological: oldest = location 1, next = location 2 (then total count)
+                    const ordered = hits.slice().sort(function(a,b){ return (a.ts?a.ts.getTime():0)-(b.ts?b.ts.getTime():0); });
+                    const h1 = ordered[0];
+                    const h2 = ordered[1];
+                    const map1 = h1.maps ? ('<a href="'+h1.maps+'" target="_blank" rel="noopener">Map 1</a>') : '—';
+                    const map2 = h2.maps ? ('<a href="'+h2.maps+'" target="_blank" rel="noopener">Map 2</a>') : '—';
+                    const uc = m.uc || h1.uc || '';
+                    html += '<tr><td>'+i+'</td><td>'+uc+'</td><td>'+m.name+'</td><td>'+(h1.kitStation||'—')+'</td><td>'+map1+'</td><td>'+locFmt(h1.ts)+'</td><td>'+(h2.kitStation||'—')+'</td><td>'+map2+'</td><td>'+locFmt(h2.ts)+'</td><td style="font-weight:800;color:#0d5c3d">'+hits.length+'</td></tr>';
+                    exp.push([i, uc, m.name, h1.kitStation||'', h1.maps||'', locFmt(h1.ts), h2.kitStation||'', h2.maps||'', locFmt(h2.ts), hits.length]);
+                });
+                if(stats) stats.innerHTML=
+                    '<div class="emr-stat"><div class="n">'+multiCount+'</div><div class="l">Multi-submit vaccinators</div></div>'+
+                    '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>';
+                if(body) body.innerHTML=html||'<tr><td colspan="10">Kisi ne 1 se zyada location submit nahi ki</td></tr>';
+                locLastExport={headers:['Sr','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time & Date 1','Kit Station 2','Map Location 2','Time & Date 2','Total Submits'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):'')};
             }
             else if(locMode==='pending'){
                 if(stats) stats.innerHTML=
@@ -7884,7 +8009,7 @@
             }
         }
         function locTabLabel(){
-            const map={submitted:'Submitted Locations',pending:'Not Submitted',all:'All Vaccinators Status',late:'Late Location Submit'};
+            const map={submitted:'Submitted Locations',pending:'Not Submitted',all:'All Vaccinators Status',late:'Late Location Submit',multi:'Multiple Location Submits',map:'Live Map'};
             return map[locMode]||'Field Location';
         }
         function locExportDateLabel(){
