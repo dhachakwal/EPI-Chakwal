@@ -7353,67 +7353,101 @@
             if(isNaN(x)) return '';
             return x.toFixed(6);
         }
-        /** Score possible fake/mock GPS — heuristic flags only (not 100% proof) */
+        /**
+         * Suspicious / low-confidence location (tuned on live Chakwal sheet).
+         * Accuracy 100–2000m = weak GPS / network location (common) — flag as low-confidence,
+         * NOT automatic Fake GPS. Stronger signals: multi-day same pin, impossible travel, out of district.
+         */
         function locAnalyzeSuspicious(hit, personHits){
             const flags=[];
             let score=0;
-            const acc=parseFloat(hit.accuracy);
-            const lat=parseFloat(hit.lat), lng=parseFloat(hit.lng);
-            // 1) Unrealistically perfect accuracy (common with some mock apps)
-            if(!isNaN(acc) && acc>0 && acc<=5){ flags.push('Very high accuracy ('+Math.round(acc)+'m)'); score+=2; }
-            if(!isNaN(acc) && acc===0){ flags.push('Accuracy = 0'); score+=2; }
-            if(hit.accuracy===''||hit.accuracy==null||isNaN(acc)){ flags.push('Missing accuracy'); score+=1; }
-            // 2) Outside rough Chakwal district bounds
-            if(!isNaN(lat)&&!isNaN(lng)){
-                if(lat<32.55||lat>33.25||lng<72.35||lng>73.35){
-                    flags.push('Outside district bounds'); score+=4;
+            const accRaw = hit.accuracy;
+            const acc = parseFloat(accRaw);
+            const lat = parseFloat(hit.lat), lng = parseFloat(hit.lng);
+
+            // A) Coarse GPS — main pattern in sheet (100–2000 m)
+            if(!isNaN(acc)){
+                if(acc >= 2000){
+                    flags.push('Very coarse GPS (~'+Math.round(acc)+'m — network/wifi style)');
+                    score += 4;
+                } else if(acc >= 500){
+                    flags.push('Coarse GPS (~'+Math.round(acc)+'m)');
+                    score += 3;
+                } else if(acc >= 100){
+                    flags.push('Low-confidence GPS (~'+Math.round(acc)+'m)');
+                    score += 2;
+                }
+                if(acc === 0){ flags.push('Accuracy = 0'); score += 2; }
+            } else if(accRaw===''||accRaw==null){
+                flags.push('Missing accuracy');
+                score += 1;
+            }
+
+            // B) District envelope (includes Lawa / western belt ~71.9)
+            if(!isNaN(lat) && !isNaN(lng)){
+                if(lat < 32.50 || lat > 33.40 || lng < 71.80 || lng > 73.40){
+                    flags.push('Outside district envelope');
+                    score += 4;
                 }
             } else {
-                flags.push('Invalid coordinates'); score+=3;
+                flags.push('Invalid coordinates');
+                score += 3;
             }
-            // 3) Exact same coordinates on multiple different days
-            if(personHits && personHits.length>1 && !isNaN(lat)&&!isNaN(lng)){
-                const key=locRound6(lat)+','+locRound6(lng);
-                const days={};
+
+            // C) Same pin on multiple days
+            if(personHits && personHits.length > 1 && !isNaN(lat) && !isNaN(lng)){
+                const key = locRound6(lat)+','+locRound6(lng);
+                const days = {};
                 personHits.forEach(function(h){
                     if(!h.ymd) return;
-                    const k=locRound6(h.lat)+','+locRound6(h.lng);
-                    if(k===key) days[h.ymd]=1;
+                    const k = locRound6(h.lat)+','+locRound6(h.lng);
+                    if(k === key) days[h.ymd] = 1;
                 });
-                const nDays=Object.keys(days).length;
-                if(nDays>=2){ flags.push('Same pin on '+nDays+' days'); score+=3; }
+                const nDays = Object.keys(days).length;
+                if(nDays >= 2){
+                    flags.push('Same pin on '+nDays+' different days');
+                    score += 3;
+                }
             }
-            // 4) Impossible travel: 2 points far apart in short time (same day)
-            if(personHits && personHits.length>1 && hit.ymd){
-                const sameDay=personHits.filter(function(h){ return h.ymd===hit.ymd && h.ts; })
+
+            // D) Impossible travel same day
+            if(personHits && personHits.length > 1 && hit.ymd){
+                const sameDay = personHits.filter(function(h){ return h.ymd===hit.ymd && h.ts; })
                     .sort(function(a,b){ return a.ts.getTime()-b.ts.getTime(); });
                 for(let i=1;i<sameDay.length;i++){
-                    const prev=sameDay[i-1], cur=sameDay[i];
-                    const km=locDistKm(prev, cur);
-                    const mins=Math.abs((cur.ts.getTime()-prev.ts.getTime())/60000);
-                    if(km>=15 && mins>0 && mins<=45){
+                    const prev = sameDay[i-1], cur = sameDay[i];
+                    const km = locDistKm(prev, cur);
+                    const mins = Math.abs((cur.ts.getTime()-prev.ts.getTime())/60000);
+                    if(km >= 15 && mins > 0 && mins <= 45){
                         flags.push('Impossible travel ~'+km.toFixed(1)+' km in '+Math.round(mins)+' min');
-                        score+=4;
+                        score += 4;
                         break;
                     }
-                    if(km>=40 && mins<=120){
+                    if(km >= 40 && mins <= 120){
                         flags.push('Long jump ~'+km.toFixed(1)+' km in '+Math.round(mins)+' min');
-                        score+=3;
+                        score += 3;
                         break;
                     }
                 }
             }
-            // 5) Suspiciously round coordinates
-            if(!isNaN(lat)&&!isNaN(lng)){
-                const ls=String(hit.lat), gs=String(hit.lng);
+
+            // E) Weak coordinate pattern signals
+            if(!isNaN(lat) && !isNaN(lng)){
+                const ls = String(hit.lat), gs = String(hit.lng);
                 if(/\.(0{4,}|000000)/.test(ls) || /\.(0{4,}|000000)/.test(gs)){
-                    flags.push('Round coordinates'); score+=1;
+                    flags.push('Round coordinates');
+                    score += 1;
+                }
+                if(/(\d)\1{3,}/.test(ls.replace('.','')) || /(\d)\1{3,}/.test(gs.replace('.',''))){
+                    flags.push('Repeating digits in coordinates');
+                    score += 1;
                 }
             }
+
             if(!flags.length) return null;
-            let level='Low';
-            if(score>=6) level='High';
-            else if(score>=3) level='Medium';
+            let level = 'Low';
+            if(score >= 5) level = 'High';
+            else if(score >= 3) level = 'Medium';
             return {score:score, level:level, flags:flags, reasons:flags.join(' · ')};
         }
         function locReviveRows(arr){
@@ -8094,33 +8128,39 @@
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Late By','Map'], rows:exp, title:'Late Location Submit'};
             }
             else if(locMode==='suspicious'){
-                // Heuristic mock/fake GPS flags (not 100% proof)
+                // Low-confidence + anomaly flags (tuned on live sheet: 100–2000m accuracy is coarse GPS)
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>Time</th><th>Accuracy</th><th>Risk</th><th>Reasons</th><th>Map</th></tr>';
-                let i=0, html='', exp=[], susCount=0, highN=0, medN=0;
+                const list=[];
                 masters.forEach(function(m){
                     const hits = locHitsFor(m, day);
                     if(!hits.length) return;
-                    // Evaluate latest hit (and use full history for same-pin / travel)
                     const allHits = locHitsFor(m, '');
                     const hit = hits[0];
                     const ana = locAnalyzeSuspicious(hit, allHits);
                     if(!ana) return;
-                    susCount++;
-                    if(ana.level==='High') highN++;
-                    else if(ana.level==='Medium') medN++;
+                    list.push({m:m, hit:hit, ana:ana});
+                });
+                list.sort(function(a,b){ return (b.ana.score||0)-(a.ana.score||0); });
+                let i=0, html='', exp=[], highN=0, medN=0, coarseN=0;
+                list.forEach(function(rec){
+                    if(rec.ana.level==='High') highN++;
+                    else if(rec.ana.level==='Medium') medN++;
+                    const a=parseFloat(rec.hit.accuracy);
+                    if(!isNaN(a) && a>=100) coarseN++;
                     i++;
-                    const riskColor = ana.level==='High' ? '#c62828' : (ana.level==='Medium' ? '#e65100' : '#f9a825');
-                    const accTxt = (hit.accuracy!==''&&hit.accuracy!=null) ? (Math.round(parseFloat(hit.accuracy))+' m') : '—';
-                    const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
-                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td>'+locFmt(hit.ts)+'</td><td>'+accTxt+'</td><td style="font-weight:800;color:'+riskColor+'">'+ana.level+' ('+ana.score+')</td><td style="text-align:left;font-size:12px;max-width:280px">'+ana.reasons+'</td><td>'+map+'</td></tr>';
-                    exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||'',m.uc||'',hit.kitStation||'',locFmt(hit.ts),accTxt,ana.level,ana.score,ana.reasons,hit.maps||'']);
+                    const riskColor = rec.ana.level==='High' ? '#c62828' : (rec.ana.level==='Medium' ? '#e65100' : '#f9a825');
+                    const accTxt = (rec.hit.accuracy!==''&&rec.hit.accuracy!=null) ? (Math.round(parseFloat(rec.hit.accuracy))+' m') : '—';
+                    const map=rec.hit.maps?('<a href="'+rec.hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
+                    html+='<tr><td>'+i+'</td><td>'+rec.m.name+'</td><td>'+locDispUser(rec.m.username||rec.hit.username)+'</td><td>'+(rec.m.tehsil||'')+'</td><td>'+(rec.m.uc||'')+'</td><td>'+(rec.hit.kitStation||'—')+'</td><td>'+locFmt(rec.hit.ts)+'</td><td style="font-weight:700">'+( !isNaN(a)&&a>=100 ? '<span style="color:#c62828">'+accTxt+'</span>' : accTxt )+'</td><td style="font-weight:800;color:'+riskColor+'">'+rec.ana.level+' ('+rec.ana.score+')</td><td style="text-align:left;font-size:12px;max-width:280px">'+rec.ana.reasons+'</td><td>'+map+'</td></tr>';
+                    exp.push([i,rec.m.name,locDispUser(rec.m.username||rec.hit.username),rec.m.tehsil||'',rec.m.uc||'',rec.hit.kitStation||'',locFmt(rec.hit.ts),accTxt,rec.ana.level,rec.ana.score,rec.ana.reasons,rec.hit.maps||'']);
                 });
                 if(stats) stats.innerHTML=
-                    '<div class="emr-stat" style="color:#c62828"><div class="n">'+susCount+'</div><div class="l">Suspicious</div></div>'+
+                    '<div class="emr-stat" style="color:#c62828"><div class="n">'+list.length+'</div><div class="l">Flagged</div></div>'+
+                    '<div class="emr-stat" style="color:#c62828"><div class="n">'+coarseN+'</div><div class="l">Accuracy ≥100m</div></div>'+
                     '<div class="emr-stat" style="color:#c62828"><div class="n">'+highN+'</div><div class="l">High risk</div></div>'+
                     '<div class="emr-stat" style="color:#e65100"><div class="n">'+medN+'</div><div class="l">Medium risk</div></div>'+
-                    '<div class="emr-stat" style="font-size:11px;line-height:1.3;padding:8px"><div class="l">Heuristic flags only — not legal proof of Fake GPS</div></div>';
-                if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious location flag nahi mila</td></tr>';
+                    '<div class="emr-stat" style="font-size:11px;line-height:1.35;padding:8px;min-width:160px"><div class="l">100–2000m = weak/network GPS (not automatic Fake GPS). Field verify if needed.</div></div>';
+                if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious / low-confidence location flag nahi mila</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Accuracy','Risk','Score','Reasons','Map'], rows:exp, title:'Suspicious Location'};
             }
             else {
