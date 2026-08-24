@@ -215,16 +215,21 @@ function getLocation(){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Getting location…';
   navigator.geolocation.getCurrentPosition(function(pos){
+    const c = pos.coords || {};
     lastLoc = {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-      accuracy: pos.coords.accuracy,
-      maps: 'https://www.google.com/maps?q='+pos.coords.latitude+','+pos.coords.longitude
+      lat: c.latitude,
+      lng: c.longitude,
+      accuracy: c.accuracy,
+      altitude: (c.altitude!=null ? c.altitude : ''),
+      altitudeAccuracy: (c.altitudeAccuracy!=null ? c.altitudeAccuracy : ''),
+      speed: (c.speed!=null ? c.speed : ''),
+      heading: (c.heading!=null ? c.heading : ''),
+      maps: 'https://www.google.com/maps?q='+c.latitude+','+c.longitude
     };
     const box = document.getElementById('locBox');
     box.style.display = 'block';
-    box.innerHTML = '<strong>Location ready</strong><br>Lat: '+lastLoc.lat.toFixed(6)+'<br>Long: '+lastLoc.lng.toFixed(6)+
-      '<br>Accuracy: ~'+Math.round(lastLoc.accuracy)+' m';
+    box.innerHTML = '<strong>Location ready</strong><br>Lat: '+Number(lastLoc.lat).toFixed(6)+'<br>Long: '+Number(lastLoc.lng).toFixed(6)+
+      '<br>Accuracy: ~'+Math.round(lastLoc.accuracy||0)+' m';
     document.getElementById('btnSub').disabled = false;
     btn.disabled = false;
     btn.innerHTML = '📍 Get My Location';
@@ -265,6 +270,9 @@ function submitLoc(){
     lat: String(lastLoc.lat),
     lng: String(lastLoc.lng),
     accuracy: String(Math.round(lastLoc.accuracy||0)),
+    altitude: String(lastLoc.altitude!==''&&lastLoc.altitude!=null?lastLoc.altitude:''),
+    speed: String(lastLoc.speed!==''&&lastLoc.speed!=null?lastLoc.speed:''),
+    heading: String(lastLoc.heading!==''&&lastLoc.heading!=null?lastLoc.heading:''),
     maps: lastLoc.maps
   };
 
