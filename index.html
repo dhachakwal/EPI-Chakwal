@@ -761,6 +761,7 @@
                         <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
                         <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">4. Late Location Submit</button>
                         <button type="button" class="emr-tab" data-loc="multi" onclick="locSwitch('multi')">5. Multiple Submits</button>
+                        <button type="button" class="emr-tab" data-loc="suspicious" onclick="locSwitch('suspicious')">6. Suspicious Location</button>
                         <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
@@ -7336,6 +7337,85 @@
             const mins = ts.getHours()*60 + ts.getMinutes();
             return mins > LOC_LATE_MINS;
         }
+        // Haversine distance km
+        function locDistKm(a, b){
+            if(!a || !b) return 0;
+            const lat1=parseFloat(a.lat), lon1=parseFloat(a.lng);
+            const lat2=parseFloat(b.lat), lon2=parseFloat(b.lng);
+            if(isNaN(lat1)||isNaN(lon1)||isNaN(lat2)||isNaN(lon2)) return 0;
+            const R=6371, toR=Math.PI/180;
+            const dLat=(lat2-lat1)*toR, dLon=(lon2-lon1)*toR;
+            const x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*toR)*Math.cos(lat2*toR)*Math.sin(dLon/2)*Math.sin(dLon/2);
+            return R*2*Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+        }
+        function locRound6(n){
+            const x=parseFloat(n);
+            if(isNaN(x)) return '';
+            return x.toFixed(6);
+        }
+        /** Score possible fake/mock GPS — heuristic flags only (not 100% proof) */
+        function locAnalyzeSuspicious(hit, personHits){
+            const flags=[];
+            let score=0;
+            const acc=parseFloat(hit.accuracy);
+            const lat=parseFloat(hit.lat), lng=parseFloat(hit.lng);
+            // 1) Unrealistically perfect accuracy (common with some mock apps)
+            if(!isNaN(acc) && acc>0 && acc<=5){ flags.push('Very high accuracy ('+Math.round(acc)+'m)'); score+=2; }
+            if(!isNaN(acc) && acc===0){ flags.push('Accuracy = 0'); score+=2; }
+            if(hit.accuracy===''||hit.accuracy==null||isNaN(acc)){ flags.push('Missing accuracy'); score+=1; }
+            // 2) Outside rough Chakwal district bounds
+            if(!isNaN(lat)&&!isNaN(lng)){
+                if(lat<32.55||lat>33.25||lng<72.35||lng>73.35){
+                    flags.push('Outside district bounds'); score+=4;
+                }
+            } else {
+                flags.push('Invalid coordinates'); score+=3;
+            }
+            // 3) Exact same coordinates on multiple different days
+            if(personHits && personHits.length>1 && !isNaN(lat)&&!isNaN(lng)){
+                const key=locRound6(lat)+','+locRound6(lng);
+                const days={};
+                personHits.forEach(function(h){
+                    if(!h.ymd) return;
+                    const k=locRound6(h.lat)+','+locRound6(h.lng);
+                    if(k===key) days[h.ymd]=1;
+                });
+                const nDays=Object.keys(days).length;
+                if(nDays>=2){ flags.push('Same pin on '+nDays+' days'); score+=3; }
+            }
+            // 4) Impossible travel: 2 points far apart in short time (same day)
+            if(personHits && personHits.length>1 && hit.ymd){
+                const sameDay=personHits.filter(function(h){ return h.ymd===hit.ymd && h.ts; })
+                    .sort(function(a,b){ return a.ts.getTime()-b.ts.getTime(); });
+                for(let i=1;i<sameDay.length;i++){
+                    const prev=sameDay[i-1], cur=sameDay[i];
+                    const km=locDistKm(prev, cur);
+                    const mins=Math.abs((cur.ts.getTime()-prev.ts.getTime())/60000);
+                    if(km>=15 && mins>0 && mins<=45){
+                        flags.push('Impossible travel ~'+km.toFixed(1)+' km in '+Math.round(mins)+' min');
+                        score+=4;
+                        break;
+                    }
+                    if(km>=40 && mins<=120){
+                        flags.push('Long jump ~'+km.toFixed(1)+' km in '+Math.round(mins)+' min');
+                        score+=3;
+                        break;
+                    }
+                }
+            }
+            // 5) Suspiciously round coordinates
+            if(!isNaN(lat)&&!isNaN(lng)){
+                const ls=String(hit.lat), gs=String(hit.lng);
+                if(/\.(0{4,}|000000)/.test(ls) || /\.(0{4,}|000000)/.test(gs)){
+                    flags.push('Round coordinates'); score+=1;
+                }
+            }
+            if(!flags.length) return null;
+            let level='Low';
+            if(score>=6) level='High';
+            else if(score>=3) level='Medium';
+            return {score:score, level:level, flags:flags, reasons:flags.join(' · ')};
+        }
         function locReviveRows(arr){
             return (arr||[]).map(function(r){
                 const o = Object.assign({}, r);
@@ -7861,13 +7941,15 @@
         function locApply(){
             const day=(document.getElementById('locDay')||{}).value||'';
             const masters=locFilteredMasters();
-            let submitted=0, pending=0, lateCount=0, totalSubs=0;
+            let submitted=0, pending=0, lateCount=0, totalSubs=0, susCount=0;
             masters.forEach(function(m){
                 const hits = locHitsFor(m, day);
                 if(hits.length){
                     submitted++;
                     totalSubs += hits.length;
                     if(hits.some(function(h){ return locIsLate(h.ts); })) lateCount++;
+                    const allHits = locHitsFor(m, '');
+                    if(locAnalyzeSuspicious(hits[0], allHits)) susCount++;
                 } else pending++;
             });
             const grid=document.getElementById('locSummaryGrid');
@@ -7884,6 +7966,7 @@
                     {n:submitted,l:'Submitted', mode:'submitted'},
                     {n:pending,l:'Not Submitted', mode:'pending', red:true},
                     {n:lateCount,l:'Late (>09:30)', mode:'late', red:true},
+                    {n:susCount,l:'Suspicious', mode:'suspicious', red:true},
                     {n:totalSubs,l: day ? 'Submits (day)' : 'Total Submits', mode:'submitted'}
                 ];
                 grid.innerHTML=items.map(function(it){
@@ -8010,6 +8093,36 @@
                 if(body) body.innerHTML=html||'<tr><td colspan="9">Is filter me koi late submission nahi (09:30 AM ke baad)</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Late By','Map'], rows:exp, title:'Late Location Submit'};
             }
+            else if(locMode==='suspicious'){
+                // Heuristic mock/fake GPS flags (not 100% proof)
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>Time</th><th>Accuracy</th><th>Risk</th><th>Reasons</th><th>Map</th></tr>';
+                let i=0, html='', exp=[], susCount=0, highN=0, medN=0;
+                masters.forEach(function(m){
+                    const hits = locHitsFor(m, day);
+                    if(!hits.length) return;
+                    // Evaluate latest hit (and use full history for same-pin / travel)
+                    const allHits = locHitsFor(m, '');
+                    const hit = hits[0];
+                    const ana = locAnalyzeSuspicious(hit, allHits);
+                    if(!ana) return;
+                    susCount++;
+                    if(ana.level==='High') highN++;
+                    else if(ana.level==='Medium') medN++;
+                    i++;
+                    const riskColor = ana.level==='High' ? '#c62828' : (ana.level==='Medium' ? '#e65100' : '#f9a825');
+                    const accTxt = (hit.accuracy!==''&&hit.accuracy!=null) ? (Math.round(parseFloat(hit.accuracy))+' m') : '—';
+                    const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
+                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td>'+locFmt(hit.ts)+'</td><td>'+accTxt+'</td><td style="font-weight:800;color:'+riskColor+'">'+ana.level+' ('+ana.score+')</td><td style="text-align:left;font-size:12px;max-width:280px">'+ana.reasons+'</td><td>'+map+'</td></tr>';
+                    exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||'',m.uc||'',hit.kitStation||'',locFmt(hit.ts),accTxt,ana.level,ana.score,ana.reasons,hit.maps||'']);
+                });
+                if(stats) stats.innerHTML=
+                    '<div class="emr-stat" style="color:#c62828"><div class="n">'+susCount+'</div><div class="l">Suspicious</div></div>'+
+                    '<div class="emr-stat" style="color:#c62828"><div class="n">'+highN+'</div><div class="l">High risk</div></div>'+
+                    '<div class="emr-stat" style="color:#e65100"><div class="n">'+medN+'</div><div class="l">Medium risk</div></div>'+
+                    '<div class="emr-stat" style="font-size:11px;line-height:1.3;padding:8px"><div class="l">Heuristic flags only — not legal proof of Fake GPS</div></div>';
+                if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious location flag nahi mila</td></tr>';
+                locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Accuracy','Risk','Score','Reasons','Map'], rows:exp, title:'Suspicious Location'};
+            }
             else {
                 // all status
                 if(stats) stats.innerHTML=
@@ -8060,7 +8173,7 @@
             }
         }
         function locTabLabel(){
-            const map={submitted:'Submitted Locations',pending:'Not Submitted',all:'All Vaccinators Status',late:'Late Location Submit',multi:'Multiple Location Submits',map:'Live Map'};
+            const map={submitted:'Submitted Locations',pending:'Not Submitted',all:'All Vaccinators Status',late:'Late Location Submit',multi:'Multiple Location Submits',suspicious:'Suspicious Location',map:'Live Map'};
             return map[locMode]||'Field Location';
         }
         function locExportDateLabel(){
