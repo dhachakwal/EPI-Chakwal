@@ -7364,8 +7364,10 @@
             const accRaw = hit.accuracy;
             const acc = parseFloat(accRaw);
             const lat = parseFloat(hit.lat), lng = parseFloat(hit.lng);
+            const nameKey = String(hit.name||'').toLowerCase().trim();
+            const userKey = String(hit.username||'').replace(/\.0$/,'').trim();
 
-            // A) Coarse GPS — main pattern in sheet (100–2000 m)
+            // A) Coarse / low-confidence GPS (KEEP — 100–2000m is weak/network GPS, not auto Fake GPS)
             if(!isNaN(acc)){
                 if(acc >= 2000){
                     flags.push('Very coarse GPS (~'+Math.round(acc)+'m — network/wifi style)');
@@ -7383,7 +7385,7 @@
                 score += 1;
             }
 
-            // B) District envelope (includes Lawa / western belt ~71.9)
+            // B) Outside district envelope (includes Lawa ~71.9)
             if(!isNaN(lat) && !isNaN(lng)){
                 if(lat < 32.50 || lat > 33.40 || lng < 71.80 || lng > 73.40){
                     flags.push('Outside district envelope');
@@ -7394,7 +7396,7 @@
                 score += 3;
             }
 
-            // C) Same pin on multiple days
+            // C) Same person: exact same pin on multiple days (strong fake/copy signal)
             if(personHits && personHits.length > 1 && !isNaN(lat) && !isNaN(lng)){
                 const key = locRound6(lat)+','+locRound6(lng);
                 const days = {};
@@ -7406,11 +7408,11 @@
                 const nDays = Object.keys(days).length;
                 if(nDays >= 2){
                     flags.push('Same pin on '+nDays+' different days');
-                    score += 3;
+                    score += 4;
                 }
             }
 
-            // D) Impossible travel same day
+            // D) Impossible travel same day (same person)
             if(personHits && personHits.length > 1 && hit.ymd){
                 const sameDay = personHits.filter(function(h){ return h.ymd===hit.ymd && h.ts; })
                     .sort(function(a,b){ return a.ts.getTime()-b.ts.getTime(); });
@@ -7420,33 +7422,75 @@
                     const mins = Math.abs((cur.ts.getTime()-prev.ts.getTime())/60000);
                     if(km >= 15 && mins > 0 && mins <= 45){
                         flags.push('Impossible travel ~'+km.toFixed(1)+' km in '+Math.round(mins)+' min');
-                        score += 4;
+                        score += 5;
                         break;
                     }
                     if(km >= 40 && mins <= 120){
                         flags.push('Long jump ~'+km.toFixed(1)+' km in '+Math.round(mins)+' min');
-                        score += 3;
+                        score += 4;
                         break;
                     }
                 }
             }
 
-            // E) Weak coordinate pattern signals
+            // E) Shared pin: different vaccinators reporting almost same coordinates (office / mock cluster)
+            if(!isNaN(lat) && !isNaN(lng) && typeof locRows !== 'undefined' && locRows && locRows.length){
+                const others = {};
+                locRows.forEach(function(r){
+                    if(!r || r.lat===''||r.lng==='') return;
+                    const rn = String(r.name||'').toLowerCase().trim();
+                    const ru = String(r.username||'').replace(/\.0$/,'').trim();
+                    if(nameKey && rn === nameKey) return;
+                    if(userKey && ru && ru === userKey) return;
+                    const d = locDistKm(hit, r);
+                    if(d <= 0.03){ // ~30 meters
+                        others[rn || ru || 'unknown'] = 1;
+                    }
+                });
+                const nOthers = Object.keys(others).length;
+                if(nOthers >= 2){
+                    flags.push('Same spot as '+nOthers+' other vaccinators (~30m)');
+                    score += 3;
+                } else if(nOthers === 1){
+                    flags.push('Same spot as another vaccinator (~30m)');
+                    score += 1;
+                }
+            }
+
+            // F) Coordinate patterns often seen with manual/mock pins
             if(!isNaN(lat) && !isNaN(lng)){
                 const ls = String(hit.lat), gs = String(hit.lng);
                 if(/\.(0{4,}|000000)/.test(ls) || /\.(0{4,}|000000)/.test(gs)){
                     flags.push('Round coordinates');
-                    score += 1;
+                    score += 2;
                 }
-                if(/(\d)\1{3,}/.test(ls.replace('.','')) || /(\d)\1{3,}/.test(gs.replace('.',''))){
+                if(/(\d)\1{4,}/.test(ls.replace('.','')) || /(\d)\1{4,}/.test(gs.replace('.',''))){
                     flags.push('Repeating digits in coordinates');
                     score += 1;
                 }
             }
 
+            // G) Frozen multi-submit: same person, same day, pin barely moves (<15m) but 2+ submits spaced out
+            if(personHits && personHits.length >= 2 && hit.ymd){
+                const sameDay = personHits.filter(function(h){ return h.ymd===hit.ymd; });
+                if(sameDay.length >= 2){
+                    let maxD = 0;
+                    for(let i=0;i<sameDay.length;i++){
+                        for(let j=i+1;j<sameDay.length;j++){
+                            const d = locDistKm(sameDay[i], sameDay[j]);
+                            if(d > maxD) maxD = d;
+                        }
+                    }
+                    if(maxD > 0 && maxD < 0.015){
+                        flags.push('Multiple submits, pin almost frozen (<15m)');
+                        score += 2;
+                    }
+                }
+            }
+
             if(!flags.length) return null;
             let level = 'Low';
-            if(score >= 5) level = 'High';
+            if(score >= 6) level = 'High';
             else if(score >= 3) level = 'Medium';
             return {score:score, level:level, flags:flags, reasons:flags.join(' · ')};
         }
@@ -8159,7 +8203,7 @@
                     '<div class="emr-stat" style="color:#c62828"><div class="n">'+coarseN+'</div><div class="l">Accuracy ≥100m</div></div>'+
                     '<div class="emr-stat" style="color:#c62828"><div class="n">'+highN+'</div><div class="l">High risk</div></div>'+
                     '<div class="emr-stat" style="color:#e65100"><div class="n">'+medN+'</div><div class="l">Medium risk</div></div>'+
-                    '<div class="emr-stat" style="font-size:11px;line-height:1.35;padding:8px;min-width:160px"><div class="l">100–2000m = weak/network GPS (not automatic Fake GPS). Field verify if needed.</div></div>';
+                    '<div class="emr-stat" style="font-size:11px;line-height:1.35;padding:8px;min-width:180px"><div class="l">Includes: 100–2000m weak/network GPS (not auto Fake GPS) + fake-like signals (same pin, shared spot, impossible travel). Field verify High risk.</div></div>';
                 if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious / low-confidence location flag nahi mila</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Accuracy','Risk','Score','Reasons','Map'], rows:exp, title:'Suspicious Location'};
             }
