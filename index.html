@@ -661,6 +661,7 @@
                     <button type="button" class="btn btn-sm" id="emrTabPdfBtn" onclick="emrExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
                     <button type="button" class="btn btn-sm" id="emrTabPngBtn" onclick="emrExportTabPng()" style="background:#00838f">🖼 PNG (This Tab)</button>
                     <button type="button" class="btn btn-sm" id="emrPdfBtn" onclick="emrExportFullPdf()" style="background:#c62828">📄 Full EMR PDF (All Tabs)</button>
+                    <button type="button" class="btn btn-sm" id="emrExplBtn" onclick="explOpenFromEmr()" style="background:#bf360c;color:#fff">📝 Explanation Letter</button>
                     <span style="font-size:12px;color:#666" id="emrDownloadHint">Excel / PDF / PNG (This Tab) = open tab · Full PDF = all sections</span>
                 </div>
 
@@ -702,6 +703,7 @@
                         <button type="button" class="btn btn-sm" onclick="attExportPdf()" style="background:#6a1b9a">📄 PDF</button>
                         <button type="button" class="btn btn-sm" onclick="attExportExcel()" style="background:#2e7d32">📊 Excel</button>
                         <button type="button" class="btn btn-sm" onclick="attExportPng()" style="background:#1565c0">🖼 PNG</button>
+                        <button type="button" class="btn btn-sm" onclick="explOpenFromAtt()" style="background:#bf360c;color:#fff">📝 Explanation Letter</button>
                         <span class="sweep-meta" id="attMeta">Not loaded</span>
                     </div>
                     <div class="emr-summary-panel" id="attSummaryPanel">
@@ -767,6 +769,7 @@
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
                             <button type="button" class="btn btn-sm" onclick="locExportPdf()" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
                             <button type="button" class="btn btn-sm" onclick="locExportPng()" style="background:#6a1b9a;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">🖼 PNG</button>
+                            <button type="button" class="btn btn-sm" onclick="explOpenFromLoc()" style="background:#bf360c;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📝 Explanation Letter</button>
                         </span>
                     </div>
                     <div id="locStats" class="emr-stats" style="margin:10px 0"></div>
@@ -1721,6 +1724,36 @@
             <div id="sdSub" style="font-size:13px;color:#666;margin-bottom:14px"></div>
             <div id="sdBody"></div>
             <div id="sdActions" style="margin-top:12px"></div>
+        </div>
+    </div>
+
+    <!-- Explanation Cum Personal Hearing Letter -->
+    <div class="modal-overlay" id="explModal" onclick="if(event.target===this)explClose()">
+        <div class="stat-modal-box" style="max-width:640px" onclick="event.stopPropagation()">
+            <button type="button" class="modal-close" onclick="explClose()">&times;</button>
+            <div class="stat-modal-title" style="color:#bf360c">📝 Explanation Cum Personal Hearing</div>
+            <p style="font-size:13px;color:#555;margin-bottom:12px" id="explCatLabel">Category: —</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <label style="font-size:12px;font-weight:700;color:#0d5c3d">Letter No.
+                    <input type="text" id="explLetterNo" placeholder="e.g. 756" style="width:100%;padding:10px;border:2px solid #0d5c3d;border-radius:8px;font-size:14px;margin-top:4px">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#0d5c3d">Letter Date
+                    <input type="date" id="explLetterDate" style="width:100%;padding:10px;border:2px solid #0d5c3d;border-radius:8px;font-size:14px;margin-top:4px">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#0d5c3d">Hearing Date
+                    <input type="date" id="explHearingDate" style="width:100%;padding:10px;border:2px solid #0d5c3d;border-radius:8px;font-size:14px;margin-top:4px">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#0d5c3d">Hearing Time
+                    <input type="time" id="explHearingTime" value="14:00" style="width:100%;padding:10px;border:2px solid #0d5c3d;border-radius:8px;font-size:14px;margin-top:4px">
+                </label>
+            </div>
+            <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:12px">
+                <strong id="explCountLabel">0</strong> record(s) will be included in the letter table.
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end">
+                <button type="button" class="btn btn-sm" onclick="explClose()" style="background:#eceff1;color:#333">Cancel</button>
+                <button type="button" class="btn btn-sm" onclick="explDownloadPdf()" style="background:#bf360c;color:#fff">⬇ Download Letter PDF</button>
+            </div>
         </div>
     </div>
 
@@ -8965,6 +8998,326 @@
                 const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
                 a.download=base+'.png'; a.click();
             }catch(e){ alert('PNG failed: '+(e.message||e)); }
+        }
+
+        // ===== Explanation Cum Personal Hearing Letters =====
+        let explState = { cat:'', rows:[], headers:[], subject:'', issueLine:'' };
+
+        function explFmtDate(d){
+            if(!d) return '';
+            const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+            if(typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d)){
+                const p=d.split('-');
+                return parseInt(p[2],10)+' '+months[parseInt(p[1],10)-1]+' '+p[0];
+            }
+            const x=new Date(d);
+            if(isNaN(x.getTime())) return String(d);
+            return x.getDate()+' '+months[x.getMonth()]+' '+x.getFullYear();
+        }
+        function explFmtTime(t){
+            if(!t) return '02:00 PM';
+            const p=String(t).split(':');
+            let h=parseInt(p[0],10), m=parseInt(p[1]||'0',10);
+            const ampm=h>=12?'PM':'AM';
+            h=h%12; if(h===0) h=12;
+            return h+':'+String(m).padStart(2,'0')+' '+ampm;
+        }
+        function explTodayISO(){
+            const d=new Date();
+            return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        }
+        function explNextDayISO(){
+            const d=new Date(); d.setDate(d.getDate()+1);
+            return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        }
+        function explClose(){
+            const m=document.getElementById('explModal');
+            if(m) m.classList.remove('active');
+        }
+        function explOpenModal(cat, label, subject, issueLine, headers, rows){
+            explState={cat:cat, rows:rows||[], headers:headers||[], subject:subject||'', issueLine:issueLine||''};
+            const modal=document.getElementById('explModal');
+            const catEl=document.getElementById('explCatLabel');
+            const cnt=document.getElementById('explCountLabel');
+            const no=document.getElementById('explLetterNo');
+            const ld=document.getElementById('explLetterDate');
+            const hd=document.getElementById('explHearingDate');
+            const ht=document.getElementById('explHearingTime');
+            if(catEl) catEl.textContent='Category: '+label+' · '+(rows||[]).length+' record(s)';
+            if(cnt) cnt.textContent=String((rows||[]).length);
+            if(ld) ld.value=explTodayISO();
+            if(hd) hd.value=explNextDayISO();
+            if(ht && !ht.value) ht.value='14:00';
+            try{
+                const last=localStorage.getItem('epi_expl_last_no')||'';
+                if(no && !no.value && last) no.placeholder='Last used: '+last;
+            }catch(e){}
+            if(modal) modal.classList.add('active');
+            if(!(rows||[]).length){
+                alert('Is category mein abhi koi record nahi. Pehle data load / filter check karein.');
+            }
+        }
+
+        function explEmrData(){
+            if(typeof emrFiltered==='function') return emrFiltered()||[];
+            return (typeof emrRows!=='undefined' && emrRows) ? emrRows : [];
+        }
+        function explCollectEmrPhone(){
+            const data=explEmrData();
+            const miss=(data||[]).filter(function(r){ return typeof emrPhoneMissing==='function' && emrPhoneMissing(emrCell(r,EMR_COLS.phone)); });
+            const rows=miss.map(function(r){
+                return [emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.father), emrCell(r,EMR_COLS.mr)||'—'];
+            });
+            return {
+                label:'EMR — Missing Phone Number',
+                subject:'EXPLANATION REGARDING NON-COMPLIANCE — MISSING PHONE NUMBERS ON EMR DASHBOARD (DSR DATED '+explFmtDate(explTodayISO())+')',
+                issueLine:'entries / records with missing or invalid phone numbers on the EMR Dashboard',
+                headers:['Tehsil','UC','Child Name','Father','MR No.'],
+                rows:rows
+            };
+        }
+        function explCollectEmrFather(){
+            const data=explEmrData();
+            const miss=(data||[]).filter(function(r){ return typeof emrFatherMissing==='function' && emrFatherMissing(emrCell(r,EMR_COLS.father)); });
+            const rows=miss.map(function(r){
+                return [emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), emrCell(r,EMR_COLS.phone), emrCell(r,EMR_COLS.mr)||'—'];
+            });
+            return {
+                label:'EMR — Missing Father Name',
+                subject:'EXPLANATION REGARDING NON-COMPLIANCE — MISSING FATHER NAME ON EMR DASHBOARD (DSR DATED '+explFmtDate(explTodayISO())+')',
+                issueLine:'entries / records with missing father name on the EMR Dashboard',
+                headers:['Tehsil','UC','Child Name','Phone','MR No.'],
+                rows:rows
+            };
+        }
+        function explCollectEmrLate(){
+            const data=explEmrData();
+            const list=[];
+            (data||[]).forEach(function(r){
+                const u=typeof emrUpdatedObj==='function'?emrUpdatedObj(r):{};
+                if(u.hour==null) return;
+                const mins=(u.hour||0)*60+(u.minute||0);
+                if(mins>=16*60) list.push(r); // after 4:00 PM
+            });
+            list.sort(function(a,b){
+                const ua=emrUpdatedObj(a), ub=emrUpdatedObj(b);
+                return ((ub.hour||0)*60+(ub.minute||0))-((ua.hour||0)*60+(ua.minute||0));
+            });
+            const rows=list.map(function(r){
+                const u=emrUpdatedObj(r);
+                const t12=typeof emrFormat12h==='function'?emrFormat12h(u):'';
+                return [emrCell(r,EMR_COLS.tehsil), emrCell(r,EMR_COLS.uc), emrCell(r,EMR_COLS.name), t12, emrCell(r,EMR_COLS.mr)||'—'];
+            });
+            return {
+                label:'EMR — Late Entries (after 4:00 PM)',
+                subject:'EXPLANATION REGARDING NON-COMPLIANCE — LATE EMR ENTRIES AFTER 4:00 PM (DSR DATED '+explFmtDate(explTodayISO())+')',
+                issueLine:'late data entries on the EMR Dashboard after 4:00 PM',
+                headers:['Tehsil','UC','Child Name','Entry Time','MR No.'],
+                rows:rows
+            };
+        }
+        function explCollectEmrDuplicate(){
+            let rows=[];
+            if(typeof emrLastExport!=='undefined' && emrLastExport && emrLastExport.rows && emrMode==='duplicate'){
+                rows=(emrLastExport.rows||[]).map(function(r){
+                    if(Array.isArray(r)){
+                        return [r[1]||'', r[2]||'', r[3]||'', r[4]||'', r[5]||''];
+                    }
+                    return [r.tehsil||'', r.uc||'', r.name||'', r.father||'', r.mr||''];
+                });
+            }
+            return {
+                label:'EMR — Duplicate Children',
+                subject:'EXPLANATION REGARDING NON-COMPLIANCE — DUPLICATE CHILDREN ENTRIES ON EMR DASHBOARD (DSR DATED '+explFmtDate(explTodayISO())+')',
+                issueLine:'duplicate children entries on the EMR Dashboard',
+                headers:['Tehsil','UC','Name','Father / Detail','MR / Ref'],
+                rows:rows
+            };
+        }
+        function explOpenFromEmr(){
+            const mode=typeof emrMode!=='undefined'?emrMode:'';
+            let pack=null;
+            if(mode==='phone') pack=explCollectEmrPhone();
+            else if(mode==='father') pack=explCollectEmrFather();
+            else if(mode==='late') pack=explCollectEmrLate();
+            else if(mode==='duplicate') pack=explCollectEmrDuplicate();
+            else {
+                alert('Explanation Letter is available on these EMR tabs:\n• Missing Phone Number\n• Missing Father Name\n• Late Entries Status (after 4:00 PM)\n• Duplicate Children\n\nPehle woh tab open karein.');
+                return;
+            }
+            explOpenModal(mode, pack.label, pack.subject, pack.issueLine, pack.headers, pack.rows);
+        }
+
+        function explCollectAttCheckout(){
+            const day=(document.getElementById('attDay')||{}).value||'';
+            const masters=(typeof attMasterFiltered==='function')?attMasterFiltered(): (typeof attMaster!=='undefined'?attMaster:[]);
+            const rows=[];
+            (masters||[]).forEach(function(m){
+                const cin=typeof attFindIn==='function'?attFindIn(attCheckInAll,m,day):null;
+                const cout=typeof attFindIn==='function'?attFindIn(attCheckOutAll,m,day):null;
+                const userDisp=typeof attDisplayUser==='function'?attDisplayUser(m.username):(m.username||'');
+                if(!cout || !cout.time){
+                    rows.push([m.tehsil||'', m.uc||'', m.name||'', userDisp, 'Not Checked-Out']);
+                    return;
+                }
+                const outMins=cout.time.getHours()*60+cout.time.getMinutes();
+                if(outMins >= 18*60){ // after 6:00 PM
+                    const t=typeof attFmtTime==='function'?attFmtTime(cout.time):'';
+                    rows.push([m.tehsil||'', m.uc||'', m.name||'', userDisp, 'Late Check-Out · '+t]);
+                }
+            });
+            return {
+                label:'Attendance — No / Late Check-Out (after 6:00 PM)',
+                subject:'EXPLANATION REGARDING NON-COMPLIANCE — CHECK-OUT NOT MARKED / LATE CHECK-OUT AFTER 6:00 PM (DSR DATED '+explFmtDate(day||explTodayISO())+')',
+                issueLine:'failure to mark check-out or check-out after 6:00 PM on the attendance system',
+                headers:['Tehsil','UC','Vaccinator','Username','Status'],
+                rows:rows
+            };
+        }
+        function explOpenFromAtt(){
+            const pack=explCollectAttCheckout();
+            explOpenModal('attCheckout', pack.label, pack.subject, pack.issueLine, pack.headers, pack.rows);
+        }
+
+        function explCollectLocPending(){
+            const day=(document.getElementById('locDay')||{}).value||'';
+            const masters=(typeof locFilteredMasters==='function')?locFilteredMasters(): (typeof locMaster!=='undefined'?locMaster:[]);
+            const rows=[];
+            (masters||[]).forEach(function(m){
+                if(typeof locHasSubmit==='function' && locHasSubmit(m, day)) return;
+                const user=typeof locDispUser==='function'?locDispUser(m.username):(m.username||'');
+                rows.push([m.tehsil||'', m.uc||'', m.name||'', user, 'Location Not Submitted']);
+            });
+            return {
+                label:'Location — Not Submitted (Pending)',
+                subject:'EXPLANATION REGARDING NON-COMPLIANCE — FIELD LOCATION NOT SUBMITTED (DSR DATED '+explFmtDate(day||explTodayISO())+')',
+                issueLine:'failure to submit field location check-in on the prescribed system',
+                headers:['Tehsil','UC','Vaccinator','Username','Status'],
+                rows:rows
+            };
+        }
+        function explOpenFromLoc(){
+            // Prefer pending list; if user is on another tab still generate pending
+            const pack=explCollectLocPending();
+            explOpenModal('locPending', pack.label, pack.subject, pack.issueLine, pack.headers, pack.rows);
+        }
+
+        function explDownloadPdf(){
+            if(typeof window.jspdf==='undefined'){ alert('jsPDF missing'); return; }
+            const letterNo=(document.getElementById('explLetterNo')||{}).value||'';
+            if(!String(letterNo).trim()){ alert('Letter No. likhna zaroori hai.'); return; }
+            const letterDate=(document.getElementById('explLetterDate')||{}).value||explTodayISO();
+            const hearingDate=(document.getElementById('explHearingDate')||{}).value||explNextDayISO();
+            const hearingTime=(document.getElementById('explHearingTime')||{}).value||'14:00';
+            const rows=explState.rows||[];
+            if(!rows.length){ alert('Letter ke liye koi record nahi.'); return; }
+            try{ localStorage.setItem('epi_expl_last_no', String(letterNo).trim()); }catch(e){}
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+            const margin=16;
+            const pageW=pdf.internal.pageSize.getWidth();
+            const pageH=pdf.internal.pageSize.getHeight();
+            const usable=pageW-margin*2;
+            let y=margin;
+
+            function ensureSpace(h){
+                if(y+h > pageH-margin){ pdf.addPage(); y=margin; }
+            }
+            function writePara(text, opts){
+                opts=opts||{};
+                pdf.setFont('helvetica', opts.bold?'bold':'normal');
+                pdf.setFontSize(opts.size||10);
+                pdf.setTextColor(opts.color||20, opts.colorG!=null?opts.colorG:20, opts.colorB!=null?opts.colorB:20);
+                const lines=pdf.splitTextToSize(String(text||''), usable);
+                lines.forEach(function(ln){
+                    ensureSpace(6);
+                    pdf.text(ln, opts.center?pageW/2:margin, y, opts.center?{align:'center'}:{});
+                    y+=opts.lh||5;
+                });
+            }
+
+            // Header block
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
+            pdf.text(String(letterNo).trim(), margin, y);
+            pdf.text(explFmtDate(letterDate), pageW-margin, y, {align:'right'});
+            y+=10;
+
+            writePara('Subject: - '+explState.subject, {bold:true, size:10, lh:5.2});
+            y+=3;
+
+            const body1='With reference to the Daily Status Report (DSR) / monitoring of EPI District Chakwal, it has been observed with great concern that the following names / records were found non-compliant regarding '+explState.issueLine+'.';
+            writePara(body1, {size:10, lh:5});
+            y+=2;
+            writePara('This negligence is highly objectionable and constitutes a breach of official duty. Regular real-time reporting and consistent field presence are mandatory responsibilities under the EPI guidelines. Such non-compliance not only reflects poor performance but also adversely affects the district\'s key performance indicators (KPIs) and the overall accuracy of immunization data.', {size:10, lh:5});
+            y+=2;
+            writePara('In view of the above, you are hereby directed to:', {size:10, lh:5});
+            y+=1;
+            writePara('1. Submit a written explanation within 01 day of the issuance of this letter, detailing the reasons for the above non-compliance.', {size:10, lh:5});
+            writePara('2. Appear in person before the undersigned on '+explFmtDate(hearingDate)+', '+explFmtTime(hearingTime)+' along with the following record for physical verification:', {size:10, lh:5});
+            y+=1;
+            writePara('- Daily & Permanent Registers', {size:10, lh:4.5});
+            writePara('- Due/Defaulter Lists', {size:10, lh:4.5});
+            writePara('- Stock Register', {size:10, lh:4.5});
+            y+=2;
+            writePara('Please note that failure to provide a satisfactory explanation or any further delay in reporting may lead to formal disciplinary proceedings under the PEEDA Act 2006. The list of the concerned is as under:', {size:10, lh:5});
+            y+=4;
+
+            // Table
+            const headers=explState.headers||[];
+            const colN=Math.max(headers.length,1);
+            const colW=usable/colN;
+            function drawTableHeader(){
+                ensureSpace(8);
+                pdf.setFillColor(13,92,61);
+                pdf.rect(margin, y, usable, 7, 'F');
+                pdf.setTextColor(255,255,255);
+                pdf.setFont('helvetica','bold');
+                pdf.setFontSize(7.5);
+                let x=margin;
+                headers.forEach(function(h,i){
+                    const t=String(h||'').substring(0,22);
+                    pdf.text(t, x+1, y+4.6);
+                    x+=colW;
+                });
+                y+=7;
+                pdf.setTextColor(30,30,30);
+                pdf.setFont('helvetica','normal');
+                pdf.setFontSize(7.5);
+            }
+            drawTableHeader();
+            rows.forEach(function(row, ri){
+                ensureSpace(6.2);
+                if(ri%2){ pdf.setFillColor(241,248,241); pdf.rect(margin,y,usable,6,'F'); }
+                let x=margin;
+                for(let i=0;i<colN;i++){
+                    const cell=String((row&&row[i]!=null)?row[i]:'');
+                    const maxChars=Math.max(4, Math.floor(colW/1.6));
+                    pdf.text(cell.length>maxChars?cell.substring(0,maxChars-1)+'…':cell, x+1, y+4);
+                    x+=colW;
+                }
+                y+=6;
+                if(y>pageH-margin-8){ pdf.addPage(); y=margin; drawTableHeader(); }
+            });
+            y+=4;
+            writePara('Note: ASVs of the concerned Tehsils / Union Councils shall also attend the office on '+explFmtDate(hearingDate)+' at '+explFmtTime(hearingTime)+'.', {bold:true, size:9, lh:4.8});
+            y+=8;
+            writePara('DISTRICT HEALTH OFFICER PS', {bold:true, size:10, lh:5});
+            writePara('DISTRICT HEALTH AUTHORITY CHAKWAL', {bold:true, size:10, lh:5});
+            y+=6;
+            writePara('Copy forwarded for information to,', {bold:true, size:9, lh:4.5});
+            writePara('- The Director General Health Services Punjab Lahore.', {size:9, lh:4.2});
+            writePara('- The Director Health Services (EPI) Punjab Lahore.', {size:9, lh:4.2});
+            writePara('- The Chief Executive Officer DHA Chakwal', {size:9, lh:4.2});
+            writePara('- The DSV Chakwal.', {size:9, lh:4.2});
+            writePara('- Master File.', {size:9, lh:4.2});
+            y+=6;
+            writePara('DISTRICT HEALTH OFFICER PS', {bold:true, size:10, lh:5});
+            writePara('DISTRICT HEALTH AUTHORITY CHAKWAL', {bold:true, size:10, lh:5});
+
+            const safeNo=String(letterNo).trim().replace(/[\\/:*?"<>|]+/g,'_');
+            pdf.save('Explanation_Letter_'+safeNo+'_'+letterDate+'.pdf');
+            explClose();
         }
 
         async function loadMrData(){
