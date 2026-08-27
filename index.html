@@ -9060,17 +9060,39 @@
                     mrRows = all;
                 }catch(ce){ console.warn('CIF_Archive', ce); }
 
-                // Population from Sheet1 (columns A Tehsil, B Population — rates C & D computed)
+                // Population + static % indicators from "District Population Th Wise"
+                // Col A Tehsil, B Population; C/D rates computed from cases; E–J optional % from sheet
                 mrPop = [];
                 try{
-                    const pdata = await mrFetchSheet('Sheet1');
-                    const prows = (pdata.table && pdata.table.rows) || [];
+                    let pdata = null;
+                    try{ pdata = await mrFetchSheet('District Population Th Wise'); }
+                    catch(e1){ try{ pdata = await mrFetchSheet('Sheet1'); }catch(e2){ pdata = null; } }
+                    const prows = (pdata && pdata.table && pdata.table.rows) || [];
                     prows.forEach(function(r){
                         const cells = (r.c||[]).map(mrParseGvizCell);
                         const t = String(cells[0]||'').trim();
+                        if(!t) return;
                         const p = parseFloat(String(cells[1]||'').replace(/,/g,''));
-                        if(t && t.toLowerCase()!=='total' && !isNaN(p)) mrPop.push({tehsil:t, population:p});
-                        if(t && t.toLowerCase()==='total' && !isNaN(p)) mrPop.push({tehsil:'Total', population:p});
+                        function pct(idx){
+                            const v = cells[idx];
+                            if(v==null || v==='') return '';
+                            const n = parseFloat(String(v).replace(/%/g,'').replace(/,/g,''));
+                            if(isNaN(n)) return String(v);
+                            // sheet stores 1.0 meaning 100%
+                            if(n > 0 && n <= 1) return Math.round(n*100)+'%';
+                            return Math.round(n)+'%';
+                        }
+                        const row = {
+                            tehsil: t.toLowerCase()==='total' ? 'Total' : t,
+                            population: isNaN(p)?0:p,
+                            inv48: pct(4),
+                            invAdeq: pct(5),
+                            specColl: pct(6),
+                            specTest: pct(7),
+                            sample5d: pct(8),
+                            lab4d: pct(9)
+                        };
+                        if(row.population || row.tehsil==='Total') mrPop.push(row);
                     });
                 }catch(pe){ console.warn('MR pop', pe); }
 
@@ -9259,23 +9281,42 @@
             if(totalCells) exp.push(totalCells);
             mrLastExport={headers:headers, rows:exp};
         }
-        function mrPopOf(tehsil){
-            const n=String(tehsil||'').toLowerCase();
+        function mrNormTeh(s){
+            return String(s||'').toLowerCase().replace(/saiden/g,'saidan').replace(/choha/g,'choa').replace(/\s+/g,' ').trim();
+        }
+        function mrPopRow(tehsil){
+            const n = mrNormTeh(tehsil);
             for(let i=0;i<mrPop.length;i++){
-                if(String(mrPop[i].tehsil).toLowerCase()===n) return mrPop[i].population;
+                if(mrNormTeh(mrPop[i].tehsil)===n) return mrPop[i];
             }
-            return 0;
+            // fuzzy contains
+            for(let i=0;i<mrPop.length;i++){
+                const t = mrNormTeh(mrPop[i].tehsil);
+                if(t && n && (t.indexOf(n)>=0 || n.indexOf(t)>=0)) return mrPop[i];
+            }
+            return null;
+        }
+        function mrPopOf(tehsil){
+            const row = mrPopRow(tehsil);
+            return row ? (row.population||0) : 0;
         }
         function mrDistrictPop(){
             for(let i=0;i<mrPop.length;i++){
                 if(String(mrPop[i].tehsil).toLowerCase()==='total') return mrPop[i].population;
             }
-            return mrPop.reduce(function(s,x){ return s+(x.tehsil.toLowerCase()==='total'?0:x.population); },0);
+            return mrPop.reduce(function(s,x){ return s+(String(x.tehsil).toLowerCase()==='total'?0:(x.population||0)); },0);
         }
-        function mrRate(num, pop){
+        /** Non-measles non-rubella reporting rate per 100,000 */
+        function mrRate100k(num, pop){
             if(!pop) return '—';
             return (num/pop*100000).toFixed(2);
         }
+        /** Measles incidence rate per 1,000,000 (10 lakh) */
+        function mrRate1M(num, pop){
+            if(!pop) return '—';
+            return (num/pop*1000000).toFixed(2);
+        }
+        function mrRate(num, pop){ return mrRate100k(num, pop); }
         function mrUpdatePanel(baseData){
             const grid=document.getElementById('mrSummaryGrid');
             const scope=document.getElementById('mrSummaryScope');
@@ -9473,9 +9514,10 @@
                 mrRenderTable(headers, rowsHtml, exp, ['Total','','',sum]);
             }
             else if(mrMode==='rates'){
-                // Non-measles non-rubella (Discarded = both labs NEGATIVE) rate per 100,000
-                // Measles incidence = Measles IgM +ve per 100,000
-                // Uses Sheet1 columns A (Tehsil) B (Population); C & D computed
+                // Non-measles Non-Rubella reporting rate = discarded / pop × 100,000
+                //   (target: tehsil > 3, district > 4)
+                // Measles Incidence rate = measles positive / pop × 1,000,000
+                // Other % columns from "District Population Th Wise" sheet (kept as provided)
                 const map={};
                 data.forEach(function(r){
                     const t=r.tehsil||'—';
@@ -9484,33 +9526,91 @@
                     if(mrIsNeg(r.labMeasles)&&mrIsNeg(r.labRubella)) map[t].disc++;
                     if(mrIsPos(r.labMeasles)) map[t].mPos++;
                 });
-                const headers=['Sr','Tehsil','Population','Cases','Discarded (Neg/Neg)','NMNR Rate /100,000','Measles +ve','Measles Incidence /100,000'];
-                const exp=[]; let i=0;
-                const tehsilList = (mrPop.length? mrPop.filter(function(x){return x.tehsil.toLowerCase()!=='total';}).map(function(x){return x.tehsil;}) : Object.keys(map)).slice();
-                // ensure data tehsils included
-                Object.keys(map).forEach(function(t){ if(tehsilList.indexOf(t)<0) tehsilList.push(t); });
-                tehsilList.sort();
+                // Aggregate data keys under population tehsil names when possible
+                const byNorm={};
+                Object.keys(map).forEach(function(t){
+                    const k=mrNormTeh(t);
+                    if(!byNorm[k]) byNorm[k]={label:t, cases:0, disc:0, mPos:0};
+                    byNorm[k].cases+=map[t].cases;
+                    byNorm[k].disc+=map[t].disc;
+                    byNorm[k].mPos+=map[t].mPos;
+                    // prefer official pop-sheet spelling
+                    const pr=mrPopRow(t);
+                    if(pr && pr.tehsil && pr.tehsil.toLowerCase()!=='total') byNorm[k].label=pr.tehsil;
+                });
+
+                const headers=[
+                    'Tehsil','Population',
+                    'Non measles Non Rubella reporting rate',
+                    'Measles Incidence rate',
+                    '% Investigated within 48 hours',
+                    'Investigation Adequacy%',
+                    '% Specimen Collection',
+                    '% Specimen Tested',
+                    '% Samples received in lab ≤ 5days',
+                    '% cases lab results received <= 4 days'
+                ];
+                const exp=[];
+                const tehsilList = (mrPop.length
+                    ? mrPop.filter(function(x){ return String(x.tehsil).toLowerCase()!=='total'; }).map(function(x){ return x.tehsil; })
+                    : Object.keys(byNorm).map(function(k){ return byNorm[k].label; })
+                ).slice();
+                Object.keys(byNorm).forEach(function(k){
+                    const lab=byNorm[k].label;
+                    if(!tehsilList.some(function(t){ return mrNormTeh(t)===mrNormTeh(lab); })) tehsilList.push(lab);
+                });
+                // stable order by pop sheet if present
+                tehsilList.sort(function(a,b){
+                    const ia=mrPop.findIndex(function(x){ return mrNormTeh(x.tehsil)===mrNormTeh(a); });
+                    const ib=mrPop.findIndex(function(x){ return mrNormTeh(x.tehsil)===mrNormTeh(b); });
+                    if(ia>=0 && ib>=0) return ia-ib;
+                    if(ia>=0) return -1;
+                    if(ib>=0) return 1;
+                    return String(a).localeCompare(String(b));
+                });
+
                 let tCases=0,tDisc=0,tM=0;
                 const rowsHtml=tehsilList.map(function(t){
-                    i++;
-                    const x=map[t]||{cases:0,disc:0,mPos:0};
-                    const pop=mrPopOf(t);
+                    const k=mrNormTeh(t);
+                    const x=byNorm[k]||{cases:0,disc:0,mPos:0};
+                    const prow=mrPopRow(t)||{};
+                    const pop=prow.population||mrPopOf(t)||0;
                     tCases+=x.cases; tDisc+=x.disc; tM+=x.mPos;
-                    const nmnr=mrRate(x.disc, pop);
-                    const inc=mrRate(x.mPos, pop);
-                    const row=[i,t, pop?pop.toLocaleString():'—', x.cases, x.disc, nmnr, x.mPos, inc];
-                    exp.push(row);
-                    return '<tr><td>'+i+'</td><td>'+t+'</td><td>'+(pop?pop.toLocaleString():'—')+'</td><td>'+x.cases+'</td><td>'+x.disc+'</td><td><strong>'+nmnr+'</strong></td><td>'+x.mPos+'</td><td><strong>'+inc+'</strong></td></tr>';
+                    const nmnr=mrRate100k(x.disc, pop);
+                    const inc=mrRate1M(x.mPos, pop);
+                    const nmnrNum=pop? (x.disc/pop*100000) : NaN;
+                    const nmnrOk=!isNaN(nmnrNum) && nmnrNum>3;
+                    const nmnrCell = nmnr==='—' ? '—' : ('<strong style="color:'+(nmnrOk?'#2e7d32':'#c62828')+'">'+nmnr+'</strong>'+(nmnrOk?'':' <span style="font-size:11px;color:#c62828">(&lt;3)</span>'));
+                    const inv48=prow.inv48||'—', invAdeq=prow.invAdeq||'—', specColl=prow.specColl||'—';
+                    const specTest=prow.specTest||'—', sample5d=prow.sample5d||'—', lab4d=prow.lab4d||'—';
+                    exp.push([t, pop?pop.toLocaleString():'—', nmnr, inc, inv48, invAdeq, specColl, specTest, sample5d, lab4d]);
+                    return '<tr><td style="text-align:left;font-weight:600">'+t+'</td><td>'+(pop?pop.toLocaleString():'—')+'</td><td>'+nmnrCell+'</td><td><strong>'+inc+'</strong></td><td>'+inv48+'</td><td>'+invAdeq+'</td><td>'+specColl+'</td><td>'+specTest+'</td><td>'+sample5d+'</td><td>'+lab4d+'</td></tr>';
                 }).join('');
+
                 const dpop=mrDistrictPop();
-                const totalRow=['Total','District', dpop?dpop.toLocaleString():'—', tCases, tDisc, mrRate(tDisc,dpop), tM, mrRate(tM,dpop)];
+                const dNmnr=mrRate100k(tDisc,dpop);
+                const dInc=mrRate1M(tM,dpop);
+                const dNmnrNum=dpop? (tDisc/dpop*100000) : NaN;
+                const dOk=!isNaN(dNmnrNum) && dNmnrNum>4;
+                const dNmnrCell = dNmnr==='—' ? '—' : ('<strong style="color:'+(dOk?'#2e7d32':'#c62828')+'">'+dNmnr+'</strong>'+(dOk?'':' <span style="font-size:11px;color:#c62828">(&lt;4)</span>'));
+                const dprow = mrPopRow('Total') || {};
+                const totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td style="text-align:left">Total</td><td>'+(dpop?dpop.toLocaleString():'—')+'</td><td>'+dNmnrCell+'</td><td><strong>'+dInc+'</strong></td><td>'+(dprow.inv48||'—')+'</td><td>'+(dprow.invAdeq||'—')+'</td><td>'+(dprow.specColl||'—')+'</td><td>'+(dprow.specTest||'—')+'</td><td>'+(dprow.sample5d||'—')+'</td><td>'+(dprow.lab4d||'—')+'</td></tr>';
+                exp.push(['Total', dpop?dpop.toLocaleString():'—', dNmnr, dInc, dprow.inv48||'', dprow.invAdeq||'', dprow.specColl||'', dprow.specTest||'', dprow.sample5d||'', dprow.lab4d||'']);
+
                 mrSetStats([
-                    {n:mrRate(tDisc,dpop), l:'District NMNR /100k'},
-                    {n:mrRate(tM,dpop), l:'District Measles Inc /100k'},
-                    {n:tDisc, l:'Discarded cases'}
+                    {n:dNmnr, l:'District NMNR /100k (target >4)'},
+                    {n:dInc, l:'District Measles Incidence /1M'},
+                    {n:tDisc, l:'Discarded (Neg/Neg)'},
+                    {n:tM, l:'Measles +ve'}
                 ]);
-                const note='<tr><td colspan="8" style="text-align:left;font-size:12px;color:#555;padding:10px">Discarded = Lab Measles <strong>NEGATIVE</strong> and Lab Rubella <strong>NEGATIVE</strong>. NMNR rate & Measles incidence = count ÷ population × 100,000 (Sheet1 Col B population; rates = Col C & D style).</td></tr>';
-                mrRenderTable(headers, rowsHtml+note, exp, totalRow);
+                const note='<tr><td colspan="10" style="text-align:left;font-size:12px;color:#555;padding:10px;line-height:1.45">'
+                    +'<strong>Formulas:</strong> Non-measles Non-Rubella reporting rate = Discarded cases ÷ Population × <strong>100,000</strong> '
+                    +'(target: Tehsil <strong>&gt;3</strong>, District <strong>&gt;4</strong>). '
+                    +'Measles Incidence rate = Measles IgM +ve cases ÷ Population × <strong>1,000,000</strong>. '
+                    +'Discarded = Lab Measles <strong>NEGATIVE</strong> and Lab Rubella <strong>NEGATIVE</strong>. '
+                    +'Other % columns are taken from sheet <em>District Population Th Wise</em> as provided.'
+                    +'</td></tr>';
+                mrRenderTable(headers, rowsHtml+totalHtml+note, exp, null);
             }
         }
         function mrDownloadExcel(){
