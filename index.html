@@ -9544,10 +9544,18 @@
                         counts[ag.label]=n;
                     });
                     let teh = pop ? pop.tehsil : '';
-                    const tehLow = String(teh||'').trim().toLowerCase();
-                    if(!tehLow || tehLow==='n/a' || tehLow==='na' || tehLow==='—' || tehLow==='-') teh = 'Clinic On Wheel';
                     let ucName = pop ? pop.uc : ucRaw;
-                    if(/^n\/?a$/i.test(String(ucName).trim())) ucName = 'Clinic On Wheel';
+                    const ucIsNA = /^n\/?a$/i.test(String(ucName||ucRaw).trim());
+                    const tehLow = String(teh||'').trim().toLowerCase();
+                    const tehIsNA = !tehLow || tehLow==='n/a' || tehLow==='na' || tehLow==='—' || tehLow==='-' || tehLow==='clinic on wheel';
+                    // Clinic On Wheel: keep as tehsil name; if UC is N/A label both clearly
+                    if(ucIsNA){
+                        ucName = 'Clinic On Wheel';
+                        teh = 'Clinic On Wheel';
+                    } else if(tehIsNA){
+                        teh = 'Clinic On Wheel';
+                        // keep real UC name under tehsil "Clinic On Wheel"
+                    }
                     rows.push({
                         uc: ucName,
                         tehsil: teh,
@@ -9796,11 +9804,34 @@
         function orfExportFileBase(){
             return orfTabLabel().replace(/[\\/:*?"<>|]+/g,'_');
         }
+        function orfColWeights(headers){
+            // Proportional widths so Sr/Tehsil/UC readable; number cols equal
+            return headers.map(function(h){
+                const s=String(h||'').toLowerCase();
+                if(s==='sr' || s==='#') return 0.7;
+                if(s==='tehsil') return 2.2;
+                if(s==='uc' || s==='union council') return 2.6;
+                if(s==='population' || s==='pop') return 1.4;
+                if(s.indexOf('%')>=0) return 1.1;
+                if(s.indexOf('ach')>=0 || s.indexOf('tgt')>=0 || s.indexOf('target')>=0) return 1.15;
+                return 1.0;
+            });
+        }
         function orfExportExcel(){
             if(typeof XLSX==='undefined'){ alert('XLSX missing'); return; }
             if(!orfLastExport.headers.length){ alert('No table data'); return; }
-            const aoa=[orfLastExport.headers].concat(orfLastExport.rows||[]);
+            const headers=orfLastExport.headers;
+            const aoa=[headers].concat(orfLastExport.rows||[]);
             const ws=XLSX.utils.aoa_to_sheet(aoa);
+            const weights=orfColWeights(headers);
+            const sumW=weights.reduce(function(a,b){return a+b;},0)||1;
+            ws['!cols']=weights.map(function(w){
+                // ~12 chars base * weight
+                const wch=Math.max(5, Math.round(12*(w/1)));
+                return {wch: Math.min(28, wch)};
+            });
+            // freeze header
+            ws['!freeze']={xSplit:0,ySplit:1};
             const wb=XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, (orfTabLabel()||'ORFixed').substring(0,28));
             XLSX.writeFile(wb, orfExportFileBase()+'.xlsx');
@@ -9811,42 +9842,72 @@
             const rows=orfLastExport.rows||[];
             if(!headers.length){ alert('No table data'); return; }
             const { jsPDF } = window.jspdf;
-            const landscape = headers.length > 8;
+            const colN=headers.length;
+            // Always landscape when many columns for alignment
+            const landscape = colN > 6;
             const pdf = new jsPDF({ orientation: landscape?'landscape':'portrait', unit:'mm', format:'a4' });
-            const margin=10;
+            const margin=8;
             const pageW=pdf.internal.pageSize.getWidth();
             const pageH=pdf.internal.pageSize.getHeight();
             const usable=pageW-margin*2;
-            let y=12;
-            pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
-            pdf.text('OR + Fixed Sites — '+orfTabLabel(), margin, y); y+=6;
-            pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(60,60,60);
-            pdf.text('District Chakwal · '+new Date().toLocaleString(), margin, y); y+=6;
-            const colN=headers.length;
-            const colW=usable/colN;
+            let y=10;
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(13,92,61);
+            pdf.text('OR + Fixed Sites — '+orfTabLabel(), margin, y); y+=5;
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(60,60,60);
+            pdf.text('District Chakwal · '+new Date().toLocaleString(), margin, y); y+=5;
+
+            const weights=orfColWeights(headers);
+            const sumW=weights.reduce(function(a,b){return a+b;},0)||1;
+            const colWs=weights.map(function(w){ return usable*(w/sumW); });
+            // Font size by column count
+            const fontSize = colN>30 ? 5 : (colN>20 ? 5.5 : (colN>12 ? 6.5 : (colN>8 ? 7.5 : 8.5)));
+            const rowH = colN>20 ? 4.2 : 5.2;
+
+            function cellText(str, maxW){
+                const s=String(str==null?'':str);
+                // approx char width in mm at current font
+                const maxChars=Math.max(2, Math.floor(maxW/(fontSize*0.28)));
+                return s.length>maxChars ? s.substring(0, Math.max(1,maxChars-1))+'…' : s;
+            }
             function headerRow(){
                 pdf.setFillColor(13,92,61);
-                pdf.rect(margin,y,usable,6,'F');
-                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
-                let x=margin;
-                headers.forEach(function(h){
-                    pdf.text(String(h).substring(0,14), x+0.5, y+4);
-                    x+=colW;
-                });
-                y+=6;
-                pdf.setTextColor(30,30,30); pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5);
-            }
-            headerRow();
-            rows.forEach(function(row,ri){
-                if(y>pageH-10){ pdf.addPage(); y=10; headerRow(); }
-                if(ri%2){ pdf.setFillColor(241,248,241); pdf.rect(margin,y,usable,5,'F'); }
+                pdf.rect(margin, y, usable, rowH+1, 'F');
+                pdf.setTextColor(255,255,255);
+                pdf.setFont('helvetica','bold');
+                pdf.setFontSize(fontSize);
                 let x=margin;
                 for(let i=0;i<colN;i++){
-                    const cell=String(row[i]!=null?row[i]:'');
-                    pdf.text(cell.substring(0, Math.max(3, Math.floor(colW/1.5))), x+0.5, y+3.5);
-                    x+=colW;
+                    const t=cellText(headers[i], colWs[i]-1);
+                    pdf.text(t, x+0.6, y+rowH-0.8);
+                    x+=colWs[i];
                 }
-                y+=5;
+                y+=rowH+1;
+                pdf.setTextColor(25,25,25);
+                pdf.setFont('helvetica','normal');
+                pdf.setFontSize(fontSize);
+            }
+            headerRow();
+            rows.forEach(function(row, ri){
+                if(y > pageH-margin-rowH){ pdf.addPage(); y=margin; headerRow(); }
+                if(ri%2){ pdf.setFillColor(241,248,241); pdf.rect(margin, y, usable, rowH, 'F'); }
+                // light grid line
+                pdf.setDrawColor(220,220,220);
+                pdf.setLineWidth(0.1);
+                pdf.line(margin, y+rowH, margin+usable, y+rowH);
+                let x=margin;
+                for(let i=0;i<colN;i++){
+                    const raw=row[i]!=null?row[i]:'';
+                    const t=cellText(raw, colWs[i]-1);
+                    // right-align numbers
+                    const isNum = typeof raw==='number' || (/^[\d.,%]+$/.test(String(raw).trim()) && String(raw).trim()!=='');
+                    if(isNum){
+                        pdf.text(t, x+colWs[i]-0.6, y+rowH-1.1, {align:'right'});
+                    } else {
+                        pdf.text(t, x+0.6, y+rowH-1.1);
+                    }
+                    x+=colWs[i];
+                }
+                y+=rowH;
             });
             pdf.save(orfExportFileBase()+'.pdf');
         }
