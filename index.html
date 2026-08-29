@@ -718,7 +718,7 @@
                     <div id="orfChartWrap" style="display:none;background:#fff;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #e0e0e0">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
                             <div id="orfChartTitle" style="font-weight:700;color:#0d5c3d;font-size:14px">Tehsil chart</div>
-                            <button type="button" class="btn btn-sm" onclick="orfExportChartPng()" style="background:#00838f">🖼 Download Chart PNG</button>
+                            <button type="button" class="btn btn-sm" id="orfDownloadPngBtn" onclick="orfExportFullViewPng()" style="background:#00838f">🖼 Download PNG</button>
                         </div>
                         <div style="position:relative;height:320px"><canvas id="orfChartCanvas"></canvas></div>
                     </div>
@@ -9910,14 +9910,77 @@
             });
         }
         async function orfExportChartPng(){
-            const canvas = document.getElementById('orfChartCanvas');
-            if(!canvas){ alert('No chart'); return; }
+            // kept for compatibility — full view is preferred
+            return orfExportFullViewPng();
+        }
+        async function orfExportFullViewPng(){
+            if(typeof html2canvas === 'undefined'){ alert('PNG not available'); return; }
+            const btn = document.getElementById('orfDownloadPngBtn');
+            const oldTxt = btn ? btn.textContent : '';
+            if(btn){ btn.disabled = true; btn.textContent = 'Preparing HD PNG…'; }
             try{
+                const holder = document.createElement('div');
+                holder.id = 'orfPngCaptureBox';
+                holder.style.cssText = 'position:fixed;left:-10000px;top:0;background:#ffffff;padding:20px 24px;width:1400px;font-family:Segoe UI,Arial,sans-serif;box-sizing:border-box;';
+                const title = document.createElement('div');
+                title.style.cssText = 'font-weight:700;color:#0d5c3d;font-size:18px;margin-bottom:12px;';
+                title.textContent = 'OR + Fixed Sites — ' + (typeof orfTabLabel==='function' ? orfTabLabel() : 'Report');
+                holder.appendChild(title);
+
+                const cw = document.getElementById('orfChartWrap');
+                if(cw && cw.style.display !== 'none'){
+                    const block = document.createElement('div');
+                    block.style.cssText = 'background:#fff;border-radius:12px;padding:12px;margin-bottom:14px;border:1px solid #e0e0e0;';
+                    const ct = document.getElementById('orfChartTitle');
+                    if(ct){
+                        const h = document.createElement('div');
+                        h.style.cssText = 'font-weight:700;color:#0d5c3d;font-size:14px;margin-bottom:8px;';
+                        h.textContent = ct.textContent || '';
+                        block.appendChild(h);
+                    }
+                    const live = document.getElementById('orfChartCanvas');
+                    if(live){
+                        const img = document.createElement('img');
+                        img.src = live.toDataURL('image/png');
+                        img.style.cssText = 'width:100%;height:auto;display:block;';
+                        block.appendChild(img);
+                    }
+                    holder.appendChild(block);
+                }
+
+                const tw = document.getElementById('orfTableWrap');
+                if(tw){
+                    const tclone = tw.cloneNode(true);
+                    tclone.style.cssText = 'overflow:visible;border:1px solid #e0e0e0;border-radius:10px;';
+                    // ensure table full width, readable
+                    const tbl = tclone.querySelector('table');
+                    if(tbl){
+                        tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:11px;min-width:0;';
+                    }
+                    holder.appendChild(tclone);
+                }
+
+                document.body.appendChild(holder);
+                // wait a tick for images
+                await new Promise(function(r){ setTimeout(r, 80); });
+                const canvas = await html2canvas(holder, {
+                    scale: 2.5,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: 1400
+                });
+                document.body.removeChild(holder);
                 const a = document.createElement('a');
                 a.href = canvas.toDataURL('image/png');
-                a.download = orfExportFileBase() + '_Chart.png';
+                a.download = (typeof orfExportFileBase==='function' ? orfExportFileBase() : 'OR_Fixed_Report') + '.png';
                 a.click();
-            }catch(e){ alert('Chart PNG failed: '+(e.message||e)); }
+            }catch(e){
+                console.error(e);
+                alert('PNG failed: '+(e.message||e));
+            }finally{
+                if(btn){ btn.disabled = false; btn.textContent = oldTxt || '🖼 Download PNG'; }
+            }
         }
 
         function orfExportFileBase(){
@@ -10058,7 +10121,7 @@
                 const tw = document.getElementById('orfTableWrap');
                 if(tw) holder.appendChild(tw.cloneNode(true));
                 document.body.appendChild(holder);
-                const canvas = await html2canvas(holder, { scale: 2, backgroundColor: '#fff', useCORS: true });
+                const canvas = await html2canvas(holder, { scale: 2.5, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 1400 });
                 document.body.removeChild(holder);
                 const a = document.createElement('a');
                 a.href = canvas.toDataURL('image/png');
