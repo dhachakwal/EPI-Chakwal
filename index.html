@@ -715,6 +715,13 @@
                         <button type="button" class="emr-tab" data-orf="tehCov" onclick="orfSwitch('tehCov')">4. Tehsil Target vs Coverage %</button>
                     </div>
                     <div id="orfStats" class="emr-stats" style="margin:10px 0"></div>
+                    <div id="orfChartWrap" style="display:none;background:#fff;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #e0e0e0">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+                            <div id="orfChartTitle" style="font-weight:700;color:#0d5c3d;font-size:14px">Tehsil chart</div>
+                            <button type="button" class="btn btn-sm" onclick="orfExportChartPng()" style="background:#00838f">🖼 Download Chart PNG</button>
+                        </div>
+                        <div style="position:relative;height:320px"><canvas id="orfChartCanvas"></canvas></div>
+                    </div>
                     <div class="emr-table-wrap" id="orfTableWrap">
                         <table class="emr-table">
                             <thead id="orfHead"></thead>
@@ -9467,6 +9474,7 @@
         ];
         let orfRows = []; // {uc, tehsil, counts:{label:n}, targets:{newborn,surviving,hpv,dtp}, population}
         let orfMode = 'ucAg';
+        let orfChartObj = null;
         let orfLastExport = {headers:[], rows:[], title:''};
 
         async function orfFetchSheet(sheetName){
@@ -9690,6 +9698,7 @@
         function orfApply(){
             if(!orfRows.length){
                 orfRender(['Info'], '<tr><td>Click Refresh Data to load OR + Fixed Sites compile sheet.</td></tr>', [], 'Empty');
+                orfHideChart();
                 return;
             }
             const data=orfFiltered();
@@ -9715,6 +9724,7 @@
                 const totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td></td><td colspan="2">Total</td>'+totals.map(function(v){return '<td>'+v+'</td>';}).join('')+'</tr>';
                 orfSetStats([{n:data.length,l:'UCs'},{n:antigens.length,l:'Antigens shown'}]);
                 orfRender(headers, rowsHtml+totalHtml, exp, 'UC-wise Antigen Report');
+                orfHideChart();
             }
             else if(orfMode==='tehAg'){
                 const map={};
@@ -9741,6 +9751,7 @@
                 const totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td></td><td>Total</td>'+totals.map(function(v){return '<td>'+v+'</td>';}).join('')+'</tr>';
                 orfSetStats([{n:list.length,l:'Tehsils'},{n:antigens.length,l:'Antigens shown'}]);
                 orfRender(headers, rowsHtml+totalHtml, exp, 'Tehsil-wise Antigen Report');
+                orfShowChart('counts', list, map, antigens);
             }
             else if(orfMode==='ucCov'){
                 // Only % columns — hide Population / Ach / Tgt
@@ -9778,11 +9789,12 @@
                 exp.push(totalCells);
                 orfSetStats([{n:data.length,l:'UCs'},{n:antigens.length,l:'Antigens'}]);
                 orfRender(headers, rowsHtml+totalHtml, exp, 'UC Target vs Coverage %');
+                orfHideChart();
             }
             else if(orfMode==='tehCov'){
                 const map={};
                 data.forEach(function(r){
-                    const t=r.tehsil||'Clinic On Wheel';
+                    const t=r.tehsil||'—';
                     if(!map[t]) map[t]={counts:{}, targets:{newborn:0,surviving:0,hpv:0,dtp:0}};
                     antigens.forEach(function(a){
                         map[t].counts[a.label]=(map[t].counts[a.label]||0)+(r.counts[a.label]||0);
@@ -9825,8 +9837,89 @@
                 exp.push(totalCells);
                 orfSetStats([{n:list.length,l:'Tehsils'},{n:antigens.length,l:'Antigens'}]);
                 orfRender(headers, rowsHtml+totalHtml, exp, 'Tehsil Target vs Coverage %');
+                orfShowChart('pct', list, map, antigens);
+            } else {
+                orfHideChart();
             }
         }
+
+        function orfHideChart(){
+            const w = document.getElementById('orfChartWrap');
+            if(w) w.style.display = 'none';
+            if(orfChartObj){ try{ orfChartObj.destroy(); }catch(e){} orfChartObj = null; }
+        }
+        function orfShowChart(kind, tehsilList, map, antigens){
+            const wrap = document.getElementById('orfChartWrap');
+            const canvas = document.getElementById('orfChartCanvas');
+            const titleEl = document.getElementById('orfChartTitle');
+            if(!wrap || !canvas || typeof Chart === 'undefined'){ return; }
+            if(orfChartObj){ try{ orfChartObj.destroy(); }catch(e){} orfChartObj = null; }
+            const labels = (tehsilList||[]).filter(function(t){ return t && t !== '—'; });
+            if(!labels.length || !(antigens||[]).length){ wrap.style.display='none'; return; }
+            wrap.style.display = 'block';
+            const colors = ['#0d5c3d','#1565c0','#c62828','#f9a825','#6a1b9a','#00838f','#ef6c00','#2e7d32','#ad1457','#455a64','#00897b','#5d4037'];
+            let datasets = [];
+            if(kind === 'counts'){
+                if(titleEl) titleEl.textContent = 'Tehsil-wise Antigen Doses (counts)';
+                // grouped bar: one dataset per antigen
+                antigens.forEach(function(a, ai){
+                    datasets.push({
+                        label: a.label,
+                        data: labels.map(function(t){ return (map[t] && map[t][a.label]) ? map[t][a.label] : 0; }),
+                        backgroundColor: colors[ai % colors.length],
+                        borderWidth: 0
+                    });
+                });
+            } else {
+                if(titleEl) titleEl.textContent = 'Tehsil Target vs Coverage %';
+                antigens.forEach(function(a, ai){
+                    datasets.push({
+                        label: a.label + ' %',
+                        data: labels.map(function(t){
+                            const x = map[t];
+                            if(!x) return 0;
+                            const ach = (x.counts && x.counts[a.label]) || 0;
+                            const tgt = (x.targets && x.targets[a.bucket]) || 0;
+                            if(!tgt) return 0;
+                            return Math.round((ach/tgt)*1000)/10;
+                        }),
+                        backgroundColor: colors[ai % colors.length],
+                        borderWidth: 0
+                    });
+                });
+            }
+            orfChartObj = new Chart(canvas, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
+                        title: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { font: { size: 11 } } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { font: { size: 10 } },
+                            title: { display: true, text: kind==='pct' ? 'Coverage %' : 'Doses', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+        async function orfExportChartPng(){
+            const canvas = document.getElementById('orfChartCanvas');
+            if(!canvas){ alert('No chart'); return; }
+            try{
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = orfExportFileBase() + '_Chart.png';
+                a.click();
+            }catch(e){ alert('Chart PNG failed: '+(e.message||e)); }
+        }
+
         function orfExportFileBase(){
             return orfTabLabel().replace(/[\\/:*?"<>|]+/g,'_');
         }
@@ -9938,12 +10031,39 @@
             pdf.save(orfExportFileBase()+'.pdf');
         }
         async function orfExportPng(){
-            const wrap=document.getElementById('orfTableWrap');
-            if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
+            if(typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
             try{
-                const canvas=await html2canvas(wrap,{scale: 1.25, backgroundColor:'#fff'});
-                const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
-                a.download=orfExportFileBase()+'.png'; a.click();
+                const holder = document.createElement('div');
+                holder.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;padding:16px;width:1100px;';
+                const title = document.createElement('div');
+                title.style.cssText = 'font-weight:700;color:#0d5c3d;font-size:16px;margin-bottom:10px;font-family:Segoe UI,Arial,sans-serif';
+                title.textContent = 'OR + Fixed Sites — ' + orfTabLabel();
+                holder.appendChild(title);
+                const cw = document.getElementById('orfChartWrap');
+                if(cw && cw.style.display !== 'none'){
+                    const cclone = cw.cloneNode(true);
+                    // replace canvas clone with image of live chart
+                    const live = document.getElementById('orfChartCanvas');
+                    if(live){
+                        const img = document.createElement('img');
+                        img.src = live.toDataURL('image/png');
+                        img.style.width = '100%';
+                        const oldCanvas = cclone.querySelector('canvas');
+                        if(oldCanvas && oldCanvas.parentNode) oldCanvas.parentNode.replaceChild(img, oldCanvas);
+                        const btn = cclone.querySelector('button');
+                        if(btn) btn.remove();
+                    }
+                    holder.appendChild(cclone);
+                }
+                const tw = document.getElementById('orfTableWrap');
+                if(tw) holder.appendChild(tw.cloneNode(true));
+                document.body.appendChild(holder);
+                const canvas = await html2canvas(holder, { scale: 2, backgroundColor: '#fff', useCORS: true });
+                document.body.removeChild(holder);
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = orfExportFileBase() + '.png';
+                a.click();
             }catch(e){ alert('PNG failed: '+(e.message||e)); }
         }
 
