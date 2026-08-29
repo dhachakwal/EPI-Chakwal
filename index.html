@@ -573,13 +573,14 @@
 
             
             <div class="section-title" id="section-emr" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-                <span>Child Immunization (EMR) — Outreach</span>
+                <span>Child Immunization (EMR) Data</span>
                 <span id="emrSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
             </div>
             <div class="emr-card" id="emrCard">
-                <!-- Top module switcher: Outreach | Attendance | Location -->
+                <!-- Top module switcher -->
                 <div class="emr-tabs" id="emrModuleTabs" style="margin-bottom:14px;border-bottom:2px solid #c8e6c9;padding-bottom:10px">
                     <button type="button" class="emr-tab active" data-module="outreach" onclick="emrSwitchModule('outreach')">📋 Outreach Reports</button>
+                    <button type="button" class="emr-tab" data-module="orFixed" onclick="emrSwitchModule('orFixed')">📊 OR + Fixed Sites Compile</button>
                     <button type="button" class="emr-tab" data-module="attendance" onclick="emrSwitchModule('attendance')">⏱ Vaccinators Attendance</button>
                     <button type="button" class="emr-tab" data-module="location" onclick="emrSwitchModule('location')">📍 Field Location Check-In</button>
                     <button type="button" class="emr-tab" data-module="sweep" onclick="emrSwitchModule('sweep')">🧹 Urban Sweep-up (10-15 Aug)</button>
@@ -679,6 +680,48 @@
                     </table>
                 </div>
                 </div><!-- /emrModuleOutreach -->
+
+                <!-- ===== MODULE: OR + FIXED SITES COMPILE ===== -->
+                <div id="emrModuleOrFixed" style="display:none">
+                    <p class="emr-note"><strong>Source:</strong> OR + Fixed Sites compiled antigen counts (Google Sheet). Targets from <em>Population &amp; Targets</em>. BCG / Hep-B / OPV-0 vs <strong>New Born</strong> monthly target; most antigens vs <strong>Surviving</strong>; HPV vs HPV target; DTP Booster vs DTP target. Coverage % = Achieved ÷ Target × 100.</p>
+                    <div class="emr-filter">
+                        <label>Tehsil
+                            <select id="orfTehsil" onchange="orfOnTehsil()"><option value="">All Tehsils</option></select>
+                        </label>
+                        <label>Union Council
+                            <select id="orfUC" onchange="orfApply()"><option value="">All UCs</option></select>
+                        </label>
+                        <label>Antigen
+                            <select id="orfAntigen" onchange="orfApply()">
+                                <option value="">All Antigens</option>
+                                <option>BCG</option><option>OPV-0</option><option>Hep-B</option>
+                                <option>OPV-1</option><option>Penta-I</option><option>PCV13-1</option><option>Rota-1</option>
+                                <option>OPV-2</option><option>Penta-2</option><option>PCV13-2</option><option>Rota-2</option>
+                                <option>OPV-3</option><option>Penta-3</option><option>PCV13-3</option>
+                                <option>IPV-1</option><option>MR-1</option><option>TCV</option><option>IPV-2</option><option>MR-2</option>
+                                <option>DTP Booster</option><option>HPV</option>
+                            </select>
+                        </label>
+                        <button type="button" class="btn btn-sm" onclick="orfLoad()" style="background:#0d5c3d">🔄 Refresh Data</button>
+                        <button type="button" class="btn btn-sm" onclick="orfExportExcel()" style="background:#1565c0">⬇ Excel</button>
+                        <button type="button" class="btn btn-sm" onclick="orfExportPdf()" style="background:#6a1b9a">📄 PDF</button>
+                        <button type="button" class="btn btn-sm" onclick="orfExportPng()" style="background:#00838f">🖼 PNG</button>
+                        <span class="sweep-meta" id="orfMeta">Not loaded</span>
+                    </div>
+                    <div class="emr-tabs" id="orfTabs">
+                        <button type="button" class="emr-tab active" data-orf="ucAg" onclick="orfSwitch('ucAg')">1. UC-wise Antigen Report</button>
+                        <button type="button" class="emr-tab" data-orf="tehAg" onclick="orfSwitch('tehAg')">2. Tehsil-wise Antigen Report</button>
+                        <button type="button" class="emr-tab" data-orf="ucCov" onclick="orfSwitch('ucCov')">3. UC Target vs Coverage %</button>
+                        <button type="button" class="emr-tab" data-orf="tehCov" onclick="orfSwitch('tehCov')">4. Tehsil Target vs Coverage %</button>
+                    </div>
+                    <div id="orfStats" class="emr-stats" style="margin:10px 0"></div>
+                    <div class="emr-table-wrap" id="orfTableWrap">
+                        <table class="emr-table">
+                            <thead id="orfHead"></thead>
+                            <tbody id="orfBody"></tbody>
+                        </table>
+                    </div>
+                </div><!-- /emrModuleOrFixed -->
 
                 <!-- ===== MODULE: ATTENDANCE ===== -->
                 <div id="emrModuleAttendance" style="display:none">
@@ -4512,15 +4555,21 @@
                 b.classList.toggle('active', b.getAttribute('data-module')===emrModule);
             });
             const o = document.getElementById('emrModuleOutreach');
+            const f = document.getElementById('emrModuleOrFixed');
             const a = document.getElementById('emrModuleAttendance');
             const l = document.getElementById('emrModuleLocation');
             const s = document.getElementById('emrModuleSweep');
             if(o) o.style.display = emrModule==='outreach' ? '' : 'none';
+            if(f) f.style.display = emrModule==='orFixed' ? '' : 'none';
             if(a) a.style.display = emrModule==='attendance' ? '' : 'none';
             if(l) l.style.display = emrModule==='location' ? '' : 'none';
             if(s) s.style.display = emrModule==='sweep' ? '' : 'none';
             // lazy load when module opened
             try{
+                if(emrModule==='orFixed' && typeof orfLoad==='function'){
+                    if(typeof orfRows==='undefined' || !orfRows || !orfRows.length) orfLoad();
+                    else orfApply();
+                }
                 if(emrModule==='attendance' && typeof attLoad==='function'){
                     if(typeof attMaster==='undefined' || !attMaster || !attMaster.length) attLoad();
                 }
@@ -9380,6 +9429,398 @@
             explClose();
         }
 
+
+
+
+        // ===== OR + Fixed Sites Compile =====
+        const ORF_SHEET_ID = '1lBQRSNA1lDWKCh7vMcrz0CVu_OEhOV6ETkiZX9lKu5M';
+        // Display order + system column mapping + target bucket
+        const ORF_ANTIGENS = [
+            {label:'BCG', col:'BCG_Count', bucket:'newborn'},
+            {label:'OPV-0', col:'OPV0_Count', bucket:'newborn'},
+            {label:'Hep-B', col:'HepB_Count', bucket:'newborn'},
+            {label:'OPV-1', col:'OPV1_Count', bucket:'surviving'},
+            {label:'Penta-I', col:'Penta1_Count', bucket:'surviving'},
+            {label:'PCV13-1', col:'Pneumo1_Count', bucket:'surviving'},
+            {label:'Rota-1', col:'Rota1_Count', bucket:'surviving'},
+            {label:'OPV-2', col:'OPV2_Count', bucket:'surviving'},
+            {label:'Penta-2', col:'Penta2_Count', bucket:'surviving'},
+            {label:'PCV13-2', col:'Pneumo2_Count', bucket:'surviving'},
+            {label:'Rota-2', col:'Rota2_Count', bucket:'surviving'},
+            {label:'OPV-3', col:'OPV3_Count', bucket:'surviving'},
+            {label:'Penta-3', col:'Penta3_Count', bucket:'surviving'},
+            {label:'PCV13-3', col:'Pneumo3_Count', bucket:'surviving'},
+            {label:'IPV-1', col:'IPV_Count', bucket:'surviving'},
+            {label:'MR-1', col:'Measles1_Count', bucket:'surviving'},
+            {label:'TCV', col:'TCV_Count', bucket:'surviving'},
+            {label:'IPV-2', col:'IPV2_Count', bucket:'surviving'},
+            {label:'MR-2', col:'Measles2_Count', bucket:'surviving'},
+            {label:'DTP Booster', col:'DPT_Booster_Count', bucket:'dtp'},
+            {label:'HPV', col:'HPV_Count', bucket:'hpv'}
+        ];
+        let orfRows = []; // {uc, tehsil, counts:{label:n}, targets:{newborn,surviving,hpv,dtp}, population}
+        let orfMode = 'ucAg';
+        let orfLastExport = {headers:[], rows:[], title:''};
+
+        async function orfFetchSheet(sheetName){
+            const url = 'https://docs.google.com/spreadsheets/d/'+ORF_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(sheetName);
+            const res = await fetch(url);
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            const text = await res.text();
+            const a=text.indexOf('{'), b=text.lastIndexOf('}');
+            return JSON.parse(text.substring(a,b+1));
+        }
+        function orfParseCell(c){
+            if(!c) return '';
+            if(c.f != null && c.f !== '') return String(c.f).trim();
+            if(c.v == null) return '';
+            return String(c.v).trim();
+        }
+        function orfNormUc(s){
+            return String(s||'').toUpperCase().replace(/\s+/g,' ').replace(/URBAN-/g,'URBAN ').replace(/URBAN -/g,'URBAN ').trim();
+        }
+        async function orfLoad(){
+            const meta=document.getElementById('orfMeta');
+            if(meta) meta.textContent='Loading…';
+            try{
+                const [pdata, ddata] = await Promise.all([
+                    orfFetchSheet('Population & Targets'),
+                    orfFetchSheet('Data')
+                ]);
+                // Population map by UC
+                const popByUc = {};
+                const popRows = (pdata.table && pdata.table.rows) || [];
+                // gviz may treat first row as header — scan all
+                popRows.forEach(function(r){
+                    const cells=(r.c||[]).map(orfParseCell);
+                    // expect Tehsil, Geolevel, Population, ... monthly newborn idx 9, surviving 10, hpv 12, dtp 14
+                    // But gviz header row may shift — detect by numbers
+                    const tehsil=String(cells[0]||'').trim();
+                    const uc=String(cells[1]||'').trim();
+                    if(!tehsil || !uc) return;
+                    if(/tehsil/i.test(tehsil) || /geolevel/i.test(uc)) return;
+                    const pop=parseFloat(String(cells[2]||'').replace(/,/g,''))||0;
+                    const nb=parseFloat(String(cells[9]||'').replace(/,/g,''))||0;
+                    const sv=parseFloat(String(cells[10]||'').replace(/,/g,''))||0;
+                    const hpv=parseFloat(String(cells[12]||'').replace(/,/g,''))||0;
+                    const dtp=parseFloat(String(cells[14]||'').replace(/,/g,''))||0;
+                    popByUc[orfNormUc(uc)] = {tehsil:tehsil, uc:uc, population:pop, newborn:nb, surviving:sv, hpv:hpv, dtp:dtp};
+                });
+
+                // Data columns from table.cols labels
+                const cols = (ddata.table && ddata.table.cols) || [];
+                const labels = cols.map(function(c){ return String((c&&c.label)||'').trim(); });
+                const colIdx = {};
+                labels.forEach(function(L,i){ colIdx[L]=i; if(L) colIdx[L.toLowerCase()]=i; });
+                function idxFor(sysCol){
+                    if(colIdx[sysCol]!=null) return colIdx[sysCol];
+                    const low=sysCol.toLowerCase();
+                    if(colIdx[low]!=null) return colIdx[low];
+                    return -1;
+                }
+                const geoIdx = (colIdx['Geolevel']!=null)?colIdx['Geolevel']:(colIdx['geolevel']!=null?colIdx['geolevel']:0);
+
+                const rows=[];
+                const drows=(ddata.table && ddata.table.rows)||[];
+                drows.forEach(function(r){
+                    const cells=(r.c||[]).map(orfParseCell);
+                    const ucRaw=String(cells[geoIdx]||'').trim();
+                    if(!ucRaw || /geolevel/i.test(ucRaw)) return;
+                    const pop=popByUc[orfNormUc(ucRaw)] || null;
+                    const counts={};
+                    ORF_ANTIGENS.forEach(function(ag){
+                        const ix=idxFor(ag.col);
+                        let n=0;
+                        if(ix>=0) n=parseFloat(String(cells[ix]||'0').replace(/,/g,''))||0;
+                        counts[ag.label]=n;
+                    });
+                    rows.push({
+                        uc: pop?pop.uc:ucRaw,
+                        tehsil: pop?pop.tehsil:'—',
+                        population: pop?pop.population:0,
+                        targets: pop?{newborn:pop.newborn,surviving:pop.surviving,hpv:pop.hpv,dtp:pop.dtp}:{newborn:0,surviving:0,hpv:0,dtp:0},
+                        counts: counts
+                    });
+                });
+                orfRows=rows;
+                // Fill tehsil filter
+                const tehsils={};
+                rows.forEach(function(r){ if(r.tehsil && r.tehsil!=='—') tehsils[r.tehsil]=1; });
+                const tsel=document.getElementById('orfTehsil');
+                if(tsel){
+                    const cur=tsel.value;
+                    tsel.innerHTML='<option value="">All Tehsils</option>'+Object.keys(tehsils).sort().map(function(t){
+                        return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+                    }).join('');
+                    if(cur && tehsils[cur]) tsel.value=cur;
+                }
+                orfOnTehsil(true);
+                orfApply();
+                if(meta) meta.textContent=rows.length+' UCs · '+new Date().toLocaleString();
+            }catch(err){
+                console.error(err);
+                if(meta) meta.textContent='Load failed: '+(err.message||err);
+                alert('OR+Fixed load failed: '+(err.message||err));
+            }
+        }
+        function orfOnTehsil(silent){
+            const t=(document.getElementById('orfTehsil')||{}).value||'';
+            const ucs={};
+            orfRows.forEach(function(r){
+                if(t && r.tehsil!==t) return;
+                if(r.uc) ucs[r.uc]=1;
+            });
+            const usel=document.getElementById('orfUC');
+            if(usel){
+                const cur=usel.value;
+                usel.innerHTML='<option value="">All UCs</option>'+Object.keys(ucs).sort().map(function(u){
+                    return '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';
+                }).join('');
+                if(cur && ucs[cur]) usel.value=cur; else usel.value='';
+            }
+            if(!silent) orfApply();
+        }
+        function orfFiltered(){
+            const t=(document.getElementById('orfTehsil')||{}).value||'';
+            const u=(document.getElementById('orfUC')||{}).value||'';
+            return orfRows.filter(function(r){
+                if(t && r.tehsil!==t) return false;
+                if(u && r.uc!==u) return false;
+                return true;
+            });
+        }
+        function orfSelectedAntigens(){
+            const a=(document.getElementById('orfAntigen')||{}).value||'';
+            if(!a) return ORF_ANTIGENS.slice();
+            return ORF_ANTIGENS.filter(function(x){ return x.label===a; });
+        }
+        function orfTargetFor(row, bucket){
+            const t=row.targets||{};
+            if(bucket==='newborn') return t.newborn||0;
+            if(bucket==='surviving') return t.surviving||0;
+            if(bucket==='hpv') return t.hpv||0;
+            if(bucket==='dtp') return t.dtp||0;
+            return 0;
+        }
+        function orfPct(ach, tgt){
+            if(!tgt) return '—';
+            return (ach/tgt*100).toFixed(1)+'%';
+        }
+        function orfSwitch(mode){
+            orfMode=mode;
+            document.querySelectorAll('#orfTabs .emr-tab').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-orf')===mode);
+            });
+            orfApply();
+        }
+        function orfRender(headers, rowsHtml, expRows, title){
+            const head=document.getElementById('orfHead');
+            const body=document.getElementById('orfBody');
+            if(head) head.innerHTML='<tr>'+headers.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr>';
+            if(body) body.innerHTML=rowsHtml||'<tr><td colspan="'+headers.length+'">No data</td></tr>';
+            orfLastExport={headers:headers, rows:expRows||[], title:title||orfTabLabel()};
+        }
+        function orfTabLabel(){
+            return ({ucAg:'UC-wise Antigen Report', tehAg:'Tehsil-wise Antigen Report', ucCov:'UC Target vs Coverage', tehCov:'Tehsil Target vs Coverage'})[orfMode]||'OR Fixed';
+        }
+        function orfSetStats(items){
+            const box=document.getElementById('orfStats');
+            if(!box) return;
+            box.innerHTML=(items||[]).map(function(it){
+                return '<div class="emr-stat"><div class="emr-stat-n">'+it.n+'</div><div class="emr-stat-l">'+it.l+'</div></div>';
+            }).join('');
+        }
+        function orfApply(){
+            if(!orfRows.length){
+                orfRender(['Info'], '<tr><td>Click Refresh Data to load OR + Fixed Sites compile sheet.</td></tr>', [], 'Empty');
+                return;
+            }
+            const data=orfFiltered();
+            const antigens=orfSelectedAntigens();
+            if(orfMode==='ucAg'){
+                const headers=['Sr','Tehsil','UC'].concat(antigens.map(function(a){return a.label;}));
+                const exp=[]; let i=0;
+                const rowsHtml=data.slice().sort(function(a,b){
+                    if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1;
+                    return a.uc<b.uc?-1:1;
+                }).map(function(r){
+                    i++;
+                    const vals=antigens.map(function(a){ return r.counts[a.label]||0; });
+                    const row=[i,r.tehsil,r.uc].concat(vals);
+                    exp.push(row);
+                    return '<tr><td>'+i+'</td><td>'+r.tehsil+'</td><td style="text-align:left;font-weight:600">'+r.uc+'</td>'+vals.map(function(v){return '<td>'+v+'</td>';}).join('')+'</tr>';
+                }).join('');
+                // totals
+                const totals=antigens.map(function(a){
+                    return data.reduce(function(s,r){ return s+(r.counts[a.label]||0); },0);
+                });
+                exp.push(['Total','',''].concat(totals));
+                const totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td></td><td colspan="2">Total</td>'+totals.map(function(v){return '<td>'+v+'</td>';}).join('')+'</tr>';
+                orfSetStats([{n:data.length,l:'UCs'},{n:antigens.length,l:'Antigens shown'}]);
+                orfRender(headers, rowsHtml+totalHtml, exp, 'UC-wise Antigen Report');
+            }
+            else if(orfMode==='tehAg'){
+                const map={};
+                data.forEach(function(r){
+                    const t=r.tehsil||'—';
+                    if(!map[t]) map[t]={};
+                    antigens.forEach(function(a){
+                        map[t][a.label]=(map[t][a.label]||0)+(r.counts[a.label]||0);
+                    });
+                });
+                const headers=['Sr','Tehsil'].concat(antigens.map(function(a){return a.label;}));
+                const exp=[]; let i=0;
+                const list=Object.keys(map).sort();
+                const rowsHtml=list.map(function(t){
+                    i++;
+                    const vals=antigens.map(function(a){ return map[t][a.label]||0; });
+                    exp.push([i,t].concat(vals));
+                    return '<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+t+'</td>'+vals.map(function(v){return '<td>'+v+'</td>';}).join('')+'</tr>';
+                }).join('');
+                const totals=antigens.map(function(a){
+                    return list.reduce(function(s,t){ return s+(map[t][a.label]||0); },0);
+                });
+                exp.push(['Total',''].concat(totals));
+                const totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td></td><td>Total</td>'+totals.map(function(v){return '<td>'+v+'</td>';}).join('')+'</tr>';
+                orfSetStats([{n:list.length,l:'Tehsils'},{n:antigens.length,l:'Antigens shown'}]);
+                orfRender(headers, rowsHtml+totalHtml, exp, 'Tehsil-wise Antigen Report');
+            }
+            else if(orfMode==='ucCov'){
+                // For each UC x antigen: Achieved, Target, %
+                // If many antigens, show compact: one row per UC with % columns (or Ach/Tgt/% groups for selected)
+                const headers=['Sr','Tehsil','UC','Population'];
+                antigens.forEach(function(a){
+                    headers.push(a.label+' Ach', a.label+' Tgt', a.label+' %');
+                });
+                const exp=[]; let i=0;
+                const rowsHtml=data.slice().sort(function(a,b){
+                    if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1;
+                    return a.uc<b.uc?-1:1;
+                }).map(function(r){
+                    i++;
+                    const cells=[i,r.tehsil,r.uc,r.population||0];
+                    let html='<tr><td>'+i+'</td><td>'+r.tehsil+'</td><td style="text-align:left;font-weight:600">'+r.uc+'</td><td>'+(r.population||0)+'</td>';
+                    antigens.forEach(function(a){
+                        const ach=r.counts[a.label]||0;
+                        const tgt=orfTargetFor(r, a.bucket);
+                        const pct=orfPct(ach,tgt);
+                        cells.push(ach, tgt, pct);
+                        const color = (tgt && ach/tgt>=1) ? '#2e7d32' : (tgt && ach/tgt>=0.8 ? '#f9a825' : '#c62828');
+                        html+='<td>'+ach+'</td><td>'+tgt+'</td><td style="font-weight:700;color:'+color+'">'+pct+'</td>';
+                    });
+                    exp.push(cells);
+                    return html+'</tr>';
+                }).join('');
+                orfSetStats([{n:data.length,l:'UCs'},{n:antigens.length,l:'Antigens'}]);
+                orfRender(headers, rowsHtml, exp, 'UC Target vs Coverage %');
+            }
+            else if(orfMode==='tehCov'){
+                // Aggregate achieved by tehsil; targets sum of UC monthly targets
+                const map={};
+                data.forEach(function(r){
+                    const t=r.tehsil||'—';
+                    if(!map[t]) map[t]={pop:0, counts:{}, targets:{newborn:0,surviving:0,hpv:0,dtp:0}};
+                    map[t].pop+=(r.population||0);
+                    antigens.forEach(function(a){
+                        map[t].counts[a.label]=(map[t].counts[a.label]||0)+(r.counts[a.label]||0);
+                    });
+                    map[t].targets.newborn+=(r.targets.newborn||0);
+                    map[t].targets.surviving+=(r.targets.surviving||0);
+                    map[t].targets.hpv+=(r.targets.hpv||0);
+                    map[t].targets.dtp+=(r.targets.dtp||0);
+                });
+                const headers=['Sr','Tehsil','Population'];
+                antigens.forEach(function(a){
+                    headers.push(a.label+' Ach', a.label+' Tgt', a.label+' %');
+                });
+                const exp=[]; let i=0;
+                const list=Object.keys(map).sort();
+                const rowsHtml=list.map(function(t){
+                    i++;
+                    const x=map[t];
+                    const cells=[i,t,x.pop];
+                    let html='<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+t+'</td><td>'+x.pop+'</td>';
+                    antigens.forEach(function(a){
+                        const ach=x.counts[a.label]||0;
+                        const tgt=x.targets[a.bucket]||0;
+                        const pct=orfPct(ach,tgt);
+                        cells.push(ach, tgt, pct);
+                        const color = (tgt && ach/tgt>=1) ? '#2e7d32' : (tgt && ach/tgt>=0.8 ? '#f9a825' : '#c62828');
+                        html+='<td>'+ach+'</td><td>'+tgt+'</td><td style="font-weight:700;color:'+color+'">'+pct+'</td>';
+                    });
+                    exp.push(cells);
+                    return html+'</tr>';
+                }).join('');
+                orfSetStats([{n:list.length,l:'Tehsils'},{n:antigens.length,l:'Antigens'}]);
+                orfRender(headers, rowsHtml, exp, 'Tehsil Target vs Coverage %');
+            }
+        }
+        function orfExportFileBase(){
+            return orfTabLabel().replace(/[\\/:*?"<>|]+/g,'_');
+        }
+        function orfExportExcel(){
+            if(typeof XLSX==='undefined'){ alert('XLSX missing'); return; }
+            if(!orfLastExport.headers.length){ alert('No table data'); return; }
+            const aoa=[orfLastExport.headers].concat(orfLastExport.rows||[]);
+            const ws=XLSX.utils.aoa_to_sheet(aoa);
+            const wb=XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, (orfTabLabel()||'ORFixed').substring(0,28));
+            XLSX.writeFile(wb, orfExportFileBase()+'.xlsx');
+        }
+        function orfExportPdf(){
+            if(typeof window.jspdf==='undefined'){ alert('jsPDF missing'); return; }
+            const headers=orfLastExport.headers||[];
+            const rows=orfLastExport.rows||[];
+            if(!headers.length){ alert('No table data'); return; }
+            const { jsPDF } = window.jspdf;
+            const landscape = headers.length > 8;
+            const pdf = new jsPDF({ orientation: landscape?'landscape':'portrait', unit:'mm', format:'a4' });
+            const margin=10;
+            const pageW=pdf.internal.pageSize.getWidth();
+            const pageH=pdf.internal.pageSize.getHeight();
+            const usable=pageW-margin*2;
+            let y=12;
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
+            pdf.text('OR + Fixed Sites — '+orfTabLabel(), margin, y); y+=6;
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(60,60,60);
+            pdf.text('District Chakwal · '+new Date().toLocaleString(), margin, y); y+=6;
+            const colN=headers.length;
+            const colW=usable/colN;
+            function headerRow(){
+                pdf.setFillColor(13,92,61);
+                pdf.rect(margin,y,usable,6,'F');
+                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
+                let x=margin;
+                headers.forEach(function(h){
+                    pdf.text(String(h).substring(0,14), x+0.5, y+4);
+                    x+=colW;
+                });
+                y+=6;
+                pdf.setTextColor(30,30,30); pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5);
+            }
+            headerRow();
+            rows.forEach(function(row,ri){
+                if(y>pageH-10){ pdf.addPage(); y=10; headerRow(); }
+                if(ri%2){ pdf.setFillColor(241,248,241); pdf.rect(margin,y,usable,5,'F'); }
+                let x=margin;
+                for(let i=0;i<colN;i++){
+                    const cell=String(row[i]!=null?row[i]:'');
+                    pdf.text(cell.substring(0, Math.max(3, Math.floor(colW/1.5))), x+0.5, y+3.5);
+                    x+=colW;
+                }
+                y+=5;
+            });
+            pdf.save(orfExportFileBase()+'.pdf');
+        }
+        async function orfExportPng(){
+            const wrap=document.getElementById('orfTableWrap');
+            if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
+            try{
+                const canvas=await html2canvas(wrap,{scale:2, backgroundColor:'#fff'});
+                const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
+                a.download=orfExportFileBase()+'.png'; a.click();
+            }catch(e){ alert('PNG failed: '+(e.message||e)); }
+        }
 
 
         async function loadMrData(){
