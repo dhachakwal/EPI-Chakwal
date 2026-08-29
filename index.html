@@ -3974,6 +3974,13 @@
 
         // ===== Child Immunization EMR =====
         const EMR_SHEET_ID = '13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo';
+        
+        function epiFastCanvasOpts(extra){
+            const o={scale:1.25, useCORS:true, allowTaint:true, backgroundColor:'#ffffff', logging:false, imageTimeout:0, removeContainer:true};
+            if(extra){ for(const k in extra) o[k]=extra[k]; }
+            return o;
+        }
+
         const EMR_COLS = {
             division:0, district:1, tehsil:2, uc:3, mr:4, name:5, father:6, age:7, gender:8,
             address:9, phone:10, bcg:11, opv0:12, opvI:13, opvII:14, opvIII:15,
@@ -5224,7 +5231,7 @@
                 });
                 document.body.appendChild(wrap);
                 const canvas = await html2canvas(wrap, {
-                    scale: 2,
+                    scale: 1.25,
                     backgroundColor: '#ffffff',
                     useCORS: true,
                     logging: false,
@@ -5462,7 +5469,7 @@
             const card = body.querySelector('.emr-child-card');
             const target = card || body;
             return await html2canvas(target, {
-                scale: 3,
+                scale: 1.5,
                 useCORS: true,
                 backgroundColor: '#f0f7f4',
                 logging: false
@@ -7048,7 +7055,7 @@
 
             try {
                 const canvas = await html2canvas(area, {
-                    scale: 4,
+                    scale: 1.5,
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff',
@@ -8000,7 +8007,7 @@
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
-                scale: 2,
+                scale: 1.25,
                 logging: false
             });
         }
@@ -8454,7 +8461,7 @@
             if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
             const base = locExportFileBase();
             try{
-                const canvas = await html2canvas(wrap, {scale:2, backgroundColor:'#fff', useCORS:true});
+                const canvas = await html2canvas(wrap, {scale: 1.25, backgroundColor:'#fff', useCORS:true});
                 const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
                 a.download=base+'.png'; a.click();
             }catch(e){ alert('PNG failed: '+(e.message||e)); }
@@ -9043,7 +9050,7 @@
             if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
             const base = attExportFileBase();
             try{
-                const canvas = await html2canvas(wrap, {scale:2, backgroundColor:'#fff'});
+                const canvas = await html2canvas(wrap, {scale: 1.25, backgroundColor:'#fff'});
                 const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
                 a.download=base+'.png'; a.click();
             }catch(e){ alert('PNG failed: '+(e.message||e)); }
@@ -9495,10 +9502,12 @@
                     const cells=(r.c||[]).map(orfParseCell);
                     // expect Tehsil, Geolevel, Population, ... monthly newborn idx 9, surviving 10, hpv 12, dtp 14
                     // But gviz header row may shift — detect by numbers
-                    const tehsil=String(cells[0]||'').trim();
-                    const uc=String(cells[1]||'').trim();
+                    let tehsil=String(cells[0]||'').trim();
+                    let uc=String(cells[1]||'').trim();
                     if(!tehsil || !uc) return;
                     if(/tehsil/i.test(tehsil) || /geolevel/i.test(uc)) return;
+                    if(/^n\/?a$/i.test(tehsil) || tehsil==='—' || tehsil==='-') tehsil='Clinic On Wheel';
+                    if(/^n\/?a$/i.test(uc)) uc='Clinic On Wheel';
                     const pop=parseFloat(String(cells[2]||'').replace(/,/g,''))||0;
                     const nb=parseFloat(String(cells[9]||'').replace(/,/g,''))||0;
                     const sv=parseFloat(String(cells[10]||'').replace(/,/g,''))||0;
@@ -9534,9 +9543,14 @@
                         if(ix>=0) n=parseFloat(String(cells[ix]||'0').replace(/,/g,''))||0;
                         counts[ag.label]=n;
                     });
+                    let teh = pop ? pop.tehsil : '';
+                    const tehLow = String(teh||'').trim().toLowerCase();
+                    if(!tehLow || tehLow==='n/a' || tehLow==='na' || tehLow==='—' || tehLow==='-') teh = 'Clinic On Wheel';
+                    let ucName = pop ? pop.uc : ucRaw;
+                    if(/^n\/?a$/i.test(String(ucName).trim())) ucName = 'Clinic On Wheel';
                     rows.push({
-                        uc: pop?pop.uc:ucRaw,
-                        tehsil: pop?pop.tehsil:'—',
+                        uc: ucName,
+                        tehsil: teh,
                         population: pop?pop.population:0,
                         targets: pop?{newborn:pop.newborn,surviving:pop.surviving,hpv:pop.hpv,dtp:pop.dtp}:{newborn:0,surviving:0,hpv:0,dtp:0},
                         counts: counts
@@ -9545,7 +9559,7 @@
                 orfRows=rows;
                 // Fill tehsil filter
                 const tehsils={};
-                rows.forEach(function(r){ if(r.tehsil && r.tehsil!=='—') tehsils[r.tehsil]=1; });
+                rows.forEach(function(r){ if(r.tehsil) tehsils[r.tehsil]=1; });
                 const tsel=document.getElementById('orfTehsil');
                 if(tsel){
                     const cur=tsel.value;
@@ -9686,23 +9700,26 @@
                 orfRender(headers, rowsHtml+totalHtml, exp, 'Tehsil-wise Antigen Report');
             }
             else if(orfMode==='ucCov'){
-                // For each UC x antigen: Achieved, Target, %
-                // If many antigens, show compact: one row per UC with % columns (or Ach/Tgt/% groups for selected)
                 const headers=['Sr','Tehsil','UC','Population'];
                 antigens.forEach(function(a){
                     headers.push(a.label+' Ach', a.label+' Tgt', a.label+' %');
                 });
                 const exp=[]; let i=0;
+                const sumAch={}, sumTgt={};
+                antigens.forEach(function(a){ sumAch[a.label]=0; sumTgt[a.label]=0; });
+                let sumPop=0;
                 const rowsHtml=data.slice().sort(function(a,b){
                     if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1;
                     return a.uc<b.uc?-1:1;
                 }).map(function(r){
                     i++;
+                    sumPop+=(r.population||0);
                     const cells=[i,r.tehsil,r.uc,r.population||0];
                     let html='<tr><td>'+i+'</td><td>'+r.tehsil+'</td><td style="text-align:left;font-weight:600">'+r.uc+'</td><td>'+(r.population||0)+'</td>';
                     antigens.forEach(function(a){
                         const ach=r.counts[a.label]||0;
                         const tgt=orfTargetFor(r, a.bucket);
+                        sumAch[a.label]+=ach; sumTgt[a.label]+=tgt;
                         const pct=orfPct(ach,tgt);
                         cells.push(ach, tgt, pct);
                         const color = (tgt && ach/tgt>=1) ? '#2e7d32' : (tgt && ach/tgt>=0.8 ? '#f9a825' : '#c62828');
@@ -9711,14 +9728,22 @@
                     exp.push(cells);
                     return html+'</tr>';
                 }).join('');
+                const totalCells=['','Total','',sumPop];
+                let totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td></td><td colspan="2">Total</td><td>'+sumPop+'</td>';
+                antigens.forEach(function(a){
+                    const ach=sumAch[a.label], tgt=sumTgt[a.label], pct=orfPct(ach,tgt);
+                    totalCells.push(ach, tgt, pct);
+                    totalHtml+='<td>'+ach+'</td><td>'+tgt+'</td><td>'+pct+'</td>';
+                });
+                totalHtml+='</tr>';
+                exp.push(totalCells);
                 orfSetStats([{n:data.length,l:'UCs'},{n:antigens.length,l:'Antigens'}]);
-                orfRender(headers, rowsHtml, exp, 'UC Target vs Coverage %');
+                orfRender(headers, rowsHtml+totalHtml, exp, 'UC Target vs Coverage %');
             }
             else if(orfMode==='tehCov'){
-                // Aggregate achieved by tehsil; targets sum of UC monthly targets
                 const map={};
                 data.forEach(function(r){
-                    const t=r.tehsil||'—';
+                    const t=r.tehsil||'Clinic On Wheel';
                     if(!map[t]) map[t]={pop:0, counts:{}, targets:{newborn:0,surviving:0,hpv:0,dtp:0}};
                     map[t].pop+=(r.population||0);
                     antigens.forEach(function(a){
@@ -9734,15 +9759,19 @@
                     headers.push(a.label+' Ach', a.label+' Tgt', a.label+' %');
                 });
                 const exp=[]; let i=0;
+                const sumAch={}, sumTgt={}; let sumPop=0;
+                antigens.forEach(function(a){ sumAch[a.label]=0; sumTgt[a.label]=0; });
                 const list=Object.keys(map).sort();
                 const rowsHtml=list.map(function(t){
                     i++;
                     const x=map[t];
+                    sumPop+=x.pop;
                     const cells=[i,t,x.pop];
                     let html='<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+t+'</td><td>'+x.pop+'</td>';
                     antigens.forEach(function(a){
                         const ach=x.counts[a.label]||0;
                         const tgt=x.targets[a.bucket]||0;
+                        sumAch[a.label]+=ach; sumTgt[a.label]+=tgt;
                         const pct=orfPct(ach,tgt);
                         cells.push(ach, tgt, pct);
                         const color = (tgt && ach/tgt>=1) ? '#2e7d32' : (tgt && ach/tgt>=0.8 ? '#f9a825' : '#c62828');
@@ -9751,8 +9780,17 @@
                     exp.push(cells);
                     return html+'</tr>';
                 }).join('');
+                const totalCells=['','Total',sumPop];
+                let totalHtml='<tr style="background:#e8f5e9;font-weight:700"><td></td><td>Total</td><td>'+sumPop+'</td>';
+                antigens.forEach(function(a){
+                    const ach=sumAch[a.label], tgt=sumTgt[a.label], pct=orfPct(ach,tgt);
+                    totalCells.push(ach, tgt, pct);
+                    totalHtml+='<td>'+ach+'</td><td>'+tgt+'</td><td>'+pct+'</td>';
+                });
+                totalHtml+='</tr>';
+                exp.push(totalCells);
                 orfSetStats([{n:list.length,l:'Tehsils'},{n:antigens.length,l:'Antigens'}]);
-                orfRender(headers, rowsHtml, exp, 'Tehsil Target vs Coverage %');
+                orfRender(headers, rowsHtml+totalHtml, exp, 'Tehsil Target vs Coverage %');
             }
         }
         function orfExportFileBase(){
@@ -9816,7 +9854,7 @@
             const wrap=document.getElementById('orfTableWrap');
             if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
             try{
-                const canvas=await html2canvas(wrap,{scale:2, backgroundColor:'#fff'});
+                const canvas=await html2canvas(wrap,{scale: 1.25, backgroundColor:'#fff'});
                 const a=document.createElement('a'); a.href=canvas.toDataURL('image/png');
                 a.download=orfExportFileBase()+'.png'; a.click();
             }catch(e){ alert('PNG failed: '+(e.message||e)); }
@@ -11216,7 +11254,7 @@
             try{
                 const form = sheet.querySelector('.cif-off') || sheet;
                 const canvas = await html2canvas(form, {
-                    scale: 2,
+                    scale: 1.25,
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff',
