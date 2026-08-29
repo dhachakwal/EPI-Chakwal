@@ -766,10 +766,11 @@
                         </div>
                     </div>
                     <div class="emr-tabs" id="attTabs">
-                        <button type="button" class="emr-tab active" data-att="cinStatus" onclick="attSwitch('cinStatus')">1. Check-In Status</button>
-                        <button type="button" class="emr-tab" data-att="cinTime" onclick="attSwitch('cinTime')">2. Check-In Timeliness</button>
-                        <button type="button" class="emr-tab" data-att="coutStatus" onclick="attSwitch('coutStatus')">3. Check-Out Status</button>
-                        <button type="button" class="emr-tab" data-att="coutTime" onclick="attSwitch('coutTime')">4. Check-Out Timeliness</button>
+                        <button type="button" class="emr-tab active" data-att="overall" onclick="attSwitch('overall')">1. Overall Attendance Situation</button>
+                        <button type="button" class="emr-tab" data-att="cinStatus" onclick="attSwitch('cinStatus')">2. Check-In Status</button>
+                        <button type="button" class="emr-tab" data-att="cinTime" onclick="attSwitch('cinTime')">3. Check-In Timeliness</button>
+                        <button type="button" class="emr-tab" data-att="coutStatus" onclick="attSwitch('coutStatus')">4. Check-Out Status</button>
+                        <button type="button" class="emr-tab" data-att="coutTime" onclick="attSwitch('coutTime')">5. Check-Out Timeliness</button>
                     </div>
                     <div id="attStats" class="emr-stats" style="margin:10px 0"></div>
                     <div class="emr-table-wrap" id="attTableWrap">
@@ -808,12 +809,13 @@
                         </div>
                     </div>
                     <div class="emr-tabs" id="locTabs" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                        <button type="button" class="emr-tab active" data-loc="submitted" onclick="locSwitch('submitted')">1. Submitted Locations</button>
-                        <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">2. Not Submitted (Pending)</button>
-                        <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">3. All Vaccinators Status</button>
-                        <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">4. Late Location Submit</button>
-                        <button type="button" class="emr-tab" data-loc="multi" onclick="locSwitch('multi')">5. Multiple Submits</button>
-                        <button type="button" class="emr-tab" data-loc="suspicious" onclick="locSwitch('suspicious')">6. Suspicious Location</button>
+                        <button type="button" class="emr-tab active" data-loc="overall" onclick="locSwitch('overall')">1. Overall Location Situation</button>
+                        <button type="button" class="emr-tab" data-loc="submitted" onclick="locSwitch('submitted')">2. Submitted Locations</button>
+                        <button type="button" class="emr-tab" data-loc="pending" onclick="locSwitch('pending')">3. Not Submitted (Pending)</button>
+                        <button type="button" class="emr-tab" data-loc="all" onclick="locSwitch('all')">4. All Vaccinators Status</button>
+                        <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">5. Late Location Submit</button>
+                        <button type="button" class="emr-tab" data-loc="multi" onclick="locSwitch('multi')">6. Multiple Submits</button>
+                        <button type="button" class="emr-tab" data-loc="suspicious" onclick="locSwitch('suspicious')">7. Suspicious Location</button>
                         <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
@@ -7368,7 +7370,7 @@
         const LOC_LATE_MINS = 9*60+30; // 09:30 AM
         let locMaster = [];
         let locRows = [];
-        let locMode = 'submitted';
+        let locMode = 'overall';
         let locLastExport = {headers:[], rows:[], title:''};
         let locLoading = false;
         let locLoadedOnce = false;
@@ -8166,7 +8168,33 @@
                 return;
             }
 
-            if(locMode==='submitted'){
+            if(locMode==='overall'){
+                // Day-wise overall: Submitted vs Not Submitted for all vaccinators
+                let ok=0, pending=0;
+                const rows=[]; const exp=[]; let i=0;
+                masters.forEach(function(m){
+                    const hit = locHasSubmit(m, day);
+                    i++;
+                    if(hit){
+                        ok++;
+                        const statusTxt = (typeof locIsLate==='function' && locIsLate(hit.ts)) ? 'Late Submitted' : 'Submitted';
+                        const stStyle = statusTxt.indexOf('Late')>=0 ? 'color:#c62828;font-weight:700' : 'color:#2e7d32;font-weight:700';
+                        const dt = hit.ts ? locYmd(hit.ts) : (day||'—');
+                        const mapLink = hit.maps ? ('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>') : '—';
+                        exp.push([i, m.name, m.uc||'', dt, statusTxt, locFmt(hit.ts), hit.lat||'', hit.lng||'']);
+                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+dt+'</td><td style="'+stStyle+'">'+statusTxt+'</td><td>'+locFmt(hit.ts)+'</td><td>'+mapLink+'</td></tr>');
+                    } else {
+                        pending++;
+                        exp.push([i, m.name, m.uc||'', day||'—', 'Not Submitted', '—', '', '']);
+                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+(day||'—')+'</td><td style="color:#c62828;font-weight:700">Not Submitted</td><td>—</td><td>—</td></tr>');
+                    }
+                });
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+ok+'</div><div class="l">Submitted</div></div><div class="emr-stat" style="color:#c62828"><div class="n">'+pending+'</div><div class="l">Not Submitted</div></div><div class="emr-stat"><div class="n">'+masters.length+'</div><div class="l">Total</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr.</th><th>Vaccinator Name</th><th>UC</th><th>Date</th><th>Location Status</th><th>Submit Time</th><th>Map</th></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="7">No rows</td></tr>';
+                locLastExport={headers:['Sr.','Vaccinator Name','UC','Date','Location Status','Submit Time','Lat','Long'], rows:exp, title:'Overall Location Situation — '+locYmdLabel(day)};
+            }
+            else if(locMode==='submitted'){
                 if(stats) stats.innerHTML=
                     '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>'+
                     '<div class="emr-stat" style="cursor:pointer;color:#c62828" onclick="locClickStat(\'pending\')"><div class="n">'+pending+'</div><div class="l">Pending</div></div>'+
@@ -8512,7 +8540,7 @@
         let attMaster = [];
         let attCheckInAll = [];
         let attCheckOutAll = [];
-        let attMode = 'cinStatus';
+        let attMode = 'overall';
         let attPanelFilter = null; // null | checkedIn | notIn | checkedOut | noOut | all
         let attLastExport = {headers:[], rows:[]};
 
@@ -8843,7 +8871,62 @@
                 });
             }
 
-            if(attMode === 'cinStatus'){
+            if(attMode === 'overall'){
+                // Combined day-wise view: all 4 statuses in one row per vaccinator
+                let okIn=0, noIn=0, okOut=0, noOut=0;
+                const rows=[]; const exp=[]; let i=0;
+                const dateLabel = day || (attSelectedDay()||'—');
+                masters.forEach(function(m){
+                    const cin = attFindIn(attCheckInAll, m, day);
+                    const cout = attFindIn(attCheckOutAll, m, day);
+                    i++;
+                    const hasIn = !!(cin && cin.time);
+                    const hasOut = !!(cout && cout.time);
+                    if(hasIn) okIn++; else noIn++;
+                    if(hasOut) okOut++; else noOut++;
+
+                    let cinStatus = hasIn ? 'Checked In' : 'Not Check-In';
+                    let coutStatus = hasOut ? 'Checked Out' : 'Not Checked-Out';
+                    let cinTimeFlag = '—';
+                    let coutTimeFlag = '—';
+                    let cinStyle = hasIn ? 'color:#2e7d32;font-weight:700' : 'color:#c62828;font-weight:700';
+                    let coutStyle = hasOut ? 'color:#2e7d32;font-weight:700' : 'color:#c62828;font-weight:700';
+                    let cinTStyle = '';
+                    let coutTStyle = '';
+
+                    if(hasIn){
+                        const mins = cin.time.getHours()*60 + cin.time.getMinutes();
+                        if(mins < 7*60+45){ cinTimeFlag = 'Early · '+attFmtTime(cin.time); cinTStyle='color:#1565c0;font-weight:700'; }
+                        else if(mins >= 8*60+31){ cinTimeFlag = 'Late · '+attFmtTime(cin.time); cinTStyle='color:#c62828;font-weight:700'; }
+                        else { cinTimeFlag = 'On Time · '+attFmtTime(cin.time); cinTStyle='color:#2e7d32;font-weight:700'; }
+                    }
+                    if(hasIn && hasOut){
+                        const gapHrs = (cout.time.getTime()-cin.time.getTime())/3600000;
+                        const outMins = cout.time.getHours()*60 + cout.time.getMinutes();
+                        const parts=[];
+                        if(gapHrs < 6) parts.push('Early');
+                        if(outMins >= 16*60) parts.push('Late');
+                        if(!parts.length){ coutTimeFlag = 'On Time · '+attFmtTime(cout.time); coutTStyle='color:#2e7d32;font-weight:700'; }
+                        else { coutTimeFlag = parts.join(' + ')+' · '+attFmtTime(cout.time)+' ('+gapHrs.toFixed(1)+'h)'; coutTStyle='color:#c62828;font-weight:700'; }
+                    } else if(hasOut && !hasIn){
+                        coutTimeFlag = attFmtTime(cout.time);
+                    }
+
+                    const dispDate = hasIn ? attYmd(cin.time) : (hasOut ? attYmd(cout.time) : (day||'—'));
+                    exp.push([i, m.name, m.uc||'', dispDate, cinStatus, coutStatus, cinTimeFlag, coutTimeFlag]);
+                    rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+dispDate+'</td><td style="'+cinStyle+'">'+cinStatus+'</td><td style="'+coutStyle+'">'+coutStatus+'</td><td style="'+cinTStyle+'">'+cinTimeFlag+'</td><td style="'+coutTStyle+'">'+coutTimeFlag+'</td></tr>');
+                });
+                attSetStats([
+                    {n:okIn,l:'Checked In'},{n:noIn,l:'Not Check-In',red:true},
+                    {n:okOut,l:'Checked Out'},{n:noOut,l:'Not Checked-Out',red:true}
+                ]);
+                attRender(
+                    ['Sr.','Vaccinator Name','UC','Date','Check-In Status','Check-Out Status','Check-In Timeliness','Check-Out Timeliness'],
+                    rows.join(''),
+                    exp
+                );
+            }
+            else if(attMode === 'cinStatus'){
                 let notIn=0, ok=0; const rows=[]; const exp=[]; let i=0;
                 masters.forEach(function(m){
                     const cin = attFindIn(attCheckInAll, m, day);
@@ -8937,6 +9020,7 @@
         }
         function attTabLabel(){
             const map={
+                overall:'Overall Attendance Situation',
                 cinStatus:'Check-In Status',
                 cinTime:'Check-In Timeliness',
                 coutStatus:'Check-Out Status',
