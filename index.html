@@ -9486,6 +9486,12 @@
         function orfNormUc(s){
             return String(s||'').toUpperCase().replace(/\s+/g,' ').replace(/URBAN-/g,'URBAN ').replace(/URBAN -/g,'URBAN ').trim();
         }
+        /** C.O.W. / N/A / Clinic On Wheel → mobile vaccination unit (one per tehsil) */
+        function orfIsCow(s){
+            const t = String(s||'').trim().toUpperCase().replace(/\s+/g,' ');
+            return t==='N/A' || t==='NA' || t==='C.O.W.' || t==='C.O.W' || t==='COW' || t==='CLINIC ON WHEEL' || t==='CLINIC ON WHEELS';
+        }
+        function orfCowLabel(){ return 'Clinic On Wheel'; }
         async function orfLoad(){
             const meta=document.getElementById('orfMeta');
             if(meta) meta.textContent='Loading…';
@@ -9494,26 +9500,35 @@
                     orfFetchSheet('Population & Targets'),
                     orfFetchSheet('Data')
                 ]);
-                // Population map by UC
+                // Population: ordered list + map by UC (C.O.W. kept under real tehsil)
                 const popByUc = {};
+                const popList = []; // same order as sheet / Data rows
+                const cowByTehsil = {}; // tehsil → pop record for Clinic On Wheel
                 const popRows = (pdata.table && pdata.table.rows) || [];
-                // gviz may treat first row as header — scan all
                 popRows.forEach(function(r){
                     const cells=(r.c||[]).map(orfParseCell);
-                    // expect Tehsil, Geolevel, Population, ... monthly newborn idx 9, surviving 10, hpv 12, dtp 14
-                    // But gviz header row may shift — detect by numbers
                     let tehsil=String(cells[0]||'').trim();
                     let uc=String(cells[1]||'').trim();
                     if(!tehsil || !uc) return;
                     if(/tehsil/i.test(tehsil) || /geolevel/i.test(uc)) return;
-                    if(/^n\/?a$/i.test(tehsil) || tehsil==='—' || tehsil==='-') tehsil='Clinic On Wheel';
-                    if(/^n\/?a$/i.test(uc)) uc='Clinic On Wheel';
+                    // Never invent a fake tehsil named Clinic On Wheel
+                    if(orfIsCow(tehsil)) return;
+                    const isCow = orfIsCow(uc);
+                    if(isCow) uc = orfCowLabel();
                     const pop=parseFloat(String(cells[2]||'').replace(/,/g,''))||0;
                     const nb=parseFloat(String(cells[9]||'').replace(/,/g,''))||0;
                     const sv=parseFloat(String(cells[10]||'').replace(/,/g,''))||0;
                     const hpv=parseFloat(String(cells[12]||'').replace(/,/g,''))||0;
                     const dtp=parseFloat(String(cells[14]||'').replace(/,/g,''))||0;
-                    popByUc[orfNormUc(uc)] = {tehsil:tehsil, uc:uc, population:pop, newborn:nb, surviving:sv, hpv:hpv, dtp:dtp};
+                    const rec={tehsil:tehsil, uc:uc, population:pop, newborn:nb, surviving:sv, hpv:hpv, dtp:dtp, isCow:isCow};
+                    popList.push(rec);
+                    if(isCow){
+                        cowByTehsil[tehsil] = rec;
+                        // also index common alternate keys (last write wins only if one per key — use tehsil-scoped)
+                        popByUc['COW|'+orfNormUc(tehsil)] = rec;
+                    } else {
+                        popByUc[orfNormUc(uc)] = rec;
+                    }
                 });
 
                 // Data columns from table.cols labels
@@ -9527,15 +9542,15 @@
                     if(colIdx[low]!=null) return colIdx[low];
                     return -1;
                 }
-                const geoIdx = (colIdx['Geolevel']!=null)?colIdx['Geolevel']:(colIdx['geolevel']!=null?colIdx['geolevel']:0);
-
-                const rows=[];
-                const drows=(ddata.table && ddata.table.rows)||[];
-                drows.forEach(function(r){
+                const geoIdx = (idxFor('Geolevel')>=0) ? idxFor('Geolevel') : 0;
+                const dataRows = (ddata.table && ddata.table.rows) || [];
+                const rows = [];
+                let dataIx = 0;
+                dataRows.forEach(function(r){
                     const cells=(r.c||[]).map(orfParseCell);
-                    const ucRaw=String(cells[geoIdx]||'').trim();
-                    if(!ucRaw || /geolevel/i.test(ucRaw)) return;
-                    const pop=popByUc[orfNormUc(ucRaw)] || null;
+                    let ucRaw=String(cells[geoIdx]||'').trim();
+                    if(!ucRaw) return;
+                    if(/geolevel/i.test(ucRaw)) return;
                     const counts={};
                     ORF_ANTIGENS.forEach(function(ag){
                         const ix=idxFor(ag.col);
@@ -9543,25 +9558,45 @@
                         if(ix>=0) n=parseFloat(String(cells[ix]||'0').replace(/,/g,''))||0;
                         counts[ag.label]=n;
                     });
-                    let teh = pop ? pop.tehsil : '';
-                    let ucName = pop ? pop.uc : ucRaw;
-                    const ucIsNA = /^n\/?a$/i.test(String(ucName||ucRaw).trim());
-                    const tehLow = String(teh||'').trim().toLowerCase();
-                    const tehIsNA = !tehLow || tehLow==='n/a' || tehLow==='na' || tehLow==='—' || tehLow==='-' || tehLow==='clinic on wheel';
-                    // Clinic On Wheel: keep as tehsil name; if UC is N/A label both clearly
-                    if(ucIsNA){
-                        ucName = 'Clinic On Wheel';
-                        teh = 'Clinic On Wheel';
-                    } else if(tehIsNA){
-                        teh = 'Clinic On Wheel';
-                        // keep real UC name under tehsil "Clinic On Wheel"
+                    const isCow = orfIsCow(ucRaw);
+                    // Prefer same-row alignment with Population sheet (same order, 87 rows)
+                    let pop = (dataIx < popList.length) ? popList[dataIx] : null;
+                    dataIx++;
+                    // If names clearly mismatch (non-COW), fall back to UC map
+                    if(pop && !isCow && !pop.isCow){
+                        if(orfNormUc(pop.uc) !== orfNormUc(ucRaw)){
+                            pop = popByUc[orfNormUc(ucRaw)] || pop;
+                        }
                     }
+                    if(isCow){
+                        // Keep real tehsil from aligned pop row / cow map — never invent tehsil "Clinic On Wheel"
+                        if(pop && pop.isCow){
+                            // ok
+                        } else if(pop && pop.tehsil && cowByTehsil[pop.tehsil]){
+                            pop = cowByTehsil[pop.tehsil];
+                        } else {
+                            // try any remaining cow by order
+                            pop = pop || null;
+                        }
+                    } else if(!pop){
+                        pop = popByUc[orfNormUc(ucRaw)] || null;
+                    }
+                    let teh = pop ? pop.tehsil : '';
+                    let ucName = isCow ? orfCowLabel() : (pop ? pop.uc : ucRaw);
+                    if(orfIsCow(ucName)) ucName = orfCowLabel();
+                    // Safety: never leave tehsil blank for COW if we know tehsils with COW
+                    if(isCow && (!teh || orfIsCow(teh))){
+                        // leave as empty only if unknown — still label UC
+                        ucName = orfCowLabel();
+                    }
+                    if(orfIsCow(teh)) teh = (pop && pop.tehsil && !orfIsCow(pop.tehsil)) ? pop.tehsil : '';
                     rows.push({
                         uc: ucName,
                         tehsil: teh,
                         population: pop?pop.population:0,
                         targets: pop?{newborn:pop.newborn,surviving:pop.surviving,hpv:pop.hpv,dtp:pop.dtp}:{newborn:0,surviving:0,hpv:0,dtp:0},
-                        counts: counts
+                        counts: counts,
+                        isCow: isCow
                     });
                 });
                 orfRows=rows;
