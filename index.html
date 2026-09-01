@@ -713,6 +713,7 @@
                         <button type="button" class="emr-tab" data-orf="tehAg" onclick="orfSwitch('tehAg')">2. Tehsil-wise Antigen Report</button>
                         <button type="button" class="emr-tab" data-orf="ucCov" onclick="orfSwitch('ucCov')">3. UC Target vs Coverage %</button>
                         <button type="button" class="emr-tab" data-orf="tehCov" onclick="orfSwitch('tehCov')">4. Tehsil Target vs Coverage %</button>
+                        <button type="button" class="emr-tab" data-orf="dropout" onclick="orfSwitch('dropout')">5. Drop-out Analysis</button>
                     </div>
                     <div id="orfStats" class="emr-stats" style="margin:10px 0"></div>
                     <div id="orfChartWrap" style="display:none;background:#fff;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #e0e0e0">
@@ -771,6 +772,7 @@
                         <button type="button" class="emr-tab" data-att="cinTime" onclick="attSwitch('cinTime')">3. Check-In Timeliness</button>
                         <button type="button" class="emr-tab" data-att="coutStatus" onclick="attSwitch('coutStatus')">4. Check-Out Status</button>
                         <button type="button" class="emr-tab" data-att="coutTime" onclick="attSwitch('coutTime')">5. Check-Out Timeliness</button>
+                        <button type="button" class="emr-tab" data-att="monthly" onclick="attSwitch('monthly')">6. Monthly Attendance</button>
                     </div>
                     <div id="attStats" class="emr-stats" style="margin:10px 0"></div>
                     <div class="emr-table-wrap" id="attTableWrap">
@@ -816,6 +818,7 @@
                         <button type="button" class="emr-tab" data-loc="late" onclick="locSwitch('late')">5. Late Location Submit</button>
                         <button type="button" class="emr-tab" data-loc="multi" onclick="locSwitch('multi')">6. Multiple Submits</button>
                         <button type="button" class="emr-tab" data-loc="suspicious" onclick="locSwitch('suspicious')">7. Suspicious Location</button>
+                        <button type="button" class="emr-tab" data-loc="monthly" onclick="locSwitch('monthly')">8. Monthly Location</button>
                         <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
@@ -8331,6 +8334,51 @@
                 if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious / low-confidence location flag nahi mila</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Accuracy','Risk','Score','Reasons','Map'], rows:exp, title:'Suspicious Location'};
             }
+            else if(locMode==='monthly'){
+                function tick(ok){
+                    return ok
+                        ? '<span style="color:#2e7d32;font-weight:900;font-size:17px">✓</span>'
+                        : '<span style="color:#c62828;font-weight:900;font-size:17px">✗</span>';
+                }
+                function tickTxt(ok){ return ok ? '✓' : '✗'; }
+                let monthKey = '';
+                if(day && day.length>=7) monthKey = day.substring(0,7);
+                if(!monthKey){
+                    let maxD = '';
+                    locRows.forEach(function(r){ if(r.ymd && r.ymd>maxD) maxD=r.ymd; });
+                    if(maxD) monthKey = maxD.substring(0,7);
+                }
+                if(!monthKey){
+                    const now = new Date();
+                    monthKey = now.getFullYear()+'-'+((now.getMonth()+1)<10?'0':'')+(now.getMonth()+1);
+                }
+                const [yy, mm] = monthKey.split('-').map(Number);
+                const daysInMonth = new Date(yy, mm, 0).getDate();
+                const dayList = [];
+                for(let d=1; d<=daysInMonth; d++){
+                    dayList.push(monthKey+'-'+(d<10?'0':'')+d);
+                }
+                let i=0, okN=0, lateN=0;
+                const rows=[]; const exp=[];
+                masters.forEach(function(m){
+                    dayList.forEach(function(ymd){
+                        const hits = locHitsFor(m, ymd);
+                        const hit = hits[0]||null;
+                        const submitted = !!hit;
+                        const timely = submitted && !(typeof locIsLate==='function' && locIsLate(hit.ts));
+                        if(submitted) okN++;
+                        if(submitted && !timely) lateN++;
+                        i++;
+                        const st = submitted ? (timely ? 'Submitted' : 'Late Submitted') : 'Not Submitted';
+                        exp.push([i, m.name, m.uc||'', ymd, tickTxt(submitted), tickTxt(timely), st]);
+                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+ymd+'</td><td style="text-align:center">'+tick(submitted)+'</td><td style="text-align:center">'+tick(timely)+'</td><td style="font-weight:700;color:'+(submitted?(timely?'#2e7d32':'#c62828'):'#c62828')+'">'+st+'</td></tr>');
+                    });
+                });
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+monthKey+'</div><div class="l">Month</div></div><div class="emr-stat"><div class="n">'+masters.length+'</div><div class="l">Vaccinators</div></div><div class="emr-stat"><div class="n">'+okN+'</div><div class="l">Submits</div></div><div class="emr-stat" style="color:#c62828"><div class="n">'+lateN+'</div><div class="l">Late</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr.</th><th>Vaccinator Name</th><th>UC</th><th>Date</th><th>Location Status</th><th>Timeliness</th><th>Detail</th></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="7">No data for '+monthKey+'</td></tr>';
+                locLastExport={headers:['Sr.','Vaccinator Name','UC','Date','Location Status','Timeliness','Detail'], rows:exp, title:'Monthly Location — '+monthKey};
+            }
             else {
                 // all status
                 if(stats) stats.innerHTML=
@@ -9017,6 +9065,73 @@
                 attSetStats([{n:early,l:'Early Check-Out',red:true},{n:late,l:'Late Check-Out',red:true}]);
                 attRender(['Sr','Vaccinator Name','Tehsil','UC','Check-In','Check-Out','Gap','Timeliness'], rows.join('')||'<tr><td colspan="8">No early/late check-outs</td></tr>', exp);
             }
+            else if(attMode === 'monthly'){
+                // Full month date-wise: ✓ green / ✗ red for CI, CO, CI-time, CO-time
+                function tick(ok){
+                    return ok
+                        ? '<span style="color:#2e7d32;font-weight:900;font-size:17px" title="OK">✓</span>'
+                        : '<span style="color:#c62828;font-weight:900;font-size:17px" title="Not OK">✗</span>';
+                }
+                function tickTxt(ok){ return ok ? '✓' : '✗'; }
+                // Month from selected day, or latest day in data
+                let monthKey = '';
+                if(day && day.length>=7) monthKey = day.substring(0,7); // YYYY-MM
+                if(!monthKey){
+                    let maxD = '';
+                    attCheckInAll.concat(attCheckOutAll).forEach(function(x){ if(x.ymd && x.ymd>maxD) maxD=x.ymd; });
+                    if(maxD) monthKey = maxD.substring(0,7);
+                }
+                if(!monthKey){
+                    const now = new Date();
+                    monthKey = now.getFullYear()+'-'+((now.getMonth()+1)<10?'0':'')+(now.getMonth()+1);
+                }
+                const [yy, mm] = monthKey.split('-').map(Number);
+                const daysInMonth = new Date(yy, mm, 0).getDate();
+                const dayList = [];
+                for(let d=1; d<=daysInMonth; d++){
+                    dayList.push(monthKey+'-'+(d<10?'0':'')+d);
+                }
+                // Only show days that exist in data OR all days of month (all calendar days)
+                const rows=[]; const exp=[]; let i=0;
+                let okIn=0, totalCells=0;
+                masters.forEach(function(m){
+                    dayList.forEach(function(ymd){
+                        const cin = attFindIn(attCheckInAll, m, ymd);
+                        const cout = attFindIn(attCheckOutAll, m, ymd);
+                        const hasIn = !!(cin && cin.time);
+                        const hasOut = !!(cout && cout.time);
+                        let ciTimeOk = false, coTimeOk = false;
+                        if(hasIn){
+                            const mins = cin.time.getHours()*60 + cin.time.getMinutes();
+                            // Green if not late (early or on-time OK); red if late (>08:30)
+                            ciTimeOk = mins < (8*60+31);
+                        }
+                        if(hasIn && hasOut){
+                            const gapHrs = (cout.time.getTime()-cin.time.getTime())/3600000;
+                            const outMins = cout.time.getHours()*60 + cout.time.getMinutes();
+                            coTimeOk = (gapHrs >= 6) && (outMins < 16*60);
+                        }
+                        // skip empty days with no activity to reduce noise? User asked full month — show all
+                        i++;
+                        totalCells++;
+                        if(hasIn) okIn++;
+                        const dispDate = ymd; // YYYY-MM-DD
+                        exp.push([i, m.name, m.uc||'', dispDate, tickTxt(hasIn), tickTxt(hasOut), tickTxt(ciTimeOk), tickTxt(coTimeOk)]);
+                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+dispDate+'</td><td style="text-align:center">'+tick(hasIn)+'</td><td style="text-align:center">'+tick(hasOut)+'</td><td style="text-align:center">'+tick(ciTimeOk)+'</td><td style="text-align:center">'+tick(coTimeOk)+'</td></tr>');
+                    });
+                });
+                attSetStats([
+                    {n:monthKey, l:'Month'},
+                    {n:masters.length, l:'Vaccinators'},
+                    {n:daysInMonth, l:'Days'},
+                    {n:okIn, l:'Check-Ins in month'}
+                ]);
+                attRender(
+                    ['Sr.','Vaccinator Name','UC','Date','Check-In Status','Check-Out Status','Check-In Timeliness','Check-Out Timeliness'],
+                    rows.join('')||'<tr><td colspan="8">No data for '+monthKey+'</td></tr>',
+                    exp
+                );
+            }
         }
         function attTabLabel(){
             const map={
@@ -9024,7 +9139,8 @@
                 cinStatus:'Check-In Status',
                 cinTime:'Check-In Timeliness',
                 coutStatus:'Check-Out Status',
-                coutTime:'Check-Out Timeliness'
+                coutTime:'Check-Out Timeliness',
+                monthly:'Monthly Attendance'
             };
             return map[attMode]||'Attendance';
         }
@@ -9770,7 +9886,7 @@
             orfLastExport={headers:headers, rows:expRows||[], title:title||orfTabLabel()};
         }
         function orfTabLabel(){
-            return ({ucAg:'UC-wise Antigen Report', tehAg:'Tehsil-wise Antigen Report', ucCov:'UC Target vs Coverage', tehCov:'Tehsil Target vs Coverage'})[orfMode]||'OR Fixed';
+            return ({ucAg:'UC-wise Antigen Report', tehAg:'Tehsil-wise Antigen Report', ucCov:'UC Target vs Coverage', tehCov:'Tehsil Target vs Coverage', dropout:'Drop-out Analysis'})[orfMode]||'OR Fixed';
         }
         function orfSetStats(items){
             const box=document.getElementById('orfStats');
@@ -9922,6 +10038,69 @@
                 orfSetStats([{n:list.length,l:'Tehsils'},{n:antigens.length,l:'Antigens'}]);
                 orfRender(headers, rowsHtml+totalHtml, exp, 'Tehsil Target vs Coverage %');
                 orfShowChart('pct', list, map, antigens);
+            }
+            else if(orfMode==='dropout'){
+                function dropPct(fromN, toN){
+                    fromN = fromN||0; toN = toN||0;
+                    if(!fromN) return 0;
+                    return Math.round((fromN - toN) * 1000 / fromN) / 10;
+                }
+                function sumCount(rows, label){
+                    return rows.reduce(function(s,r){ return s + ((r.counts&&r.counts[label])||0); }, 0);
+                }
+                const dist = {
+                    bcg: sumCount(data,'BCG'),
+                    p1: sumCount(data,'Penta-I') || sumCount(data,'Penta-1'),
+                    p3: sumCount(data,'Penta-3'),
+                    mr1: sumCount(data,'MR-1'),
+                    mr2: sumCount(data,'MR-2')
+                };
+                function pctCell(v){
+                    const col = v>10 ? '#c62828' : (v>5 ? '#f9a825' : '#2e7d32');
+                    return '<td style="font-weight:700;color:'+col+'">'+v+'%</td>';
+                }
+                const tehMap = {};
+                data.forEach(function(r){
+                    const t = r.tehsil || '—';
+                    if(!tehMap[t]) tehMap[t] = {bcg:0,p1:0,p3:0,mr1:0,mr2:0};
+                    const c = r.counts||{};
+                    tehMap[t].bcg += (c['BCG']||0);
+                    tehMap[t].p1 += (c['Penta-I']||c['Penta-1']||0);
+                    tehMap[t].p3 += (c['Penta-3']||0);
+                    tehMap[t].mr1 += (c['MR-1']||0);
+                    tehMap[t].mr2 += (c['MR-2']||0);
+                });
+                const headers = ['Sr','Level','BCG','Penta-1','Penta-3','MR-1','MR-2','BCG→Penta-1 %','Penta-1→Penta-3 %','BCG→MR-1 %','Penta-1→MR-1 %','MR-1→MR-2 %'];
+                const exp = [];
+                let rowsHtml = '';
+                let i = 0;
+                i++;
+                exp.push([i,'District',dist.bcg,dist.p1,dist.p3,dist.mr1,dist.mr2, dropPct(dist.bcg,dist.p1), dropPct(dist.p1,dist.p3), dropPct(dist.bcg,dist.mr1), dropPct(dist.p1,dist.mr1), dropPct(dist.mr1,dist.mr2)]);
+                rowsHtml += '<tr style="background:#e8f5e9;font-weight:700"><td>'+i+'</td><td style="text-align:left">District</td><td>'+dist.bcg+'</td><td>'+dist.p1+'</td><td>'+dist.p3+'</td><td>'+dist.mr1+'</td><td>'+dist.mr2+'</td>'
+                    +pctCell(dropPct(dist.bcg,dist.p1))+pctCell(dropPct(dist.p1,dist.p3))+pctCell(dropPct(dist.bcg,dist.mr1))+pctCell(dropPct(dist.p1,dist.mr1))+pctCell(dropPct(dist.mr1,dist.mr2))+'</tr>';
+                Object.keys(tehMap).sort().forEach(function(t){
+                    i++;
+                    const x = tehMap[t];
+                    exp.push([i,t,x.bcg,x.p1,x.p3,x.mr1,x.mr2, dropPct(x.bcg,x.p1),dropPct(x.p1,x.p3),dropPct(x.bcg,x.mr1),dropPct(x.p1,x.mr1),dropPct(x.mr1,x.mr2)]);
+                    rowsHtml += '<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+t+'</td><td>'+x.bcg+'</td><td>'+x.p1+'</td><td>'+x.p3+'</td><td>'+x.mr1+'</td><td>'+x.mr2+'</td>'
+                        +pctCell(dropPct(x.bcg,x.p1))+pctCell(dropPct(x.p1,x.p3))+pctCell(dropPct(x.bcg,x.mr1))+pctCell(dropPct(x.p1,x.mr1))+pctCell(dropPct(x.mr1,x.mr2))+'</tr>';
+                });
+                data.slice().sort(function(a,b){ if(a.tehsil!==b.tehsil) return a.tehsil<b.tehsil?-1:1; return a.uc<b.uc?-1:1; }).forEach(function(r){
+                    i++;
+                    const c = r.counts||{};
+                    const bcg=c['BCG']||0, p1=c['Penta-I']||c['Penta-1']||0, p3=c['Penta-3']||0, mr1=c['MR-1']||0, mr2=c['MR-2']||0;
+                    exp.push([i,(r.tehsil||'')+' / '+(r.uc||''),bcg,p1,p3,mr1,mr2, dropPct(bcg,p1),dropPct(p1,p3),dropPct(bcg,mr1),dropPct(p1,mr1),dropPct(mr1,mr2)]);
+                    rowsHtml += '<tr><td>'+i+'</td><td style="text-align:left">'+(r.tehsil||'')+' · <strong>'+(r.uc||'')+'</strong></td><td>'+bcg+'</td><td>'+p1+'</td><td>'+p3+'</td><td>'+mr1+'</td><td>'+mr2+'</td>'
+                        +pctCell(dropPct(bcg,p1))+pctCell(dropPct(p1,p3))+pctCell(dropPct(bcg,mr1))+pctCell(dropPct(p1,mr1))+pctCell(dropPct(mr1,mr2))+'</tr>';
+                });
+                orfSetStats([
+                    {n:dropPct(dist.bcg,dist.p1)+'%', l:'BCG→Penta-1'},
+                    {n:dropPct(dist.p1,dist.p3)+'%', l:'Penta-1→Penta-3'},
+                    {n:dropPct(dist.bcg,dist.mr1)+'%', l:'BCG→MR-1'},
+                    {n:dropPct(dist.mr1,dist.mr2)+'%', l:'MR-1→MR-2'}
+                ]);
+                orfRender(headers, rowsHtml, exp, 'Drop-out Analysis');
+                orfHideChart();
             } else {
                 orfHideChart();
             }
