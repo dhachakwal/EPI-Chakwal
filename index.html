@@ -7403,10 +7403,20 @@
             const d = new Date(s);
             return isNaN(d.getTime()) ? null : d;
         }
+        /** Always calendar date in Pakistan (UTC+5) — avoids UTC/local mismatch */
+        function locPktParts(d){
+            if(!d || isNaN(d.getTime())) return null;
+            const utcMs = d.getTime() + (d.getTimezoneOffset() * 60000);
+            const pkt = new Date(utcMs + (5 * 60 * 60000));
+            return { y:pkt.getFullYear(), m:pkt.getMonth()+1, day:pkt.getDate(), h:pkt.getHours(), mi:pkt.getMinutes() };
+        }
         function locYmd(d){
-            if(!d) return '';
-            const y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate();
-            return y+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;
+            const p = locPktParts(d);
+            if(!p) return '';
+            return p.y+'-'+(p.m<10?'0':'')+p.m+'-'+(p.day<10?'0':'')+p.day;
+        }
+        function locTodayYmd(){
+            return locYmd(new Date());
         }
         function locYmdLabel(ymd){
             if(!ymd) return 'All dates';
@@ -7418,10 +7428,12 @@
         }
         function locFmt(d){
             if(!d) return '';
+            const p = locPktParts(d);
+            if(!p) return '';
             const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            let h=d.getHours(), mi=d.getMinutes();
+            let h=p.h, mi=p.mi;
             const ap=h>=12?'PM':'AM'; h=h%12; if(!h) h=12;
-            return d.getDate()+'-'+months[d.getMonth()]+'-'+d.getFullYear()+' '+h+':'+(mi<10?'0':'')+mi+' '+ap;
+            return p.day+'-'+months[p.m-1]+'-'+p.y+' '+h+':'+(mi<10?'0':'')+mi+' '+ap;
         }
         function locLateDurationText(ts){
             if(!ts) return '—';
@@ -7435,7 +7447,9 @@
         }
         function locIsLate(ts){
             if(!ts) return false;
-            const mins = ts.getHours()*60 + ts.getMinutes();
+            const p = locPktParts(ts);
+            if(!p) return false;
+            const mins = p.h*60 + p.mi;
             return mins > LOC_LATE_MINS;
         }
         // Haversine distance km
@@ -7622,7 +7636,7 @@
                 const data = JSON.parse(raw);
                 if(!data || !data.master || !data.master.length) return false;
                 // cache valid 10 min
-                if(data.savedAt && (Date.now()-data.savedAt) > 10*60*1000) return false;
+                if(data.savedAt && (Date.now()-data.savedAt) > 2*60*1000) return false;
                 locMaster = data.master;
                 locRows = locReviveRows(data.rows||[]);
                 return true;
@@ -7671,12 +7685,18 @@
             const daySel=document.getElementById('locDay');
             if(daySel){
                 const keys=Object.keys(days).sort().reverse();
+                const today = (typeof locTodayYmd==='function') ? locTodayYmd() : '';
                 const cur=preserve ? daySel.value : '';
                 daySel.innerHTML='<option value="">All dates</option>'+keys.map(function(d){
-                    return '<option value="'+d+'">'+locYmdLabel(d)+'</option>';
+                    return '<option value="'+d+'">'+locYmdLabel(d)+(d===today?' (Today)':'')+'</option>';
                 }).join('');
-                if(cur && (cur==='' || days[cur])) daySel.value=cur;
-                else if(keys.length) daySel.value=keys[0];
+                if(preserve && cur && (cur==='' || days[cur] || cur==='')) {
+                    daySel.value=cur;
+                } else if(today && days[today]) {
+                    daySel.value=today; // default: today PKT
+                } else if(keys.length) {
+                    daySel.value=keys[0];
+                }
             }
             const tehs={};
             locMaster.forEach(function(m){ if(m.tehsil) tehs[m.tehsil]=1; });
@@ -7769,8 +7789,11 @@
                 locRows = newRows;
                 locLoadedOnce = true;
                 locSaveCache();
-                locFillFilters(true);
-                if(meta) meta.textContent = 'Master: '+locMaster.length+' · Location rows: '+locRows.length+(locPack.sheet?' · Tab: '+locPack.sheet:' · (no Location tab yet)')+' · '+new Date().toLocaleString();
+                // Force refresh → jump to today; soft refresh keeps filters
+                locFillFilters(!!force ? false : true);
+                const todayY = locTodayYmd();
+                const todayN = locRows.filter(function(r){ return r.ymd===todayY; }).length;
+                if(meta) meta.textContent = 'Master: '+locMaster.length+' · All rows: '+locRows.length+' · Today ('+todayY+'): '+todayN+(locPack.sheet?' · Tab: '+locPack.sheet:'')+' · '+new Date().toLocaleString();
                 if(st){ st.style.display='none'; }
                 locApply();
             }catch(e){
@@ -8091,11 +8114,15 @@
         }
         function locHitsFor(m, day){
             const u=locNormUser(m.username);
-            const n=String(m.name||'').trim().toLowerCase();
+            const n=String(m.name||'').trim().toLowerCase().replace(/\s+/g,' ');
             const hits=locRows.filter(function(r){
                 if(day && r.ymd && r.ymd!==day) return false;
-                if(u && locNormUser(r.username)===u) return true;
-                if(n && String(r.name||'').trim().toLowerCase()===n) return true;
+                const ru = locNormUser(r.username);
+                if(u && ru && ru===u) return true;
+                // phone variants: 03xx vs 3xx
+                if(u && ru && u.replace(/^0+/,'')===ru.replace(/^0+/,'')) return true;
+                const rn = String(r.name||'').trim().toLowerCase().replace(/\s+/g,' ');
+                if(n && rn && n===rn) return true;
                 return false;
             });
             hits.sort(function(a,b){ return (b.ts?b.ts.getTime():0)-(a.ts?a.ts.getTime():0); });
