@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Vaccinator Location Check-In | EPI Chakwal</title>
+<title>Vaccinator Check-In / Leave | EPI Chakwal</title>
 <link rel="icon" href="favicon.png.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,86 +18,140 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(1
 .brand h1{font-size:18px;color:#0d5c3d;margin:8px 0 2px;font-weight:800}
 .brand p{font-size:12px;color:#666;line-height:1.35}
 label{display:block;font-size:13px;font-weight:600;color:#0d5c3d;margin:12px 0 5px}
-select,input[type="text"]{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
-select:focus,input[type="text"]:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
-input[type="text"]::placeholder{color:#999;font-size:13.5px}
+select,input[type="text"],input[type="date"],textarea{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
+textarea{min-height:72px;resize:vertical}
+select:focus,input:focus,textarea:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
 .btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
 .btn-loc{background:linear-gradient(135deg,#0d5c3d,#1a8a5c);color:#fff}
-.btn-loc:disabled{opacity:.55;cursor:not-allowed}
+.btn-loc:disabled,.btn-sub:disabled{opacity:.55;cursor:not-allowed}
 .btn-sub{background:#1565c0;color:#fff}
-.btn-sub:disabled{opacity:.55;cursor:not-allowed}
+.btn-leave{background:#c62828;color:#fff}
 .btn-done{background:#2e7d32;color:#fff;cursor:default}
 .btn-sec{background:#eceff1;color:#37474f;font-size:14px;padding:10px}
 .note{font-size:12px;color:#555;margin-top:10px;line-height:1.5;background:#f7faf8;border-radius:8px;padding:10px 12px;border:1px solid #e0eee4}
+.mode-row{display:flex;gap:8px;margin-top:12px}
+.mode-btn{flex:1;padding:12px;border-radius:10px;border:2px solid #c8e6c9;background:#fafffe;font-weight:700;font-size:14px;cursor:pointer;color:#0d5c3d}
+.mode-btn.active-duty{border-color:#0d5c3d;background:#e8f5e9}
+.mode-btn.active-leave{border-color:#c62828;background:#ffebee;color:#b71c1c}
 .loc-box{margin-top:12px;padding:12px;background:#f1f8e9;border-radius:10px;border:1px dashed #81c784;font-size:13px;display:none}
-.loc-box strong{color:#0d5c3d}
 .urdu-ok{display:none;margin-top:14px;padding:14px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;text-align:center;direction:rtl;font-family:'Noto Nastaliq Urdu',serif;font-size:17px;line-height:2;color:#1b5e20;font-weight:600}
 .err{display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:13px;background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a}
+.bal{display:none;margin-top:10px;padding:10px;background:#e3f2fd;border-radius:8px;font-size:12.5px;color:#0d47a1;line-height:1.45}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .thank{display:block;font-size:13px;font-weight:600;opacity:.95;margin-top:2px}
+#leaveBlock{display:none}
+#dutyBlock{display:block}
+.file-hint{font-size:11px;color:#666;margin-top:4px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="brand">
     <img src="favicon.png.png" alt="EPI" onerror="this.style.display='none'">
-    <h1>Location Check-In</h1>
-    <p>EPI District Chakwal · Vaccinator field location</p>
+    <h1>Field Check-In</h1>
+    <p>EPI District Chakwal · Location &amp; Casual Leave</p>
   </div>
-
   <div class="card">
     <label for="teh">Tehsil</label>
     <select id="teh"><option value="">Loading…</option></select>
-
     <label for="uc">Union Council (UC)</label>
     <select id="uc" disabled><option value="">Select Tehsil first</option></select>
-
     <label for="vacc">Vaccinator</label>
     <select id="vacc" disabled><option value="">Select UC first</option></select>
 
-    <label for="kitStation">Kit Station Name</label>
-    <input type="text" id="kitStation" placeholder="e.g. H.H Nazia, Bethak Noor Khan" autocomplete="off">
+    <div class="mode-row">
+      <button type="button" class="mode-btn active-duty" id="btnModeDuty" onclick="setMode('duty')">📍 On Duty</button>
+      <button type="button" class="mode-btn" id="btnModeLeave" onclick="setMode('leave')">🏖️ On Leave</button>
+    </div>
+    <div class="bal" id="balBox"></div>
 
-    <div class="note">
-      <strong>Steps</strong><br>
-      1) Select Tehsil → UC → your name<br>
-      2) Enter the <strong>Kit Station Name</strong> where you will vaccinate today (e.g. H.H Nazia, Bethak Noor Khan)<br>
-      3) Tap <strong>Get My Location</strong> and allow location access<br>
-      4) Tap <strong>Submit Location</strong>
+    <div id="dutyBlock">
+      <label for="kitStation">Kit Station Name</label>
+      <input type="text" id="kitStation" placeholder="e.g. H.H Nazia, Bethak Noor Khan" autocomplete="off">
+      <div class="note">
+        <strong>On Duty</strong><br>
+        1) Select Tehsil → UC → your name<br>
+        2) Enter Kit Station Name<br>
+        3) Get My Location (Allow)<br>
+        4) Submit Location
+      </div>
+      <button type="button" class="btn btn-loc" id="btnLoc" onclick="getLocation()">📍 Get My Location</button>
+      <div class="loc-box" id="locBox"></div>
+      <button type="button" class="btn btn-sub" id="btnSub" onclick="submitDuty()" disabled>✅ Submit Location</button>
     </div>
 
-    <button type="button" class="btn btn-loc" id="btnLoc" onclick="getLocation()">📍 Get My Location</button>
-    <div class="loc-box" id="locBox"></div>
+    <div id="leaveBlock">
+      <label for="leaveDate">Leave Date (today only)</label>
+      <input type="date" id="leaveDate" readonly style="background:#eef5f0;font-weight:700;color:#0d5c3d">
+      <label for="leaveReason">Reason (Casual Leave)</label>
+      <textarea id="leaveReason" placeholder="Short reason for leave"></textarea>
+      <label for="leaveFile">Leave Application (photo / PDF) — required</label>
+      <input type="file" id="leaveFile" accept="image/*,application/pdf" style="padding:8px;border:1.5px solid #c8e6c9;border-radius:10px;width:100%;background:#fafffe">
+      <div class="file-hint">Max ~3 MB. Photo of signed application or PDF.</div>
+      <div class="note">
+        <strong>Casual Leave rules</strong><br>
+        • Max <strong>2 leaves / month</strong><br>
+        • Max <strong>24 / year</strong> (from your opening balance)<br>
+        • Half day: <strong>not allowed</strong><br>
+        • Application attachment: <strong>mandatory</strong>
+      </div>
+      <button type="button" class="btn btn-leave" id="btnLeaveSub" onclick="submitLeave()">📝 Submit Leave</button>
+    </div>
 
-    <button type="button" class="btn btn-sub" id="btnSub" onclick="submitLoc()" disabled>✅ Submit Location</button>
     <button type="button" class="btn btn-sec" id="btnReset" onclick="resetForm()" style="margin-top:8px">↺ Reset</button>
-
-    <div class="urdu-ok" id="urduOk">آپ نے کامیابی کے ساتھ اپنی آج کی لوکیشن سبمٹ کر دی ہے۔</div>
+    <div class="urdu-ok" id="urduOk">آپ نے کامیابی کے ساتھ سبمٹ کر دیا ہے۔</div>
     <div class="err" id="errBox"></div>
   </div>
 </div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const LOC_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyeYd2z5z8HBN27YlO-KzyziFM-k6Hc3kwYF6SG4AkfTmQus0F-D2oyI9cHerzZM5x-A/exec';
 const MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
-const CACHE_KEY = 'epi_loc_master_v1';
+const CACHE_KEY = 'epi_loc_master_v2';
+const YEARLY_MAX = 24;
+const MONTHLY_MAX = 2;
 
 let master = [];
+let leaveRows = [];
 let lastLoc = null;
+let mode = 'duty';
 
 function showErr(msg){
   const el = document.getElementById('errBox');
   if(!msg){ el.style.display='none'; el.textContent=''; return; }
   el.style.display='block'; el.textContent = msg;
 }
-
 function normUser(u){
   let s = String(u==null?'':u).trim();
   if(s.endsWith('.0')) s = s.slice(0,-2);
   if(/^\d+$/.test(s) && s.length>=10 && !s.startsWith('0')) s = '0'+s;
   return s;
+}
+function normUserKey(u){
+  let s = String(u==null?'':u).trim().toLowerCase();
+  if(s.endsWith('.0')) s = s.slice(0,-2);
+  if(/^\d+$/.test(s)) s = s.replace(/^0+/,'')||'0';
+  return s;
+}
+function todayYmdPKT(){
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset()*60000);
+  const pkt = new Date(utc + 5*60*60000);
+  const y=pkt.getFullYear(), m=pkt.getMonth()+1, d=pkt.getDate();
+  return y+'-'+(m<10?'0':'')+m+'-'+(d<10?'0':'')+d;
+}
+function monthKey(ymd){ return String(ymd||'').substring(0,7); }
+
+function setMode(m){
+  mode = m;
+  document.getElementById('dutyBlock').style.display = m==='duty'?'block':'none';
+  document.getElementById('leaveBlock').style.display = m==='leave'?'block':'none';
+  document.getElementById('btnModeDuty').className = 'mode-btn'+(m==='duty'?' active-duty':'');
+  document.getElementById('btnModeLeave').className = 'mode-btn'+(m==='leave'?' active-leave':'');
+  showErr('');
+  if(m==='leave' && typeof lockLeaveDateToday==='function') lockLeaveDateToday();
+  updateBalanceUI();
 }
 
 function fillTehsils(){
@@ -111,22 +165,20 @@ function fillTehsils(){
 }
 
 async function loadMaster(){
-  // Cache first for instant UI
   try{
     const cached = sessionStorage.getItem(CACHE_KEY);
     if(cached){
-      master = JSON.parse(cached);
-      if(master && master.length){ fillTehsils(); }
+      const o = JSON.parse(cached);
+      if(o && o.master && o.master.length){ master = o.master; leaveRows = o.leaveRows||[]; fillTehsils(); }
     }
   }catch(e){}
-
   try{
     const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/export?format=xlsx&_='+Date.now();
     const res = await fetch(url);
     if(!res.ok) throw new Error('Sheet HTTP '+res.status);
     const buf = await res.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
-    let sheetName = wb.SheetNames.find(function(n){ return /all\s*vaccinator|total\s*vaccinator/i.test(n); }) || wb.SheetNames[0];
+    let sheetName = wb.SheetNames.find(function(n){ return /all\s*vaccinator/i.test(n); }) || wb.SheetNames[0];
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
     const H = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
     function ix(cands){
@@ -135,28 +187,93 @@ async function loadMaster(){
       return -1;
     }
     const iT=ix(['tehsil']), iU=ix(['union council','uc']), iN=ix(['vaccinator name','name']), iUser=ix(['username']);
+    const iAv=ix(['availed','total casual']), iRem=ix(['remaining leave','remaining']);
     const list = [];
     for(let r=1;r<aoa.length;r++){
       const row = aoa[r]||[];
       const name = iN>=0 ? String(row[iN]||'').trim() : '';
       if(!name) continue;
+      if(/^vacant$/i.test(name)) continue;
+      let availed = iAv>=0 ? parseFloat(String(row[iAv]||'').replace(/,/g,'')) : NaN;
+      let remaining = iRem>=0 ? parseFloat(String(row[iRem]||'').replace(/,/g,'')) : NaN;
+      if(isNaN(remaining) && !isNaN(availed)) remaining = Math.max(0, YEARLY_MAX - availed);
+      if(isNaN(remaining)) remaining = YEARLY_MAX;
+      if(isNaN(availed)) availed = Math.max(0, YEARLY_MAX - remaining);
       list.push({
         tehsil: iT>=0 ? String(row[iT]||'').trim() : '',
         uc: iU>=0 ? String(row[iU]||'').trim() : '',
         name: name,
-        username: iUser>=0 ? normUser(row[iUser]) : ''
+        username: iUser>=0 ? normUser(row[iUser]) : '',
+        availed: availed,
+        openingRemaining: remaining
       });
     }
     master = list;
-    try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify(master)); }catch(e){}
+    // Leave tab
+    leaveRows = [];
+    const leaveName = wb.SheetNames.find(function(n){ return /^leave$/i.test(String(n).trim()); });
+    if(leaveName){
+      const laoa = XLSX.utils.sheet_to_json(wb.Sheets[leaveName], {header:1, defval:''});
+      const LH = (laoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
+      function lix(cands){
+        for(let i=0;i<cands.length;i++){ const j=LH.indexOf(cands[i]); if(j>=0) return j; }
+        for(let i=0;i<LH.length;i++){ for(let k=0;k<cands.length;k++){ if(LH[i].indexOf(cands[k])>=0) return i; } }
+        return -1;
+      }
+      const jD=lix(['leave date','date']), jN=lix(['name']), jU=lix(['username']);
+      for(let r=1;r<laoa.length;r++){
+        const row=laoa[r]||[];
+        const nm = jN>=0?String(row[jN]||'').trim():'';
+        if(!nm) continue;
+        let ymd = String(jD>=0?row[jD]:'').trim();
+        const m = ymd.match(/(\d{4}-\d{2}-\d{2})/);
+        ymd = m ? m[1] : '';
+        leaveRows.push({ name:nm, username:jU>=0?normUser(row[jU]):'', ymd:ymd });
+      }
+    }
+    try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
     fillTehsils();
   }catch(e){
     console.error(e);
     if(!master.length){
       document.getElementById('teh').innerHTML = '<option value="">Load failed</option>';
-      showErr('Could not load vaccinator list. Check internet / sheet sharing.');
+      showErr('Could not load vaccinator list. Check internet.');
     }
   }
+}
+
+function leaveStatsFor(v){
+  if(!v) return {month:0, yearUsed:0, remaining:YEARLY_MAX};
+  const key = normUserKey(v.username);
+  const nm = String(v.name||'').trim().toLowerCase();
+  const today = todayYmdPKT();
+  const mk = monthKey(today);
+  let month=0, yearUsed=0;
+  const seen={};
+  leaveRows.forEach(function(r){
+    if(!r.ymd || r.ymd < '2026-09-01') return;
+    const ru = normUserKey(r.username);
+    const rn = String(r.name||'').trim().toLowerCase();
+    if(!((key && ru && key===ru) || (nm && rn && nm===rn))) return;
+    if(seen[r.ymd]) return;
+    seen[r.ymd]=1;
+    yearUsed++;
+    if(r.ymd.indexOf(mk)===0) month++;
+  });
+  const opening = (v.openingRemaining!=null && !isNaN(v.openingRemaining)) ? Number(v.openingRemaining) : YEARLY_MAX;
+  return { month:month, yearUsed:yearUsed, remaining: Math.max(0, opening - yearUsed), opening: opening };
+}
+
+function updateBalanceUI(){
+  const v = selectedVacc();
+  const box = document.getElementById('balBox');
+  if(!v){ box.style.display='none'; return; }
+  const s = leaveStatsFor(v);
+  box.style.display='block';
+  box.innerHTML = '<strong>'+v.name+'</strong><br>'
+    + 'Opening balance (as of Aug 2026): <strong>'+s.opening+'</strong><br>'
+    + 'Used since Sep 2026: <strong>'+s.yearUsed+'</strong> · Year remaining: <strong>'+s.remaining+'</strong><br>'
+    + 'This month leaves: <strong>'+s.month+' / '+MONTHLY_MAX+'</strong>';
 }
 
 function onTehsil(){
@@ -164,43 +281,32 @@ function onTehsil(){
   const uc = document.getElementById('uc');
   const vacc = document.getElementById('vacc');
   vacc.innerHTML = '<option value="">Select UC first</option>';
-  vacc.disabled = true;
-  vacc._list = [];
-  if(!t){
-    uc.innerHTML = '<option value="">Select Tehsil first</option>';
-    uc.disabled = true;
-    return;
-  }
-  const set = {};
+  vacc.disabled = true; vacc._list = [];
+  document.getElementById('balBox').style.display='none';
+  if(!t){ uc.innerHTML='<option value="">Select Tehsil first</option>'; uc.disabled=true; return; }
+  const set={};
   master.forEach(function(m){ if(m.tehsil===t && m.uc) set[m.uc]=1; });
-  uc.disabled = false;
-  uc.innerHTML = '<option value="">— Select UC —</option>' +
-    Object.keys(set).sort().map(function(u){ return '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>'; }).join('');
+  uc.disabled=false;
+  uc.innerHTML='<option value="">— Select UC —</option>'+Object.keys(set).sort().map(function(u){
+    return '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';
+  }).join('');
 }
-
 function onUC(){
-  const t = document.getElementById('teh').value;
-  const u = document.getElementById('uc').value;
-  const vacc = document.getElementById('vacc');
-  if(!t||!u){
-    vacc.innerHTML = '<option value="">Select UC first</option>';
-    vacc.disabled = true;
-    vacc._list = [];
-    return;
-  }
-  const list = master.filter(function(m){ return m.tehsil===t && m.uc===u; });
-  vacc._list = list;
-  vacc.disabled = false;
-  vacc.innerHTML = '<option value="">— Select Vaccinator —</option>' +
-    list.map(function(m){
-      return '<option value="'+m.name.replace(/"/g,'&quot;')+'">'+m.name+(m.username?' ('+m.username+')':'')+'</option>';
-    }).join('');
+  const t=document.getElementById('teh').value;
+  const u=document.getElementById('uc').value;
+  const vacc=document.getElementById('vacc');
+  if(!t||!u){ vacc.innerHTML='<option value="">Select UC first</option>'; vacc.disabled=true; vacc._list=[]; return; }
+  const list=master.filter(function(m){ return m.tehsil===t && m.uc===u; });
+  vacc._list=list; vacc.disabled=false;
+  vacc.innerHTML='<option value="">— Select Vaccinator —</option>'+list.map(function(m){
+    return '<option value="'+m.name.replace(/"/g,'&quot;')+'">'+m.name+(m.username?' ('+m.username+')':'')+'</option>';
+  }).join('');
+  updateBalanceUI();
 }
-
 function selectedVacc(){
-  const vacc = document.getElementById('vacc');
-  const list = vacc._list || [];
-  const name = vacc.value;
+  const vacc=document.getElementById('vacc');
+  const list=vacc._list||[];
+  const name=vacc.value;
   if(!name) return null;
   for(let i=0;i<list.length;i++){ if(list[i].name===name) return list[i]; }
   return null;
@@ -208,157 +314,212 @@ function selectedVacc(){
 
 function getLocation(){
   showErr('');
-  const v = selectedVacc();
+  const v=selectedVacc();
   if(!v){ showErr('Please select Tehsil, UC and Vaccinator first.'); return; }
-  if(!navigator.geolocation){ showErr('Location is not supported on this device.'); return; }
-  const btn = document.getElementById('btnLoc');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Getting location…';
+  if(!navigator.geolocation){ showErr('Location not supported on this device.'); return; }
+  const btn=document.getElementById('btnLoc');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Getting location…';
   navigator.geolocation.getCurrentPosition(function(pos){
-    const c = pos.coords || {};
-    lastLoc = {
-      lat: c.latitude,
-      lng: c.longitude,
-      accuracy: c.accuracy,
-      altitude: (c.altitude!=null ? c.altitude : ''),
-      altitudeAccuracy: (c.altitudeAccuracy!=null ? c.altitudeAccuracy : ''),
-      speed: (c.speed!=null ? c.speed : ''),
-      heading: (c.heading!=null ? c.heading : ''),
-      maps: 'https://www.google.com/maps?q='+c.latitude+','+c.longitude
+    lastLoc={
+      lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy,
+      maps:'https://www.google.com/maps?q='+pos.coords.latitude+','+pos.coords.longitude
     };
-    const box = document.getElementById('locBox');
-    box.style.display = 'block';
-    box.innerHTML = '<strong>Location ready</strong><br>Lat: '+Number(lastLoc.lat).toFixed(6)+'<br>Long: '+Number(lastLoc.lng).toFixed(6)+
-      '<br>Accuracy: ~'+Math.round(lastLoc.accuracy||0)+' m';
-    document.getElementById('btnSub').disabled = false;
-    btn.disabled = false;
-    btn.innerHTML = '📍 Get My Location';
+    const box=document.getElementById('locBox');
+    box.style.display='block';
+    box.innerHTML='<strong>Location ready</strong><br>Lat: '+lastLoc.lat.toFixed(6)+'<br>Long: '+lastLoc.lng.toFixed(6)+'<br>Accuracy: ~'+Math.round(lastLoc.accuracy)+' m';
+    document.getElementById('btnSub').disabled=false;
+    btn.disabled=false; btn.innerHTML='📍 Get My Location';
   }, function(err){
-    lastLoc = null;
-    document.getElementById('btnSub').disabled = true;
-    document.getElementById('locBox').style.display = 'none';
-    let msg = 'Location not available. ';
-    if(err.code===1) msg += 'Permission denied — please Allow location.';
-    else if(err.code===2) msg += 'GPS unavailable — try outdoors.';
-    else if(err.code===3) msg += 'Timeout — try again.';
-    else msg += (err.message||'');
+    lastLoc=null; document.getElementById('btnSub').disabled=true;
+    document.getElementById('locBox').style.display='none';
+    let msg='Location not available. ';
+    if(err.code===1) msg+='Permission denied — please Allow location.';
+    else if(err.code===2) msg+='GPS unavailable — try outdoors.';
+    else if(err.code===3) msg+='Timeout — try again.';
+    else msg+=(err.message||'');
     showErr(msg);
-    btn.disabled = false;
-    btn.innerHTML = '📍 Get My Location';
-  }, { enableHighAccuracy:true, timeout:15000, maximumAge:10000 });
+    btn.disabled=false; btn.innerHTML='📍 Get My Location';
+  }, {enableHighAccuracy:true, timeout:15000, maximumAge:10000});
 }
 
-function submitLoc(){
-  showErr('');
-  const v = selectedVacc();
-  if(!v){ showErr('Please select a vaccinator.'); return; }
-  const kit = (document.getElementById('kitStation')||{}).value || '';
-  if(!String(kit).trim()){ showErr('Please enter Kit Station Name (e.g. H.H Nazia, Bethak Noor Khan).'); return; }
-  if(!lastLoc){ showErr('Please get your location first.'); return; }
-
-  const btn = document.getElementById('btnSub');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Submitting…';
-
-  const payload = {
-    timestamp: new Date().toISOString(),
-    name: v.name,
-    username: String(v.username||''),
-    tehsil: v.tehsil,
-    uc: v.uc,
-    kitStation: String(kit).trim(),
-    lat: String(lastLoc.lat),
-    lng: String(lastLoc.lng),
-    accuracy: String(Math.round(lastLoc.accuracy||0)),
-    altitude: String(lastLoc.altitude!==''&&lastLoc.altitude!=null?lastLoc.altitude:''),
-    speed: String(lastLoc.speed!==''&&lastLoc.speed!=null?lastLoc.speed:''),
-    heading: String(lastLoc.heading!==''&&lastLoc.heading!=null?lastLoc.heading:''),
-    maps: lastLoc.maps
-  };
-
-  function markOk(){
-    btn.className = 'btn btn-done';
-    btn.innerHTML = 'Location Submitted<span class="thank">Thank You, '+v.name+'</span>';
-    var ur = document.getElementById('urduOk');
-    if(ur){
-      ur.style.display = 'block';
-      ur.innerHTML = 'آپ نے کامیابی کے ساتھ اپنی آج کی لوکیشن سبمٹ کر دی ہے۔<br><span style="font-size:13px;font-family:Segoe UI,Arial,sans-serif;direction:ltr;display:block;margin-top:8px;color:#2e7d32">Saved: '+v.name+' · '+(payload.kitStation||'')+' · '+new Date().toLocaleTimeString()+'</span>';
-    }
-    document.getElementById('btnLoc').disabled = true;
-  }
-  function markFail(msg){
-    btn.disabled = false;
-    btn.className = 'btn btn-sub';
-    btn.innerHTML = '✅ Submit Location';
-    showErr(msg || 'Submit failed. Internet on karein aur dobara try karein.');
-  }
-
-  function postViaForm(){
-    let iframe = document.getElementById('locHiddenFrame');
+function postPayload(payload){
+  // form + fetch dual path
+  try{
+    let iframe=document.getElementById('locHiddenFrame');
     if(!iframe){
-      iframe = document.createElement('iframe');
-      iframe.name = 'locHiddenFrame';
-      iframe.id = 'locHiddenFrame';
-      iframe.style.cssText = 'display:none;width:0;height:0;border:0';
+      iframe=document.createElement('iframe');
+      iframe.name='locHiddenFrame'; iframe.id='locHiddenFrame';
+      iframe.style.cssText='display:none;width:0;height:0;border:0';
       document.body.appendChild(iframe);
     }
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = LOC_SCRIPT_URL;
-    form.target = 'locHiddenFrame';
-    form.style.display = 'none';
-    Object.keys(payload).forEach(function(k){
-      const inp = document.createElement('input');
-      inp.type = 'hidden'; inp.name = k; inp.value = payload[k]==null?'':String(payload[k]);
+    const form=document.createElement('form');
+    form.method='POST'; form.action=LOC_SCRIPT_URL; form.target='locHiddenFrame'; form.style.display='none';
+    const dataInp=document.createElement('input');
+    dataInp.type='hidden'; dataInp.name='data'; dataInp.value=JSON.stringify(payload);
+    form.appendChild(dataInp);
+    // also flat fields for small payloads
+    ['type','timestamp','name','username','tehsil','uc','kitStation','lat','lng','accuracy','maps','leaveDate','reason','leaveType'].forEach(function(k){
+      if(payload[k]==null) return;
+      const inp=document.createElement('input');
+      inp.type='hidden'; inp.name=k; inp.value=String(payload[k]);
       form.appendChild(inp);
     });
-    const dataInp = document.createElement('input');
-    dataInp.type = 'hidden'; dataInp.name = 'data'; dataInp.value = JSON.stringify(payload);
-    form.appendChild(dataInp);
     document.body.appendChild(form);
     form.submit();
-    setTimeout(function(){ try{ form.remove(); }catch(e){} }, 3000);
-  }
-
+    setTimeout(function(){ try{ form.remove(); }catch(e){} }, 4000);
+  }catch(e){}
   try{
-    // 1) Form POST (most reliable on mobile for Google Apps Script)
-    postViaForm();
-    // 2) Also JSON fetch (backup path)
+    fetch(LOC_SCRIPT_URL, {
+      method:'POST', mode:'no-cors', redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload), keepalive:true
+    });
+  }catch(e){}
+}
+
+function submitDuty(){
+  showErr('');
+  const v=selectedVacc();
+  if(!v){ showErr('Please select a vaccinator.'); return; }
+  const kit=(document.getElementById('kitStation')||{}).value||'';
+  if(!String(kit).trim()){ showErr('Please enter Kit Station Name.'); return; }
+  if(!lastLoc){ showErr('Please get your location first.'); return; }
+  const btn=document.getElementById('btnSub');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Submitting…';
+  const payload={
+    type:'location',
+    timestamp:new Date().toISOString(),
+    name:v.name, username:v.username||'', tehsil:v.tehsil, uc:v.uc,
+    kitStation:String(kit).trim(),
+    lat:String(lastLoc.lat), lng:String(lastLoc.lng),
+    accuracy:String(Math.round(lastLoc.accuracy||0)), maps:lastLoc.maps
+  };
+  postPayload(payload);
+  setTimeout(function(){
+    btn.className='btn btn-done';
+    btn.innerHTML='Location Submitted<span class="thank">Thank You, '+v.name+'</span>';
+    const ur=document.getElementById('urduOk');
+    ur.style.display='block';
+    ur.innerHTML='آپ نے کامیابی کے ساتھ اپنی آج کی لوکیشن سبمٹ کر دی ہے۔';
+    document.getElementById('btnLoc').disabled=true;
+  }, 600);
+}
+
+function readFileAsBase64(file){
+  return new Promise(function(resolve, reject){
+    if(!file){ reject(new Error('No file')); return; }
+    if(file.size > 3.5*1024*1024){ reject(new Error('File too large (max 3.5 MB). Compress and retry.')); return; }
+    const reader=new FileReader();
+    reader.onload=function(){ resolve(String(reader.result||'')); };
+    reader.onerror=function(){ reject(new Error('Could not read file')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function submitLeave(){
+  showErr('');
+  const v=selectedVacc();
+  if(!v){ showErr('Please select Tehsil, UC and Vaccinator first.'); return; }
+  if(typeof lockLeaveDateToday==='function') lockLeaveDateToday();
+  const leaveDate=todayYmdPKT();
+  document.getElementById('leaveDate').value=leaveDate;
+  if(leaveDate < '2026-09-01'){ showErr('Leave system starts from 1 Sep 2026.'); return; }
+  const reason=(document.getElementById('leaveReason').value||'').trim();
+  if(!reason){ showErr('Please enter leave reason.'); return; }
+  const fileEl=document.getElementById('leaveFile');
+  const file=fileEl && fileEl.files && fileEl.files[0];
+  if(!file){ showErr('Leave application attachment is mandatory.'); return; }
+
+  const stats=leaveStatsFor(v);
+  if(stats.month >= MONTHLY_MAX){
+    showErr('Monthly limit reached (2 casual leaves). Already taken this month: '+stats.month);
+    return;
+  }
+  if(stats.remaining <= 0){
+    showErr('Yearly leave balance is 0. Cannot apply more leave.');
+    return;
+  }
+  // same day already?
+  const key=normUserKey(v.username); const nm=v.name.toLowerCase();
+  const dup=leaveRows.some(function(r){
+    if(r.ymd!==leaveDate) return false;
+    return (key && normUserKey(r.username)===key) || (String(r.name||'').toLowerCase()===nm);
+  });
+  if(dup){ showErr('Leave already submitted for '+leaveDate); return; }
+
+  const btn=document.getElementById('btnLeaveSub');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Submitting leave…';
+  try{
+    const dataUrl=await readFileAsBase64(file);
+    const payload={
+      type:'leave',
+      timestamp:new Date().toISOString(),
+      name:v.name, username:v.username||'', tehsil:v.tehsil, uc:v.uc,
+      leaveDate:leaveDate, leaveType:'Casual', reason:reason,
+      attachmentName:file.name||'leave.jpg',
+      attachmentMime:file.type||'image/jpeg',
+      attachmentBase64:dataUrl
+    };
+    // Prefer JSON fetch for large base64 (form may truncate)
     try{
-      fetch(LOC_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: {'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify(payload),
-        keepalive: true
+      await fetch(LOC_SCRIPT_URL, {
+        method:'POST', mode:'no-cors', redirect:'follow',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(payload), keepalive:true
       });
-    }catch(eF){}
-    setTimeout(markOk, 600);
-  }catch(e){
-    markFail('Submit failed: '+(e.message||e)+'. Network check karein.');
+    }catch(e1){
+      postPayload(payload);
+    }
+    // optimistic local update
+    leaveRows.push({name:v.name, username:v.username||'', ymd:leaveDate});
+    updateBalanceUI();
+    setTimeout(function(){
+      btn.className='btn btn-done';
+      btn.innerHTML='Leave Submitted<span class="thank">Thank You, '+v.name+'</span>';
+      const ur=document.getElementById('urduOk');
+      ur.style.display='block';
+      ur.innerHTML='آپ کی چھٹی کامیابی سے سبمٹ ہو گئی ہے۔';
+    }, 900);
+  }catch(err){
+    btn.disabled=false; btn.className='btn btn-leave'; btn.innerHTML='📝 Submit Leave';
+    showErr(err.message||String(err));
   }
 }
 
 function resetForm(){
-  lastLoc = null;
-  showErr('');
-  document.getElementById('locBox').style.display = 'none';
-  document.getElementById('urduOk').style.display = 'none';
-  const btn = document.getElementById('btnSub');
-  btn.disabled = true;
-  btn.className = 'btn btn-sub';
-  btn.innerHTML = '✅ Submit Location';
-  document.getElementById('btnLoc').disabled = false;
-  document.getElementById('btnLoc').innerHTML = '📍 Get My Location';
-  document.getElementById('teh').value = '';
-  const kitEl = document.getElementById('kitStation');
-  if(kitEl) kitEl.value = '';
+  lastLoc=null; showErr('');
+  document.getElementById('locBox').style.display='none';
+  document.getElementById('urduOk').style.display='none';
+  const btn=document.getElementById('btnSub');
+  btn.disabled=true; btn.className='btn btn-sub'; btn.innerHTML='✅ Submit Location';
+  const lb=document.getElementById('btnLeaveSub');
+  lb.disabled=false; lb.className='btn btn-leave'; lb.innerHTML='📝 Submit Leave';
+  document.getElementById('btnLoc').disabled=false;
+  document.getElementById('btnLoc').innerHTML='📍 Get My Location';
+  document.getElementById('teh').value='';
+  const kit=document.getElementById('kitStation'); if(kit) kit.value='';
+  document.getElementById('leaveReason').value='';
+  if(typeof lockLeaveDateToday==='function') lockLeaveDateToday(); else document.getElementById('leaveDate').value=todayYmdPKT();
+  const f=document.getElementById('leaveFile'); if(f) f.value='';
   onTehsil();
+  setMode('duty');
 }
 
 document.getElementById('teh').addEventListener('change', onTehsil);
 document.getElementById('uc').addEventListener('change', onUC);
+document.getElementById('vacc').addEventListener('change', updateBalanceUI);
+function lockLeaveDateToday(){
+  const el = document.getElementById('leaveDate');
+  if(!el) return;
+  const t = todayYmdPKT();
+  el.value = t;
+  el.min = t;
+  el.max = t;
+  el.readOnly = true;
+}
+lockLeaveDateToday();
+document.getElementById('leaveDate').addEventListener('change', lockLeaveDateToday);
+document.getElementById('leaveDate').addEventListener('input', lockLeaveDateToday);
 loadMaster();
 </script>
 </body>
