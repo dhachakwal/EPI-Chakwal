@@ -786,7 +786,7 @@
 
                 <!-- ===== MODULE: LOCATION ===== -->
                 <div id="emrModuleLocation" style="display:none">
-                    <p class="emr-note"><strong>Source:</strong> Live GPS submissions from <a href="location.html" target="_blank" rel="noopener"><code>location.html</code></a> · Master list: All Vaccinators · Sheet tab: <em>Location</em> · Late = after <strong>09:30 AM</strong></p>
+                    <p class="emr-note"><strong>Source:</strong> Live GPS submissions from <a href="location.html" target="_blank" rel="noopener"><code>location.html</code></a> · Master: <em>All Vaccinators Profile</em> · Tabs: <em>Location</em> + <em>Leave</em> · Late = after <strong>09:30 AM</strong></p>
                     <div class="emr-filter" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
                         <label>Date
                             <select id="locDay" onchange="locOnDayChange()"><option value="">All dates</option></select>
@@ -819,6 +819,9 @@
                         <button type="button" class="emr-tab" data-loc="multi" onclick="locSwitch('multi')">6. Multiple Submits</button>
                         <button type="button" class="emr-tab" data-loc="suspicious" onclick="locSwitch('suspicious')">7. Suspicious Location</button>
                         <button type="button" class="emr-tab" data-loc="monthly" onclick="locSwitch('monthly')">8. Monthly Location</button>
+                        <button type="button" class="emr-tab" data-loc="leaveToday" onclick="locSwitch('leaveToday')">9. On Leave (Today)</button>
+                        <button type="button" class="emr-tab" data-loc="leaveBal" onclick="locSwitch('leaveBal')">10. Leave Balance</button>
+                        <button type="button" class="emr-tab" data-loc="leaveReg" onclick="locSwitch('leaveReg')">11. Leave Register</button>
                         <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
@@ -7373,6 +7376,7 @@
         const LOC_LATE_MINS = 9*60+30; // 09:30 AM
         let locMaster = [];
         let locRows = [];
+        let locLeaveRows = [];
         let locMode = 'overall';
         let locLastExport = {headers:[], rows:[], title:''};
         let locLoading = false;
@@ -7744,20 +7748,63 @@
             if(st){ st.style.display='block'; st.textContent=force?'Refreshing locations…':'Loading locations…'; }
             try{
                 const wb = await locFetchWb();
-                const masterPack = locAoa(wb, ['All Vaccinators','Total Vaccinators','Vaccinators']);
+                const masterPack = locAoa(wb, ['All Vaccinators Profile','All Vaccinators','Total Vaccinators','Vaccinators']);
                 const H=masterPack.headers, R=masterPack.rows;
                 const iT=locIx(H,['tehsil']), iU=locIx(H,['union council','uc']), iN=locIx(H,['vaccinator name','name']), iUser=locIx(H,['username']);
+                const iAv=locIx(H,['availed','total casual']), iRem=locIx(H,['remaining leave','remaining']);
                 const newMaster = [];
                 R.forEach(function(row){
                     const name = iN>=0?String(row[iN]||'').trim():'';
                     if(!name) return;
+                    if(/^vacant$/i.test(name)) return;
+                    let availed = iAv>=0 ? parseFloat(String(row[iAv]||'').replace(/,/g,'')) : NaN;
+                    let remaining = iRem>=0 ? parseFloat(String(row[iRem]||'').replace(/,/g,'')) : NaN;
+                    if(isNaN(remaining) && !isNaN(availed)) remaining = Math.max(0, 24 - availed);
+                    if(isNaN(remaining)) remaining = 24;
                     newMaster.push({
                         name:name,
                         username:iUser>=0?String(row[iUser]==null?'':row[iUser]).replace(/\.0$/,'').trim():'',
                         tehsil:iT>=0?String(row[iT]||'').trim():'',
-                        uc:iU>=0?String(row[iU]||'').trim():''
+                        uc:iU>=0?String(row[iU]||'').trim():'',
+                        openingRemaining: remaining,
+                        availedJanAug: isNaN(availed)?null:availed
                     });
                 });
+                // Leave applications tab
+                const leavePack = locAoa(wb, ['Leave','Leaves','Casual Leave']);
+                const newLeaves = [];
+                if(leavePack.rows && leavePack.rows.length){
+                    const Lh=leavePack.headers;
+                    const jTs=locIx(Lh,['timestamp','time']), jD=locIx(Lh,['leave date','leavedate','date']),
+                          jN=locIx(Lh,['name']), jU=locIx(Lh,['username']), jT=locIx(Lh,['tehsil']), jUc=locIx(Lh,['uc','union']),
+                          jReason=locIx(Lh,['reason']), jLink=locIx(Lh,['attachment','link']), jType=locIx(Lh,['leave type','type']);
+                    leavePack.rows.forEach(function(row){
+                        const name=jN>=0?String(row[jN]||'').trim():'';
+                        if(!name) return;
+                        let ts = jTs>=0 ? locParseDate(row[jTs]) : null;
+                        let ymd = '';
+                        if(jD>=0){
+                            const raw=row[jD];
+                            const ds=String(raw||'').trim();
+                            const m=ds.match(/(\d{4}-\d{2}-\d{2})/);
+                            if(m) ymd=m[1];
+                            else {
+                                const dd=locParseDate(raw);
+                                if(dd) ymd=locYmd(dd);
+                            }
+                        }
+                        if(!ymd && ts) ymd=locYmd(ts);
+                        newLeaves.push({
+                            ts:ts, ymd:ymd, name:name,
+                            username:jU>=0?String(row[jU]==null?'':row[jU]).replace(/\.0$/,'').trim():'',
+                            tehsil:jT>=0?String(row[jT]||'').trim():'',
+                            uc:jUc>=0?String(row[jUc]||'').trim():'',
+                            reason:jReason>=0?String(row[jReason]||'').trim():'',
+                            link:jLink>=0?String(row[jLink]||'').trim():'',
+                            leaveType:jType>=0?String(row[jType]||'Casual').trim():'Casual'
+                        });
+                    });
+                }
                 const locPack = locAoa(wb, ['Location','Locations','Field Location']);
                 const newRows = [];
                 if(locPack.rows && locPack.rows.length){
@@ -7787,6 +7834,7 @@
                 }
                 locMaster = newMaster;
                 locRows = newRows;
+                locLeaveRows = newLeaves;
                 locLoadedOnce = true;
                 locSaveCache();
                 // Force refresh → jump to today; soft refresh keeps filters
@@ -8360,6 +8408,67 @@
                     '<div class="emr-stat" style="font-size:11px;line-height:1.35;padding:8px;min-width:180px"><div class="l">Includes: 100–2000m weak/network GPS (not auto Fake GPS) + fake-like signals (same pin, shared spot, impossible travel). Field verify High risk.</div></div>';
                 if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious / low-confidence location flag nahi mila</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Accuracy','Risk','Score','Reasons','Map'], rows:exp, title:'Suspicious Location'};
+            }
+            else if(locMode==='leaveToday'){
+                const dayY = day || (typeof locTodayYmd==='function' ? locTodayYmd() : '');
+                const list = (locLeaveRows||[]).filter(function(r){ return !dayY || r.ymd===dayY; });
+                list.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+                let i=0, rows=[], exp=[];
+                list.forEach(function(r){
+                    i++;
+                    const link = r.link ? ('<a href="'+r.link+'" target="_blank" rel="noopener">View</a>') : '—';
+                    exp.push([i,r.name,r.username,r.tehsil,r.uc,r.ymd,r.leaveType||'Casual',r.reason||'',r.link||'']);
+                    rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+r.name+'</td><td>'+(r.username||'')+'</td><td>'+(r.tehsil||'')+'</td><td style="text-align:left">'+(r.uc||'')+'</td><td>'+(r.ymd||'')+'</td><td>Casual</td><td style="text-align:left">'+(r.reason||'')+'</td><td>'+link+'</td></tr>');
+                });
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">On Leave</div></div><div class="emr-stat"><div class="n">'+(dayY||'All')+'</div><div class="l">Date</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Leave Date</th><th>Type</th><th>Reason</th><th>Application</th></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">Is date pe koi leave nahi</td></tr>';
+                locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Leave Date','Type','Reason','Application'], rows:exp, title:'On Leave — '+(dayY||'All')};
+            }
+            else if(locMode==='leaveBal'){
+                let i=0, rows=[], exp=[];
+                const today = (typeof locTodayYmd==='function')?locTodayYmd():'';
+                const mk = today.substring(0,7);
+                masters.forEach(function(m){
+                    const opening = (m.openingRemaining!=null)?Number(m.openingRemaining):24;
+                    let yearUsed=0, month=0; const seen={};
+                    (locLeaveRows||[]).forEach(function(r){
+                        if(!r.ymd || r.ymd<'2026-09-01') return;
+                        const match = (locNormUser(m.username) && locNormUser(r.username)===locNormUser(m.username))
+                            || (String(m.name).trim().toLowerCase()===String(r.name||'').trim().toLowerCase());
+                        if(!match) return;
+                        if(seen[r.ymd]) return; seen[r.ymd]=1;
+                        yearUsed++;
+                        if(r.ymd.indexOf(mk)===0) month++;
+                    });
+                    const rem = Math.max(0, opening - yearUsed);
+                    i++;
+                    const st = (month>=2 || rem<=0) ? 'Limit reached' : 'OK';
+                    const col = st==='OK' ? '#2e7d32' : '#c62828';
+                    exp.push([i,m.name,m.username,m.tehsil,m.uc,opening,yearUsed,rem,month+'/2',st]);
+                    rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+opening+'</td><td>'+yearUsed+'</td><td style="font-weight:700">'+rem+'</td><td>'+month+'/2</td><td style="color:'+col+';font-weight:700">'+st+'</td></tr>');
+                });
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+masters.length+'</div><div class="l">Vaccinators</div></div><div class="emr-stat"><div class="n">2</div><div class="l">Max / month</div></div><div class="emr-stat"><div class="n">24</div><div class="l">Max / year pool</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Opening Bal</th><th>Used (Sep+)</th><th>Year Remaining</th><th>This Month</th><th>Status</th></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="10">No master data</td></tr>';
+                locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Opening','Used','Remaining','Month','Status'], rows:exp, title:'Leave Balance'};
+            }
+            else if(locMode==='leaveReg'){
+                const list = (locLeaveRows||[]).slice().sort(function(a,b){
+                    if(a.ymd!==b.ymd) return (b.ymd||'').localeCompare(a.ymd||'');
+                    return String(a.name).localeCompare(String(b.name));
+                });
+                let i=0, rows=[], exp=[];
+                list.forEach(function(r){
+                    i++;
+                    const link = r.link ? ('<a href="'+r.link+'" target="_blank" rel="noopener">View</a>') : '—';
+                    exp.push([i,r.ymd,r.name,r.username,r.tehsil,r.uc,r.leaveType||'Casual',r.reason||'',r.link||'']);
+                    rows.push('<tr><td>'+i+'</td><td>'+(r.ymd||'')+'</td><td style="text-align:left;font-weight:600">'+r.name+'</td><td>'+(r.username||'')+'</td><td>'+(r.tehsil||'')+'</td><td style="text-align:left">'+(r.uc||'')+'</td><td>Casual</td><td style="text-align:left">'+(r.reason||'')+'</td><td>'+link+'</td></tr>');
+                });
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">Leave records</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Date</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Type</th><th>Reason</th><th>Application</th></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">Abhi koi leave submit nahi</td></tr>';
+                locLastExport={headers:['Sr','Date','Name','Username','Tehsil','UC','Type','Reason','Application'], rows:exp, title:'Leave Register'};
             }
             else if(locMode==='monthly'){
                 function tick(ok){
