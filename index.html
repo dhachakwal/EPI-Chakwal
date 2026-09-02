@@ -8180,6 +8180,22 @@
             const hits = locHitsFor(m, day);
             return hits[0]||null;
         }
+        function locHasLeave(m, day){
+            const list = locLeaveRows || [];
+            if(!list.length) return null;
+            const u = locNormUser(m.username);
+            const n = String(m.name||'').trim().toLowerCase().replace(/\s+/g,' ');
+            const ymd = day || (typeof locTodayYmd==='function' ? locTodayYmd() : '');
+            for(let i=0;i<list.length;i++){
+                const r = list[i];
+                if(ymd && r.ymd && r.ymd !== ymd) continue;
+                if(!ymd && day) continue;
+                const ru = locNormUser(r.username);
+                const rn = String(r.name||'').trim().toLowerCase().replace(/\s+/g,' ');
+                if((u && ru && u===ru) || (n && rn && n===rn)) return r;
+            }
+            return null;
+        }
         function locFilteredMasters(){
             const teh=(document.getElementById('locTehsil')||{}).value||'';
             const uc=(document.getElementById('locUC')||{}).value||'';
@@ -8196,6 +8212,7 @@
             const day=(document.getElementById('locDay')||{}).value||'';
             const masters=locFilteredMasters();
             let submitted=0, pending=0, lateCount=0, totalSubs=0, susCount=0;
+            let leaveCountSum = 0;
             masters.forEach(function(m){
                 const hits = locHitsFor(m, day);
                 if(hits.length){
@@ -8204,6 +8221,8 @@
                     if(hits.some(function(h){ return locIsLate(h.ts); })) lateCount++;
                     const allHits = locHitsFor(m, '');
                     if(locAnalyzeSuspicious(hits[0], allHits)) susCount++;
+                } else if(typeof locHasLeave==='function' && locHasLeave(m, day)){
+                    leaveCountSum++;
                 } else pending++;
             });
             const grid=document.getElementById('locSummaryGrid');
@@ -8224,10 +8243,10 @@
                     {n:totalSubs,l: day ? 'Submits (day)' : 'Total Submits', mode:'submitted'}
                 ];
                 grid.innerHTML=items.map(function(it){
-                    const red=it.red?'color:#c62828;':'';
+                    const col = it.red ? 'color:#c62828;' : (it.green ? 'color:#2e7d32;' : (it.blue ? 'color:#1565c0;' : ''));
                     const click=it.mode?('cursor:pointer;') : '';
                     const oc=it.mode?(' onclick="locClickStat(\''+it.mode+'\')" title="Open tab"') : '';
-                    return '<div class="emr-sum-item clickable" style="'+red+click+'"'+oc+'><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
+                    return '<div class="emr-sum-item clickable" style="'+col+click+'"'+oc+'><div class="n">'+it.n+'</div><div class="l">'+it.l+'</div></div>';
                 }).join('');
             }
             const stats=document.getElementById('locStats');
@@ -8247,11 +8266,12 @@
             }
 
             if(locMode==='overall'){
-                // Day-wise overall: Submitted vs Not Submitted for all vaccinators
-                let ok=0, pending=0;
+                // Submitted (green) · Leave (blue) · Not Submitted (red)
+                let ok=0, pending=0, leaveN=0;
                 const rows=[]; const exp=[]; let i=0;
                 masters.forEach(function(m){
                     const hit = locHasSubmit(m, day);
+                    const leave = (!hit && typeof locHasLeave==='function') ? locHasLeave(m, day) : null;
                     i++;
                     if(hit){
                         ok++;
@@ -8261,16 +8281,21 @@
                         const mapLink = hit.maps ? ('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>') : '—';
                         exp.push([i, m.name, m.uc||'', dt, statusTxt, locFmt(hit.ts), hit.lat||'', hit.lng||'']);
                         rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+dt+'</td><td style="'+stStyle+'">'+statusTxt+'</td><td>'+locFmt(hit.ts)+'</td><td>'+mapLink+'</td></tr>');
+                    } else if(leave){
+                        leaveN++;
+                        const link = leave.link ? ('<a href="'+leave.link+'" target="_blank" rel="noopener">Application</a>') : '—';
+                        exp.push([i, m.name, m.uc||'', leave.ymd||day||'—', 'Leave', leave.reason||'', '', '']);
+                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+(leave.ymd||day||'—')+'</td><td style="color:#1565c0;font-weight:700">Leave</td><td style="color:#1565c0">'+(leave.reason||'Casual')+'</td><td>'+link+'</td></tr>');
                     } else {
                         pending++;
                         exp.push([i, m.name, m.uc||'', day||'—', 'Not Submitted', '—', '', '']);
                         rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+(day||'—')+'</td><td style="color:#c62828;font-weight:700">Not Submitted</td><td>—</td><td>—</td></tr>');
                     }
                 });
-                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+ok+'</div><div class="l">Submitted</div></div><div class="emr-stat" style="color:#c62828"><div class="n">'+pending+'</div><div class="l">Not Submitted</div></div><div class="emr-stat"><div class="n">'+masters.length+'</div><div class="l">Total</div></div>';
-                if(head) head.innerHTML='<tr><th>Sr.</th><th>Vaccinator Name</th><th>UC</th><th>Date</th><th>Location Status</th><th>Submit Time</th><th>Map</th></tr>';
+                if(stats) stats.innerHTML='<div class="emr-stat" style="color:#2e7d32"><div class="n">'+ok+'</div><div class="l">Submitted</div></div><div class="emr-stat" style="color:#1565c0"><div class="n">'+leaveN+'</div><div class="l">Leave</div></div><div class="emr-stat" style="color:#c62828"><div class="n">'+pending+'</div><div class="l">Not Submitted</div></div><div class="emr-stat"><div class="n">'+masters.length+'</div><div class="l">Total</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr.</th><th>Vaccinator Name</th><th>UC</th><th>Date</th><th>Location Status</th><th>Submit Time / Reason</th><th>Map / Application</th></tr>';
                 if(body) body.innerHTML=rows.join('')||'<tr><td colspan="7">No rows</td></tr>';
-                locLastExport={headers:['Sr.','Vaccinator Name','UC','Date','Location Status','Submit Time','Lat','Long'], rows:exp, title:'Overall Location Situation — '+locYmdLabel(day)};
+                locLastExport={headers:['Sr.','Vaccinator Name','UC','Date','Location Status','Submit Time / Reason','Lat','Long'], rows:exp, title:'Overall Location Situation — '+locYmdLabel(day)};
             }
             else if(locMode==='submitted'){
                 if(stats) stats.innerHTML=
