@@ -84,8 +84,6 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:#1a8a5c;box-sh
     <div id="leaveBlock">
       <label for="leaveDate">Leave Date (today only)</label>
       <input type="date" id="leaveDate" readonly style="background:#eef5f0;font-weight:700;color:#0d5c3d">
-      <label for="leaveReason">Reason (Casual Leave)</label>
-      <textarea id="leaveReason" placeholder="Short reason for leave"></textarea>
       <label for="leaveFile">Leave Application (photo / PDF) — required</label>
       <input type="file" id="leaveFile" accept="image/*,application/pdf" style="padding:8px;border:1.5px solid #c8e6c9;border-radius:10px;width:100%;background:#fafffe">
       <div class="file-hint">Max ~3 MB. Photo of signed application or PDF.</div>
@@ -424,8 +422,6 @@ async function submitLeave(){
   const leaveDate=todayYmdPKT();
   document.getElementById('leaveDate').value=leaveDate;
   if(leaveDate < '2026-09-01'){ showErr('Leave system starts from 1 Sep 2026.'); return; }
-  const reason=(document.getElementById('leaveReason').value||'').trim();
-  if(!reason){ showErr('Please enter leave reason.'); return; }
   const fileEl=document.getElementById('leaveFile');
   const file=fileEl && fileEl.files && fileEl.files[0];
   if(!file){ showErr('Leave application attachment is mandatory.'); return; }
@@ -455,7 +451,7 @@ async function submitLeave(){
       type:'leave',
       timestamp:new Date().toISOString(),
       name:v.name, username:v.username||'', tehsil:v.tehsil, uc:v.uc,
-      leaveDate:leaveDate, leaveType:'Casual', reason:reason,
+      leaveDate:leaveDate, leaveType:'Casual', reason:'Casual Leave',
       attachmentName:file.name||'leave.jpg',
       attachmentMime:file.type||'image/jpeg',
       attachmentBase64:dataUrl
@@ -498,7 +494,6 @@ function resetForm(){
   document.getElementById('btnLoc').innerHTML='📍 Get My Location';
   document.getElementById('teh').value='';
   const kit=document.getElementById('kitStation'); if(kit) kit.value='';
-  document.getElementById('leaveReason').value='';
   if(typeof lockLeaveDateToday==='function') lockLeaveDateToday(); else document.getElementById('leaveDate').value=todayYmdPKT();
   const f=document.getElementById('leaveFile'); if(f) f.value='';
   onTehsil();
