@@ -7821,6 +7821,9 @@
                         const lng=jLng>=0?row[jLng]:'';
                         let maps=jMap>=0?String(row[jMap]||'').trim():'';
                         if(!maps && lat!=='' && lng!=='') maps='https://www.google.com/maps?q='+lat+','+lng;
+                        // Skip empty GPS rows (e.g. failed leave posts written into Location tab)
+                        const latN = parseFloat(lat), lngN = parseFloat(lng);
+                        if(isNaN(latN) || isNaN(lngN)) return;
                         newRows.push({
                             ts:ts, ymd:ts?locYmd(ts):'',
                             name:name,
@@ -8215,14 +8218,14 @@
             let leaveCountSum = 0;
             masters.forEach(function(m){
                 const hits = locHitsFor(m, day);
-                if(hits.length){
+                if(typeof locHasLeave==='function' && locHasLeave(m, day)){
+                    leaveCountSum++;
+                } else if(hits.length){
                     submitted++;
                     totalSubs += hits.length;
                     if(hits.some(function(h){ return locIsLate(h.ts); })) lateCount++;
                     const allHits = locHitsFor(m, '');
                     if(locAnalyzeSuspicious(hits[0], allHits)) susCount++;
-                } else if(typeof locHasLeave==='function' && locHasLeave(m, day)){
-                    leaveCountSum++;
                 } else pending++;
             });
             const grid=document.getElementById('locSummaryGrid');
@@ -8270,10 +8273,15 @@
                 let ok=0, pending=0, leaveN=0;
                 const rows=[]; const exp=[]; let i=0;
                 masters.forEach(function(m){
-                    const hit = locHasSubmit(m, day);
-                    const leave = (!hit && typeof locHasLeave==='function') ? locHasLeave(m, day) : null;
+                    const leave = (typeof locHasLeave==='function') ? locHasLeave(m, day) : null;
+                    const hit = leave ? null : locHasSubmit(m, day); // Leave takes priority over location for the day
                     i++;
-                    if(hit){
+                    if(leave){
+                        leaveN++;
+                        const link = leave.link ? ('<a href="'+leave.link+'" target="_blank" rel="noopener">Application</a>') : '—';
+                        exp.push([i, m.name, m.uc||'', leave.ymd||day||'—', 'Leave', leave.reason||'Casual', '', '']);
+                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+(leave.ymd||day||'—')+'</td><td style="color:#1565c0;font-weight:700">Leave</td><td style="color:#1565c0">'+(leave.reason||'Casual Leave')+'</td><td>'+link+'</td></tr>');
+                    } else if(hit){
                         ok++;
                         const statusTxt = (typeof locIsLate==='function' && locIsLate(hit.ts)) ? 'Late Submitted' : 'Submitted';
                         const stStyle = statusTxt.indexOf('Late')>=0 ? 'color:#c62828;font-weight:700' : 'color:#2e7d32;font-weight:700';
@@ -8281,11 +8289,6 @@
                         const mapLink = hit.maps ? ('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>') : '—';
                         exp.push([i, m.name, m.uc||'', dt, statusTxt, locFmt(hit.ts), hit.lat||'', hit.lng||'']);
                         rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+dt+'</td><td style="'+stStyle+'">'+statusTxt+'</td><td>'+locFmt(hit.ts)+'</td><td>'+mapLink+'</td></tr>');
-                    } else if(leave){
-                        leaveN++;
-                        const link = leave.link ? ('<a href="'+leave.link+'" target="_blank" rel="noopener">Application</a>') : '—';
-                        exp.push([i, m.name, m.uc||'', leave.ymd||day||'—', 'Leave', leave.reason||'', '', '']);
-                        rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+(leave.ymd||day||'—')+'</td><td style="color:#1565c0;font-weight:700">Leave</td><td style="color:#1565c0">'+(leave.reason||'Casual')+'</td><td>'+link+'</td></tr>');
                     } else {
                         pending++;
                         exp.push([i, m.name, m.uc||'', day||'—', 'Not Submitted', '—', '', '']);
