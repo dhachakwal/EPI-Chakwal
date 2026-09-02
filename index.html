@@ -7844,7 +7844,9 @@
                 locFillFilters(!!force ? false : true);
                 const todayY = locTodayYmd();
                 const todayN = locRows.filter(function(r){ return r.ymd===todayY; }).length;
-                if(meta) meta.textContent = 'Master: '+locMaster.length+' · All rows: '+locRows.length+' · Today ('+todayY+'): '+todayN+(locPack.sheet?' · Tab: '+locPack.sheet:'')+' · '+new Date().toLocaleString();
+                const leaveN = (locLeaveRows||[]).length;
+                const leaveToday = (locLeaveRows||[]).filter(function(r){ return r.ymd===todayY; }).length;
+                if(meta) meta.textContent = 'Master: '+locMaster.length+' · Location: '+locRows.length+' · Leave: '+leaveN+' (today '+leaveToday+') · GPS today: '+todayN+' · '+new Date().toLocaleString();
                 if(st){ st.style.display='none'; }
                 locApply();
             }catch(e){
