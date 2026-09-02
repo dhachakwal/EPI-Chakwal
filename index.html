@@ -594,7 +594,8 @@
                 <div class="emr-filter">
                     <label>Period
                         <select id="emrPeriod" onchange="emrOnPeriodChange()">
-                            <option value="month:2026-08" selected>August 2026</option>
+                            <option value="month:2026-09" selected>September 2026</option>
+                            <option value="month:2026-08">August 2026</option>
                             <option value="month:2026-07">July 2026</option>
                             <option value="month:2026-06">June 2026</option>
                             <option value="month:2026-05">May 2026</option>
@@ -4154,19 +4155,20 @@
                             const data = await fetchGviz(params);
                             const rows = (data.table && data.table.rows) || [];
                             const cols = (data.table && data.table.cols) || [];
-                            if(rows.length < 30 || cols.length < 30) continue;
+                            if(rows.length < 2 || cols.length < 10) continue;
                             const mapped = mapSheetRows(rows);
-                            if(mapped.length < 30) continue;
+                            if(mapped.length < 1) continue;
                             return mapped;
                         }catch(e){}
                     }
                     return null;
                 }
 
-                // Jan–Aug 2026 (+ optional 2025) — all in parallel
+                // Jan–Sep 2026 (+ more as added) — all in parallel
                 const jobs = [
-                    {key:'2026-08', label:'Aug-2026', tries:[{sheet:'Aug-2026'},{gid:'0'}]},
-                    {key:'2026-07', label:'July-2026', tries:[{sheet:'July-2026'}]},
+                    {key:'2026-09', label:'Sep-2026', tries:[{sheet:'Sep-2026'},{sheet:'Sep 2026'},{sheet:'September-2026'},{sheet:'September 2026'},{sheet:'Sep-26'}]},
+                    {key:'2026-08', label:'Aug-2026', tries:[{sheet:'Aug-2026'},{sheet:'Aug 2026'},{sheet:'August-2026'},{gid:'0'}]},
+                    {key:'2026-07', label:'July-2026', tries:[{sheet:'July-2026'},{sheet:'July 2026'}]},
                     {key:'2026-06', label:'June-2026', tries:[{sheet:'June-2026'}]},
                     {key:'2026-05', label:'May-2026', tries:[{sheet:'May-2026'}]},
                     {key:'2026-04', label:'April-2026', tries:[{sheet:'April-2026'}]},
