@@ -8369,18 +8369,26 @@
                 locLastExport={headers:['Sr','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time & Date 1','Kit Station 2','Map Location 2','Time & Date 2','Total Submits'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):'')};
             }
             else if(locMode==='pending'){
-                if(stats) stats.innerHTML=
-                    '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>'+
-                    '<div class="emr-stat" style="cursor:pointer;color:#c62828" onclick="locClickStat(\'pending\')"><div class="n">'+pending+'</div><div class="l">Not Submitted</div></div>';
-                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Status</th></tr>';
-                let i=0, html='', exp=[];
+                // Only true pending: no location AND no leave
+                let truePending = 0, leaveOnDay = 0;
+                const rowsP = []; const exp=[]; let i=0;
                 masters.forEach(function(m){
                     if(locHasSubmit(m, day)) return;
+                    if(typeof locHasLeave==='function' && locHasLeave(m, day)){
+                        leaveOnDay++;
+                        return;
+                    }
+                    truePending++;
                     i++;
-                    html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="color:#c62828;font-weight:700">Not Submitted</td></tr>';
+                    rowsP.push('<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="color:#c62828;font-weight:700">Not Submitted</td></tr>');
                     exp.push([i,m.name,locDispUser(m.username),m.tehsil||'',m.uc||'','Not Submitted']);
                 });
-                if(body) body.innerHTML=html||'<tr><td colspan="6">Sab ne location bhej di</td></tr>';
+                if(stats) stats.innerHTML=
+                    '<div class="emr-stat" style="cursor:pointer;color:#2e7d32" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>'+
+                    '<div class="emr-stat" style="cursor:pointer;color:#1565c0" onclick="locClickStat(\'leaveToday\')"><div class="n">'+leaveOnDay+'</div><div class="l">Leave</div></div>'+
+                    '<div class="emr-stat" style="cursor:pointer;color:#c62828" onclick="locClickStat(\'pending\')"><div class="n">'+truePending+'</div><div class="l">Not Submitted</div></div>';
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Status</th></tr>';
+                if(body) body.innerHTML=rowsP.join('')||'<tr><td colspan="6">Sab ne location bhej di ya leave pe hain</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Status'], rows:exp, title:'Not Submitted (Pending)'+(day?' — '+locYmdLabel(day):'')};
             }
             else if(locMode==='late'){
@@ -8584,6 +8592,11 @@
                             const map=hit.maps?('<a href="'+hit.maps+'" target="_blank" rel="noopener">Open Map</a>'):'—';
                             html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td style="color:#2e7d32;font-weight:700">Submitted'+(late?' · Late':'')+'</td><td>'+locFmt(hit.ts)+'</td><td>'+map+'</td></tr>';
                             exp.push([i,m.name,locDispUser(m.username),m.tehsil||'',m.uc||'',hit.kitStation||'','Submitted'+(late?' · Late':''),locFmt(hit.ts),hit.maps||'']);
+                        } else if(typeof locHasLeave==='function' && locHasLeave(m, day)){
+                            const lv = locHasLeave(m, day);
+                            const alink = lv.link ? ('<a href="'+lv.link+'" target="_blank" rel="noopener">Application</a>') : '—';
+                            html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>—</td><td style="color:#1565c0;font-weight:700">Leave</td><td>'+(lv.ymd||day||'')+'</td><td>'+alink+'</td></tr>';
+                            exp.push([i,m.name,locDispUser(m.username),m.tehsil||'',m.uc||'','','Leave',lv.ymd||day||'',lv.link||'']);
                         } else {
                             html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>—</td><td style="color:#c62828;font-weight:700">Not Submitted</td><td>—</td><td>—</td></tr>';
                             exp.push([i,m.name,locDispUser(m.username),m.tehsil||'',m.uc||'','','Not Submitted','','']);
