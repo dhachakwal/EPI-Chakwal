@@ -375,6 +375,115 @@ function postPayload(payload){
   }catch(e){}
 }
 
+
+function fileToCompressedDataUrl(file, maxSide, quality){
+  return new Promise(function(resolve, reject){
+    if(!file) return reject(new Error('No file'));
+    // PDF: read as-is (no canvas compress)
+    if(file.type === 'application/pdf' || /\.pdf$/i.test(file.name||'')){
+      if(file.size > 3.5*1024*1024) return reject(new Error('PDF too large (max ~3.5 MB).'));
+      const fr = new FileReader();
+      fr.onload = function(){ resolve({ dataUrl: fr.result, name: file.name, mime: file.type||'application/pdf' }); };
+      fr.onerror = function(){ reject(new Error('Could not read PDF')); };
+      fr.readAsDataURL(file);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function(){
+      try{
+        let w = img.naturalWidth||img.width, h = img.naturalHeight||img.height;
+        const side = maxSide || 1280;
+        if(w > side || h > side){
+          if(w >= h){ h = Math.round(h * side / w); w = side; }
+          else { w = Math.round(w * side / h); h = side; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        let q = quality || 0.72;
+        let dataUrl = canvas.toDataURL('image/jpeg', q);
+        // shrink further if still large (~1.2MB base64 ~ 0.9MB binary)
+        while(dataUrl.length > 1.4e6 && q > 0.4){
+          q -= 0.08;
+          dataUrl = canvas.toDataURL('image/jpeg', q);
+        }
+        URL.revokeObjectURL(url);
+        const baseName = (file.name||'leave.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+        resolve({ dataUrl: dataUrl, name: baseName, mime: 'image/jpeg' });
+      }catch(e){
+        URL.revokeObjectURL(url);
+        reject(e);
+      }
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.src = url;
+  });
+}
+
+async function verifyLeaveInSheet(name, username, leaveDate, attempts){
+  attempts = attempts || 4;
+  const key = normUserKey(username);
+  const nm = String(name||'').trim().toLowerCase();
+  for(let a=0; a<attempts; a++){
+    try{
+      const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/export?format=xlsx&_='+Date.now();
+      const res = await fetch(url);
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const sn = (wb.SheetNames||[]).find(function(n){ return /leave/i.test(n); }) || 'Leave';
+      const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:false});
+      if(!aoa || aoa.length < 2) { await sleep(1500); continue; }
+      const headers = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
+      function ix(cands){
+        for(let c=0;c<cands.length;c++){
+          const j=headers.indexOf(cands[c]); if(j>=0) return j;
+          for(let i=0;i<headers.length;i++){ if(headers[i].indexOf(cands[c])>=0) return i; }
+        }
+        return -1;
+      }
+      const jN=ix(['name']), jU=ix(['username']), jD=ix(['leave date','leavedate','date']);
+      for(let r=1;r<aoa.length;r++){
+        const row=aoa[r];
+        const rn=jN>=0?String(row[jN]||'').trim().toLowerCase():'';
+        const ru=jU>=0?normUserKey(row[jU]):'';
+        let ymd='';
+        if(jD>=0){
+          const raw=row[jD];
+          const m=String(raw||'').match(/(\d{4}-\d{2}-\d{2})/);
+          if(m) ymd=m[1];
+          else {
+            const d=new Date(raw);
+            if(!isNaN(d.getTime())){
+              // treat as PKT-ish date string from sheet
+              const s=String(raw);
+              const m2=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+              if(m2){
+                let yy=m2[3].length===2?('20'+m2[3]):m2[3];
+                ymd=yy+'-'+(m2[1].length===1?'0':'')+m2[1]+'-'+(m2[2].length===1?'0':'')+m2[2];
+                // if DMY format like 05/09/2026
+                if(+m2[1]<=31 && +m2[2]<=12 && s.indexOf('/')>=0){
+                  ymd=yy+'-'+(m2[2].length===1?'0':'')+m2[2]+'-'+(m2[1].length===1?'0':'')+m2[1];
+                }
+              } else {
+                const y=d.getFullYear(), mo=d.getMonth()+1, da=d.getDate();
+                ymd=y+'-'+(mo<10?'0':'')+mo+'-'+(da<10?'0':'')+da;
+              }
+            }
+          }
+        }
+        if(ymd !== leaveDate) continue;
+        if((key && ru && key===ru) || (nm && rn && nm===rn)) return true;
+      }
+    }catch(e){}
+    await sleep(1800);
+  }
+  return false;
+}
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+
 function submitDuty(){
   showErr('');
   const v=selectedVacc();
@@ -417,46 +526,37 @@ function readFileAsBase64(file){
 async function submitLeave(){
   showErr('');
   const v=selectedVacc();
-  if(!v){ showErr('Please select Tehsil, UC and Vaccinator first.'); return; }
-  if(typeof lockLeaveDateToday==='function') lockLeaveDateToday();
-  const leaveDate=todayYmdPKT();
-  document.getElementById('leaveDate').value=leaveDate;
-  if(leaveDate < '2026-09-01'){ showErr('Leave system starts from 1 Sep 2026.'); return; }
+  if(!v){ showErr('Please select a vaccinator.'); return; }
+  const leaveDate = todayYmdPKT();
+  lockLeaveDateToday();
   const fileEl=document.getElementById('leaveFile');
   const file=fileEl && fileEl.files && fileEl.files[0];
-  if(!file){ showErr('Leave application attachment is mandatory.'); return; }
-
+  if(!file){ showErr('Please attach leave application (photo or PDF).'); return; }
   const stats=leaveStatsFor(v);
-  if(stats.month >= MONTHLY_MAX){
-    showErr('Monthly limit reached (2 casual leaves). Already taken this month: '+stats.month);
-    return;
-  }
-  if(stats.remaining <= 0){
-    showErr('Yearly leave balance is 0. Cannot apply more leave.');
-    return;
-  }
-  // same day already?
-  const key=normUserKey(v.username); const nm=v.name.toLowerCase();
+  if(stats.month >= MONTHLY_MAX){ showErr('Monthly limit reached (max '+MONTHLY_MAX+' leaves this month).'); return; }
+  if(stats.remaining <= 0){ showErr('Yearly leave balance exhausted.'); return; }
   const dup=leaveRows.some(function(r){
-    if(r.ymd!==leaveDate) return false;
-    return (key && normUserKey(r.username)===key) || (String(r.name||'').toLowerCase()===nm);
+    const sameUser = (normUserKey(r.username) && normUserKey(r.username)===normUserKey(v.username))
+      || (String(r.name||'').trim().toLowerCase()===String(v.name||'').trim().toLowerCase());
+    return sameUser && r.ymd===leaveDate;
   });
-  if(dup){ showErr('Leave already submitted for '+leaveDate); return; }
+  if(dup){ showErr('Leave already submitted for today ('+leaveDate+').'); return; }
 
   const btn=document.getElementById('btnLeaveSub');
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Submitting leave…';
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Compressing & submitting…';
   try{
-    const dataUrl=await readFileAsBase64(file);
+    const packed = await fileToCompressedDataUrl(file, 1280, 0.7);
+    btn.innerHTML='<span class="spinner"></span> Uploading leave…';
     const payload={
       type:'leave',
       timestamp:new Date().toISOString(),
       name:v.name, username:v.username||'', tehsil:v.tehsil, uc:v.uc,
       leaveDate:leaveDate, leaveType:'Casual', reason:'Casual Leave',
-      attachmentName:file.name||'leave.jpg',
-      attachmentMime:file.type||'image/jpeg',
-      attachmentBase64:dataUrl
+      attachmentName:packed.name,
+      attachmentMime:packed.mime,
+      attachmentBase64:packed.dataUrl
     };
-    // Prefer JSON fetch for large base64 (form may truncate)
+    // Send JSON body (Apps Script reads postData.contents)
     try{
       await fetch(LOC_SCRIPT_URL, {
         method:'POST', mode:'no-cors', redirect:'follow',
@@ -466,23 +566,28 @@ async function submitLeave(){
     }catch(e1){
       postPayload(payload);
     }
-    // optimistic local update
+    btn.innerHTML='<span class="spinner"></span> Verifying on server…';
+    const ok = await verifyLeaveInSheet(v.name, v.username, leaveDate, 5);
+    if(!ok){
+      btn.disabled=false; btn.className='btn btn-leave'; btn.innerHTML='📝 Submit Leave';
+      showErr('Leave did NOT save on server. Try again with a smaller/clear photo (under 2 MB). Check internet and retry.');
+      return;
+    }
     leaveRows.push({name:v.name, username:v.username||'', ymd:leaveDate});
+    try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
     updateBalanceUI();
-    setTimeout(function(){
-      btn.className='btn btn-done';
-      btn.innerHTML='Leave Submitted<span class="thank">Thank You, '+v.name+'</span>';
-      const ur=document.getElementById('urduOk');
-      ur.style.display='block';
-      ur.innerHTML='آپ کی چھٹی کامیابی سے سبمٹ ہو گئی ہے۔';
-    }, 900);
+    btn.className='btn btn-done';
+    btn.innerHTML='Leave Submitted<span class="thank">Thank You, '+v.name+'</span>';
+    const ur=document.getElementById('urduOk');
+    ur.style.display='block';
+    ur.innerHTML='آپ کی چھٹی کامیابی سے سبمٹ ہو گئی ہے۔';
   }catch(err){
     btn.disabled=false; btn.className='btn btn-leave'; btn.innerHTML='📝 Submit Leave';
     showErr(err.message||String(err));
   }
 }
 
-function resetForm(){
+function resetFormfunction resetForm(){
   lastLoc=null; showErr('');
   document.getElementById('locBox').style.display='none';
   document.getElementById('urduOk').style.display='none';
