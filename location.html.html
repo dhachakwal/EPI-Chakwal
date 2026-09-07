@@ -86,7 +86,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:#1a8a5c;box-sh
       <input type="date" id="leaveDate" readonly style="background:#eef5f0;font-weight:700;color:#0d5c3d">
       <label for="leaveFile">Leave Application (photo / PDF) — required</label>
       <input type="file" id="leaveFile" accept="image/*,application/pdf" style="padding:8px;border:1.5px solid #c8e6c9;border-radius:10px;width:100%;background:#fafffe">
-      <div class="file-hint">Max ~3 MB. Photo of signed application or PDF.</div>
+      <div class="file-hint">Max ~8 MB (PDF / photo). Prefer clear photo under 3 MB for faster upload.</div>
       <div class="note">
         <strong>Casual Leave rules</strong><br>
         • Max <strong>2 leaves / month</strong><br>
@@ -162,82 +162,193 @@ function fillTehsils(){
     }).join('');
 }
 
+async function fetchWithTimeout(url, ms){
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, ms||18000);
+  try{
+    const res = await fetch(url, ctrl ? { signal: ctrl.signal, cache: 'no-store' } : { cache: 'no-store' });
+    clearTimeout(t);
+    return res;
+  }catch(e){
+    clearTimeout(t);
+    throw e;
+  }
+}
+
+function parseProfileAoa(aoa){
+  const H = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
+  function ix2(cands){
+    for(let i=0;i<cands.length;i++){ const j=H.indexOf(cands[i]); if(j>=0) return j; }
+    for(let i=0;i<H.length;i++){ for(let k=0;k<cands.length;k++){ if(H[i].indexOf(cands[k])>=0) return i; } }
+    return -1;
+  }
+  const iT=ix2(['tehsil']), iU=ix2(['union council','uc']), iN=ix2(['vaccinator name','name']), iUser=ix2(['username']);
+  const iAv=ix2(['availed','total casual']), iRem=ix2(['remaining leave','remaining']);
+  const list = [];
+  for(let r=1;r<aoa.length;r++){
+    const row = aoa[r]||[];
+    const name = iN>=0 ? String(row[iN]||'').trim() : '';
+    if(!name) continue;
+    if(/^vacant$/i.test(name)) continue;
+    let availed = iAv>=0 ? parseFloat(String(row[iAv]||'').replace(/,/g,'')) : NaN;
+    let remaining = iRem>=0 ? parseFloat(String(row[iRem]||'').replace(/,/g,'')) : NaN;
+    if(isNaN(remaining) && !isNaN(availed)) remaining = Math.max(0, YEARLY_MAX - availed);
+    if(isNaN(remaining)) remaining = YEARLY_MAX;
+    if(isNaN(availed)) availed = Math.max(0, YEARLY_MAX - remaining);
+    list.push({
+      tehsil: iT>=0 ? String(row[iT]||'').trim() : '',
+      uc: iU>=0 ? String(row[iU]||'').trim() : '',
+      name: name,
+      username: iUser>=0 ? normUser(row[iUser]) : '',
+      availed: availed,
+      openingRemaining: remaining
+    });
+  }
+  return list;
+}
+
+async function loadMasterViaGviz(){
+  const sheet = encodeURIComponent('All Vaccinators Profile');
+  const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+sheet+'&_='+Date.now();
+  const res = await fetchWithTimeout(url, 15000);
+  if(!res.ok) throw new Error('gviz HTTP '+res.status);
+  const text = await res.text();
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if(a<0||b<0) throw new Error('gviz bad body');
+  const data = JSON.parse(text.substring(a,b+1));
+  if(!data.table) throw new Error('gviz no table');
+  const cols = data.table.cols||[];
+  const rows = data.table.rows||[];
+  const aoa = [cols.map(function(c){ return (c && c.label) ? c.label : ''; })];
+  rows.forEach(function(r){
+    const cells = (r && r.c) ? r.c : [];
+    aoa.push(cells.map(function(c){
+      if(!c) return '';
+      if(c.v != null && c.v !== '') return c.v;
+      return c.f != null ? c.f : '';
+    }));
+  });
+  return parseProfileAoa(aoa);
+}
+
+async function loadMasterViaXlsx(){
+  if(typeof XLSX === 'undefined') throw new Error('XLSX not loaded');
+  const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/export?format=xlsx&_='+Date.now();
+  const res = await fetchWithTimeout(url, 20000);
+  if(!res.ok) throw new Error('Sheet HTTP '+res.status);
+  const buf = await res.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  let sheetName = wb.SheetNames.find(function(n){ return /all\s*vaccinator/i.test(n); }) || wb.SheetNames[0];
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
+  const list = parseProfileAoa(aoa);
+  // Leave tab
+  const leaveName = wb.SheetNames.find(function(n){ return /leave/i.test(String(n).trim()); });
+  if(leaveName){
+    const laoa = XLSX.utils.sheet_to_json(wb.Sheets[leaveName], {header:1, defval:''});
+    const LH = (laoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
+    function lix(cands){
+      for(let i=0;i<cands.length;i++){ const j=LH.indexOf(cands[i]); if(j>=0) return j; }
+      for(let i=0;i<LH.length;i++){ for(let k=0;k<cands.length;k++){ if(LH[i].indexOf(cands[k])>=0) return i; } }
+      return -1;
+    }
+    const jD=lix(['leave date','leavedate','date']), jN=lix(['name']), jU=lix(['username']);
+    const lr = [];
+    for(let r=1;r<laoa.length;r++){
+      const row=laoa[r]||[];
+      const nm = jN>=0?String(row[jN]||'').trim():'';
+      if(!nm) continue;
+      let ymd = String(jD>=0?row[jD]:'').trim();
+      const m = ymd.match(/(\d{4}-\d{2}-\d{2})/);
+      if(m) ymd = m[1];
+      else {
+        const d = new Date(ymd);
+        if(!isNaN(d.getTime())){
+          const y=d.getFullYear(), mo=d.getMonth()+1, da=d.getDate();
+          ymd = y+'-'+(mo<10?'0':'')+mo+'-'+(da<10?'0':'')+da;
+        } else ymd = '';
+      }
+      lr.push({ name:nm, username:jU>=0?normUser(row[jU]):'', ymd:ymd });
+    }
+    leaveRows = lr;
+  }
+  return list;
+}
+
+function showLoadFailed(){
+  const teh = document.getElementById('teh');
+  if(teh) teh.innerHTML = '<option value="">Load failed — tap Retry</option>';
+  showErr('Vaccinator list load nahi hui. Internet check karein, phir Retry dabayein.');
+  // inject retry if missing
+  if(!document.getElementById('btnRetryLoad')){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'btnRetryLoad';
+    btn.className = 'btn btn-sec';
+    btn.style.marginTop = '8px';
+    btn.textContent = '🔄 Retry Load Tehsil / UC list';
+    btn.onclick = function(){
+      showErr('');
+      teh.innerHTML = '<option value="">Loading…</option>';
+      loadMaster();
+    };
+    const card = teh.closest('.card') || teh.parentNode;
+    card.insertBefore(btn, teh.parentNode ? teh.parentNode.nextSibling : null);
+  }
+}
+
 async function loadMaster(){
+  const teh = document.getElementById('teh');
+  if(teh && (!master || !master.length)) teh.innerHTML = '<option value="">Loading…</option>';
+  // 1) instant from cache
   try{
     const cached = sessionStorage.getItem(CACHE_KEY);
     if(cached){
       const o = JSON.parse(cached);
-      if(o && o.master && o.master.length){ master = o.master; leaveRows = o.leaveRows||[]; fillTehsils(); }
+      if(o && o.master && o.master.length){
+        master = o.master;
+        leaveRows = o.leaveRows||[];
+        fillTehsils();
+      }
     }
   }catch(e){}
+
+  let lastErr = null;
+  // 2) Fast path: gviz (lighter than full xlsx)
   try{
-    const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/export?format=xlsx&_='+Date.now();
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('Sheet HTTP '+res.status);
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array'});
-    let sheetName = wb.SheetNames.find(function(n){ return /all\s*vaccinator/i.test(n); }) || wb.SheetNames[0];
-    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
-    const H = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
-    function ix(cands){
-      for(let i=0;i<cands.length;i++){ const j=H.indexOf(cands[i]); if(j>=0) return j; }
-      for(let i=0;i<H.length;i++){ for(let k=0;k<cands.length;k++){ if(H[i].indexOf(cands[k])>=0) return i; } }
-      return -1;
+    const list = await loadMasterViaGviz();
+    if(list && list.length){
+      master = list;
+      try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
+      fillTehsils();
+      // refresh leave in background via xlsx (non-blocking)
+      loadMasterViaXlsx().then(function(list2){
+        if(list2 && list2.length){
+          master = list2;
+          try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
+          fillTehsils();
+        }
+      }).catch(function(){});
+      return;
     }
-    const iT=ix(['tehsil']), iU=ix(['union council','uc']), iN=ix(['vaccinator name','name']), iUser=ix(['username']);
-    const iAv=ix(['availed','total casual']), iRem=ix(['remaining leave','remaining']);
-    const list = [];
-    for(let r=1;r<aoa.length;r++){
-      const row = aoa[r]||[];
-      const name = iN>=0 ? String(row[iN]||'').trim() : '';
-      if(!name) continue;
-      if(/^vacant$/i.test(name)) continue;
-      let availed = iAv>=0 ? parseFloat(String(row[iAv]||'').replace(/,/g,'')) : NaN;
-      let remaining = iRem>=0 ? parseFloat(String(row[iRem]||'').replace(/,/g,'')) : NaN;
-      if(isNaN(remaining) && !isNaN(availed)) remaining = Math.max(0, YEARLY_MAX - availed);
-      if(isNaN(remaining)) remaining = YEARLY_MAX;
-      if(isNaN(availed)) availed = Math.max(0, YEARLY_MAX - remaining);
-      list.push({
-        tehsil: iT>=0 ? String(row[iT]||'').trim() : '',
-        uc: iU>=0 ? String(row[iU]||'').trim() : '',
-        name: name,
-        username: iUser>=0 ? normUser(row[iUser]) : '',
-        availed: availed,
-        openingRemaining: remaining
-      });
+  }catch(e){ lastErr = e; console.warn('gviz fail', e); }
+
+  // 3) Full xlsx
+  try{
+    const list = await loadMasterViaXlsx();
+    if(list && list.length){
+      master = list;
+      try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
+      fillTehsils();
+      return;
     }
-    master = list;
-    // Leave tab
-    leaveRows = [];
-    const leaveName = wb.SheetNames.find(function(n){ return /^leave$/i.test(String(n).trim()); });
-    if(leaveName){
-      const laoa = XLSX.utils.sheet_to_json(wb.Sheets[leaveName], {header:1, defval:''});
-      const LH = (laoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
-      function lix(cands){
-        for(let i=0;i<cands.length;i++){ const j=LH.indexOf(cands[i]); if(j>=0) return j; }
-        for(let i=0;i<LH.length;i++){ for(let k=0;k<cands.length;k++){ if(LH[i].indexOf(cands[k])>=0) return i; } }
-        return -1;
-      }
-      const jD=lix(['leave date','date']), jN=lix(['name']), jU=lix(['username']);
-      for(let r=1;r<laoa.length;r++){
-        const row=laoa[r]||[];
-        const nm = jN>=0?String(row[jN]||'').trim():'';
-        if(!nm) continue;
-        let ymd = String(jD>=0?row[jD]:'').trim();
-        const m = ymd.match(/(\d{4}-\d{2}-\d{2})/);
-        ymd = m ? m[1] : '';
-        leaveRows.push({ name:nm, username:jU>=0?normUser(row[jU]):'', ymd:ymd });
-      }
-    }
-    try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
-    fillTehsils();
-  }catch(e){
-    console.error(e);
-    if(!master.length){
-      document.getElementById('teh').innerHTML = '<option value="">Load failed</option>';
-      showErr('Could not load vaccinator list. Check internet.');
-    }
+  }catch(e){ lastErr = e; console.warn('xlsx fail', e); }
+
+  if(master && master.length){
+    fillTehsils(); // keep cache
+    return;
   }
+  console.error(lastErr);
+  showLoadFailed();
 }
 
 function leaveStatsFor(v){
@@ -381,7 +492,7 @@ function fileToCompressedDataUrl(file, maxSide, quality){
     if(!file) return reject(new Error('No file'));
     // PDF: read as-is (no canvas compress)
     if(file.type === 'application/pdf' || /\.pdf$/i.test(file.name||'')){
-      if(file.size > 3.5*1024*1024) return reject(new Error('PDF too large (max ~3.5 MB).'));
+      if(file.size > 8*1024*1024) return reject(new Error('PDF too large (max 8 MB).'));
       const fr = new FileReader();
       fr.onload = function(){ resolve({ dataUrl: fr.result, name: file.name, mime: file.type||'application/pdf' }); };
       fr.onerror = function(){ reject(new Error('Could not read PDF')); };
@@ -515,7 +626,7 @@ function submitDuty(){
 function readFileAsBase64(file){
   return new Promise(function(resolve, reject){
     if(!file){ reject(new Error('No file')); return; }
-    if(file.size > 3.5*1024*1024){ reject(new Error('File too large (max 3.5 MB). Compress and retry.')); return; }
+    if(file.size > 8*1024*1024){ reject(new Error('File too large (max 8 MB). Compress and retry.')); return; }
     const reader=new FileReader();
     reader.onload=function(){ resolve(String(reader.result||'')); };
     reader.onerror=function(){ reject(new Error('Could not read file')); };
