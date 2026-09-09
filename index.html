@@ -756,8 +756,11 @@
 
                 <!-- ===== MODULE: OR + FIXED SITES COMPILE ===== -->
                 <div id="emrModuleOrFixed" style="display:none">
-                    <p class="emr-note"><strong>Source:</strong> OR + Fixed Sites compiled antigen counts (Google Sheet). Targets from <em>Population &amp; Targets</em>. BCG / Hep-B / OPV-0 vs <strong>New Born</strong> monthly target; most antigens vs <strong>Surviving</strong>; HPV vs HPV target; DTP Booster vs DTP target. Coverage % = Achieved ÷ Target × 100.</p>
+                    <p class="emr-note"><strong>Source:</strong> OR + Fixed Sites compiled antigen counts — monthly sheets (e.g. Aug 2026, Sep 2026). Targets from <em>Population &amp; Targets</em>. BCG / Hep-B / OPV-0 vs <strong>New Born</strong>; most antigens vs <strong>Surviving</strong>; HPV / DTP Booster vs their monthly targets. Coverage % = Achieved ÷ Target × 100.</p>
                     <div class="emr-filter">
+                        <label>Period
+                            <select id="orfPeriod" onchange="orfOnPeriod()"><option value="">Loading…</option></select>
+                        </label>
                         <label>Tehsil
                             <select id="orfTehsil" onchange="orfOnTehsil()"><option value="">All Tehsils</option></select>
                         </label>
@@ -9865,10 +9868,13 @@
             {label:'DTP Booster', col:'DPT_Booster_Count', bucket:'dtp'},
             {label:'HPV', col:'HPV_Count', bucket:'hpv'}
         ];
-        let orfRows = []; // {uc, tehsil, counts:{label:n}, targets:{newborn,surviving,hpv,dtp}, population}
+        let orfRows = []; // current period rows shown in reports
+        let orfByMonth = {}; // sheetName → rows[]
+        let orfMonthOrder = []; // loaded sheet names, newest first
         let orfMode = 'ucAg';
         let orfChartObj = null;
         let orfLastExport = {headers:[], rows:[], title:''};
+        let orfPopCtx = null; // shared population context after load
 
         async function orfFetchSheet(sheetName){
             const url = 'https://docs.google.com/spreadsheets/d/'+ORF_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(sheetName);
@@ -9893,133 +9899,211 @@
             return t==='N/A' || t==='NA' || t==='C.O.W.' || t==='C.O.W' || t==='COW' || t==='CLINIC ON WHEEL' || t==='CLINIC ON WHEELS';
         }
         function orfCowLabel(){ return 'Clinic On Wheel'; }
+        function orfMonthCandidates(){
+            // Prefer recent months; also legacy "Data" sheet
+            const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const years=[2026,2025,2024];
+            const list=[];
+            years.forEach(function(y){
+                // newest month first within year for ordering later
+                for(let i=months.length-1;i>=0;i--) list.push(months[i]+' '+y);
+            });
+            list.push('Data');
+            return list;
+        }
+        function orfParseMonthRows(ddata, popCtx, monthLabel){
+            const popByUc = popCtx.popByUc;
+            const popList = popCtx.popList;
+            const cowByTehsil = popCtx.cowByTehsil;
+            const cols = (ddata.table && ddata.table.cols) || [];
+            const labels = cols.map(function(c){ return String((c&&c.label)||'').trim(); });
+            const colIdx = {};
+            labels.forEach(function(L,i){ colIdx[L]=i; if(L) colIdx[L.toLowerCase()]=i; });
+            function idxFor(sysCol){
+                if(colIdx[sysCol]!=null) return colIdx[sysCol];
+                const low=sysCol.toLowerCase();
+                if(colIdx[low]!=null) return colIdx[low];
+                return -1;
+            }
+            // Must look like antigen data
+            if(idxFor('BCG_Count')<0 && idxFor('Geolevel')<0) return null;
+            const geoIdx = (idxFor('Geolevel')>=0) ? idxFor('Geolevel') : 0;
+            const dataRows = (ddata.table && ddata.table.rows) || [];
+            const rows = [];
+            let dataIx = 0;
+            dataRows.forEach(function(r){
+                const cells=(r.c||[]).map(orfParseCell);
+                let ucRaw=String(cells[geoIdx]||'').trim();
+                if(!ucRaw) return;
+                if(/geolevel/i.test(ucRaw)) return;
+                const counts={};
+                ORF_ANTIGENS.forEach(function(ag){
+                    const ix=idxFor(ag.col);
+                    let n=0;
+                    if(ix>=0) n=parseFloat(String(cells[ix]||'0').replace(/,/g,''))||0;
+                    counts[ag.label]=n;
+                });
+                const isCow = orfIsCow(ucRaw);
+                let pop = (dataIx < popList.length) ? popList[dataIx] : null;
+                dataIx++;
+                if(pop && !isCow && !pop.isCow){
+                    if(orfNormUc(pop.uc) !== orfNormUc(ucRaw)){
+                        pop = popByUc[orfNormUc(ucRaw)] || pop;
+                    }
+                }
+                if(isCow){
+                    if(pop && pop.isCow){ /* ok */ }
+                    else if(pop && pop.tehsil && cowByTehsil[pop.tehsil]) pop = cowByTehsil[pop.tehsil];
+                } else if(!pop){
+                    pop = popByUc[orfNormUc(ucRaw)] || null;
+                }
+                let teh = pop ? pop.tehsil : '';
+                let ucName = isCow ? orfCowLabel() : (pop ? pop.uc : ucRaw);
+                if(orfIsCow(ucName)) ucName = orfCowLabel();
+                if(isCow && (!teh || orfIsCow(teh))) ucName = orfCowLabel();
+                if(orfIsCow(teh)) teh = (pop && pop.tehsil && !orfIsCow(pop.tehsil)) ? pop.tehsil : '';
+                rows.push({
+                    month: monthLabel,
+                    uc: ucName,
+                    tehsil: teh,
+                    population: pop?pop.population:0,
+                    targets: pop?{newborn:pop.newborn,surviving:pop.surviving,hpv:pop.hpv,dtp:pop.dtp}:{newborn:0,surviving:0,hpv:0,dtp:0},
+                    counts: counts,
+                    isCow: isCow
+                });
+            });
+            return rows.length ? rows : null;
+        }
+        function orfBuildPopCtx(pdata){
+            const popByUc = {};
+            const popList = [];
+            const cowByTehsil = {};
+            const popRows = (pdata.table && pdata.table.rows) || [];
+            popRows.forEach(function(r){
+                const cells=(r.c||[]).map(orfParseCell);
+                let tehsil=String(cells[0]||'').trim();
+                let uc=String(cells[1]||'').trim();
+                if(!tehsil || !uc) return;
+                if(/tehsil/i.test(tehsil) || /geolevel/i.test(uc)) return;
+                if(orfIsCow(tehsil)) return;
+                const isCow = orfIsCow(uc);
+                if(isCow) uc = orfCowLabel();
+                const pop=parseFloat(String(cells[2]||'').replace(/,/g,''))||0;
+                const nb=parseFloat(String(cells[9]||'').replace(/,/g,''))||0;
+                const sv=parseFloat(String(cells[10]||'').replace(/,/g,''))||0;
+                const hpv=parseFloat(String(cells[12]||'').replace(/,/g,''))||0;
+                const dtp=parseFloat(String(cells[14]||'').replace(/,/g,''))||0;
+                const rec={tehsil:tehsil, uc:uc, population:pop, newborn:nb, surviving:sv, hpv:hpv, dtp:dtp, isCow:isCow};
+                popList.push(rec);
+                if(isCow){
+                    cowByTehsil[tehsil] = rec;
+                    popByUc['COW|'+orfNormUc(tehsil)] = rec;
+                } else {
+                    popByUc[orfNormUc(uc)] = rec;
+                }
+            });
+            return {popByUc:popByUc, popList:popList, cowByTehsil:cowByTehsil};
+        }
         async function orfLoad(){
             const meta=document.getElementById('orfMeta');
             if(meta) meta.textContent='Loading…';
             try{
-                const [pdata, ddata] = await Promise.all([
-                    orfFetchSheet('Population & Targets'),
-                    orfFetchSheet('Data')
-                ]);
-                // Population: ordered list + map by UC (C.O.W. kept under real tehsil)
-                const popByUc = {};
-                const popList = []; // same order as sheet / Data rows
-                const cowByTehsil = {}; // tehsil → pop record for Clinic On Wheel
-                const popRows = (pdata.table && pdata.table.rows) || [];
-                popRows.forEach(function(r){
-                    const cells=(r.c||[]).map(orfParseCell);
-                    let tehsil=String(cells[0]||'').trim();
-                    let uc=String(cells[1]||'').trim();
-                    if(!tehsil || !uc) return;
-                    if(/tehsil/i.test(tehsil) || /geolevel/i.test(uc)) return;
-                    // Never invent a fake tehsil named Clinic On Wheel
-                    if(orfIsCow(tehsil)) return;
-                    const isCow = orfIsCow(uc);
-                    if(isCow) uc = orfCowLabel();
-                    const pop=parseFloat(String(cells[2]||'').replace(/,/g,''))||0;
-                    const nb=parseFloat(String(cells[9]||'').replace(/,/g,''))||0;
-                    const sv=parseFloat(String(cells[10]||'').replace(/,/g,''))||0;
-                    const hpv=parseFloat(String(cells[12]||'').replace(/,/g,''))||0;
-                    const dtp=parseFloat(String(cells[14]||'').replace(/,/g,''))||0;
-                    const rec={tehsil:tehsil, uc:uc, population:pop, newborn:nb, surviving:sv, hpv:hpv, dtp:dtp, isCow:isCow};
-                    popList.push(rec);
-                    if(isCow){
-                        cowByTehsil[tehsil] = rec;
-                        // also index common alternate keys (last write wins only if one per key — use tehsil-scoped)
-                        popByUc['COW|'+orfNormUc(tehsil)] = rec;
-                    } else {
-                        popByUc[orfNormUc(uc)] = rec;
-                    }
-                });
+                const pdata = await orfFetchSheet('Population & Targets');
+                const popCtx = orfBuildPopCtx(pdata);
+                orfPopCtx = popCtx;
 
-                // Data columns from table.cols labels
-                const cols = (ddata.table && ddata.table.cols) || [];
-                const labels = cols.map(function(c){ return String((c&&c.label)||'').trim(); });
-                const colIdx = {};
-                labels.forEach(function(L,i){ colIdx[L]=i; if(L) colIdx[L.toLowerCase()]=i; });
-                function idxFor(sysCol){
-                    if(colIdx[sysCol]!=null) return colIdx[sysCol];
-                    const low=sysCol.toLowerCase();
-                    if(colIdx[low]!=null) return colIdx[low];
-                    return -1;
-                }
-                const geoIdx = (idxFor('Geolevel')>=0) ? idxFor('Geolevel') : 0;
-                const dataRows = (ddata.table && ddata.table.rows) || [];
-                const rows = [];
-                let dataIx = 0;
-                dataRows.forEach(function(r){
-                    const cells=(r.c||[]).map(orfParseCell);
-                    let ucRaw=String(cells[geoIdx]||'').trim();
-                    if(!ucRaw) return;
-                    if(/geolevel/i.test(ucRaw)) return;
-                    const counts={};
-                    ORF_ANTIGENS.forEach(function(ag){
-                        const ix=idxFor(ag.col);
-                        let n=0;
-                        if(ix>=0) n=parseFloat(String(cells[ix]||'0').replace(/,/g,''))||0;
-                        counts[ag.label]=n;
-                    });
-                    const isCow = orfIsCow(ucRaw);
-                    // Prefer same-row alignment with Population sheet (same order, 87 rows)
-                    let pop = (dataIx < popList.length) ? popList[dataIx] : null;
-                    dataIx++;
-                    // If names clearly mismatch (non-COW), fall back to UC map
-                    if(pop && !isCow && !pop.isCow){
-                        if(orfNormUc(pop.uc) !== orfNormUc(ucRaw)){
-                            pop = popByUc[orfNormUc(ucRaw)] || pop;
-                        }
-                    }
-                    if(isCow){
-                        // Keep real tehsil from aligned pop row / cow map — never invent tehsil "Clinic On Wheel"
-                        if(pop && pop.isCow){
-                            // ok
-                        } else if(pop && pop.tehsil && cowByTehsil[pop.tehsil]){
-                            pop = cowByTehsil[pop.tehsil];
-                        } else {
-                            // try any remaining cow by order
-                            pop = pop || null;
-                        }
-                    } else if(!pop){
-                        pop = popByUc[orfNormUc(ucRaw)] || null;
-                    }
-                    let teh = pop ? pop.tehsil : '';
-                    let ucName = isCow ? orfCowLabel() : (pop ? pop.uc : ucRaw);
-                    if(orfIsCow(ucName)) ucName = orfCowLabel();
-                    // Safety: never leave tehsil blank for COW if we know tehsils with COW
-                    if(isCow && (!teh || orfIsCow(teh))){
-                        // leave as empty only if unknown — still label UC
-                        ucName = orfCowLabel();
-                    }
-                    if(orfIsCow(teh)) teh = (pop && pop.tehsil && !orfIsCow(pop.tehsil)) ? pop.tehsil : '';
-                    rows.push({
-                        uc: ucName,
-                        tehsil: teh,
-                        population: pop?pop.population:0,
-                        targets: pop?{newborn:pop.newborn,surviving:pop.surviving,hpv:pop.hpv,dtp:pop.dtp}:{newborn:0,surviving:0,hpv:0,dtp:0},
-                        counts: counts,
-                        isCow: isCow
-                    });
+                // Load monthly sheets (and legacy Data) in parallel
+                const candidates = orfMonthCandidates();
+                const results = await Promise.all(candidates.map(function(name){
+                    return orfFetchSheet(name).then(function(d){
+                        return {name:name, data:d, ok:true};
+                    }).catch(function(){ return {name:name, ok:false}; });
+                }));
+
+                orfByMonth = {};
+                orfMonthOrder = [];
+                const parts = [];
+                results.forEach(function(res){
+                    if(!res.ok || !res.data) return;
+                    const rows = orfParseMonthRows(res.data, popCtx, res.name);
+                    if(!rows || !rows.length) return;
+                    orfByMonth[res.name] = rows;
+                    orfMonthOrder.push(res.name);
+                    parts.push(res.name.replace(/ /g,'-')+' ('+rows.length+')');
                 });
-                orfRows=rows;
-                // Fill tehsil filter
-                const tehsils={};
-                rows.forEach(function(r){ if(r.tehsil) tehsils[r.tehsil]=1; });
-                const tsel=document.getElementById('orfTehsil');
-                if(tsel){
-                    const cur=tsel.value;
-                    tsel.innerHTML='<option value="">All Tehsils</option>'+Object.keys(tehsils).sort().map(function(t){
-                        return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
-                    }).join('');
-                    if(cur && tehsils[cur]) tsel.value=cur;
+                if(!orfMonthOrder.length) throw new Error('No month data sheets found (expected Aug 2026, Sep 2026, …)');
+
+                // Period dropdown — newest first (candidates already newest-first; keep only loaded)
+                const psel=document.getElementById('orfPeriod');
+                if(psel){
+                    const prev=psel.value;
+                    let html='';
+                    if(orfMonthOrder.length>1){
+                        html+='<option value="__all__">All months (sum)</option>';
+                    }
+                    orfMonthOrder.forEach(function(m){
+                        html+='<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>';
+                    });
+                    psel.innerHTML=html;
+                    if(prev && (prev==='__all__' || orfByMonth[prev])) psel.value=prev;
+                    else psel.value=orfMonthOrder[0]; // latest month
                 }
+
+                orfRebuildCurrentRows();
+                orfFillTehsilFilter();
                 orfOnTehsil(true);
                 orfApply();
-                if(meta) meta.textContent=rows.length+' UCs · '+new Date().toLocaleString();
+                if(meta) meta.textContent=parts.join(' + ')+' · '+new Date().toLocaleString();
             }catch(err){
                 console.error(err);
                 if(meta) meta.textContent='Load failed: '+(err.message||err);
                 alert('OR+Fixed load failed: '+(err.message||err));
             }
+        }
+        function orfRebuildCurrentRows(){
+            const period=(document.getElementById('orfPeriod')||{}).value||'';
+            if(period==='__all__'){
+                // Sum counts by tehsil+uc across months; targets/pop from first seen
+                const map={};
+                orfMonthOrder.forEach(function(m){
+                    (orfByMonth[m]||[]).forEach(function(r){
+                        const k=(r.tehsil||'')+'||'+(r.uc||'');
+                        if(!map[k]){
+                            map[k]={
+                                month:'All',
+                                uc:r.uc, tehsil:r.tehsil, population:r.population||0,
+                                targets:Object.assign({}, r.targets||{}),
+                                counts:{}, isCow:!!r.isCow
+                            };
+                            ORF_ANTIGENS.forEach(function(a){ map[k].counts[a.label]=0; });
+                        }
+                        ORF_ANTIGENS.forEach(function(a){
+                            map[k].counts[a.label]=(map[k].counts[a.label]||0)+(r.counts[a.label]||0);
+                        });
+                    });
+                });
+                orfRows=Object.keys(map).map(function(k){ return map[k]; });
+            } else {
+                orfRows = (orfByMonth[period]||[]).slice();
+            }
+        }
+        function orfFillTehsilFilter(){
+            const tehsils={};
+            orfRows.forEach(function(r){ if(r.tehsil) tehsils[r.tehsil]=1; });
+            const tsel=document.getElementById('orfTehsil');
+            if(tsel){
+                const cur=tsel.value;
+                tsel.innerHTML='<option value="">All Tehsils</option>'+Object.keys(tehsils).sort().map(function(t){
+                    return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+                }).join('');
+                if(cur && tehsils[cur]) tsel.value=cur;
+            }
+        }
+        function orfOnPeriod(){
+            orfRebuildCurrentRows();
+            orfFillTehsilFilter();
+            orfOnTehsil(true);
+            orfApply();
         }
         function orfOnTehsil(silent){
             const t=(document.getElementById('orfTehsil')||{}).value||'';
@@ -10440,7 +10524,9 @@
         }
 
         function orfExportFileBase(){
-            return orfTabLabel().replace(/[\\/:*?"<>|]+/g,'_');
+            const period=(document.getElementById('orfPeriod')||{}).value||'';
+            const pLab = period==='__all__' ? 'All months' : (period||'');
+            return (orfTabLabel()+(pLab?' '+pLab:'')).replace(/[\\/:*?"<>|]+/g,'_');
         }
         function orfColWeights(headers){
             // Proportional widths so Sr/Tehsil/UC readable; number cols equal
