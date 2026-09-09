@@ -580,6 +580,7 @@
                 <!-- Top module switcher -->
                 <div class="emr-tabs" id="emrModuleTabs" style="margin-bottom:14px;border-bottom:2px solid #c8e6c9;padding-bottom:10px">
                     <button type="button" class="emr-tab active" data-module="outreach" onclick="emrSwitchModule('outreach')">📋 Outreach Reports</button>
+                    <button type="button" class="emr-tab" data-module="fixed" onclick="emrSwitchModule('fixed')">🏥 Fixed Site Reports</button>
                     <button type="button" class="emr-tab" data-module="orFixed" onclick="emrSwitchModule('orFixed')">📊 OR + Fixed Sites Compile</button>
                     <button type="button" class="emr-tab" data-module="attendance" onclick="emrSwitchModule('attendance')">⏱ Vaccinators Attendance</button>
                     <button type="button" class="emr-tab" data-module="location" onclick="emrSwitchModule('location')">📍 Field Location Check-In</button>
@@ -681,6 +682,77 @@
                     </table>
                 </div>
                 </div><!-- /emrModuleOutreach -->
+
+                <!-- ===== MODULE: FIXED SITE ===== -->
+                <div id="emrModuleFixed" style="display:none">
+                    <div id="emrFixedCard">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                        <span style="font-weight:700;color:#0d5c3d;font-size:14px">Fixed Site Immunization Report</span>
+                        <span id="fxSectionAsOf" style="font-size:13px;font-weight:700;color:#0d5c3d">Data loading…</span>
+                    </div>
+
+                <p class="emr-note"><strong>Source:</strong> EMR Fixed Site Immunization Report. Health facility–based entries with tehsil and antigen summaries.</p>
+                <div class="emr-filter">
+                    <label>Period
+                        <select id="fxPeriod" onchange="fxOnPeriodChange()">
+                            <option value="month">Full Month</option>
+                            <option value="day">Day-wise</option>
+                        </select>
+                    </label>
+                    <label id="fxMonthLabel">Select Month
+                        <select id="fxMonthSelect" onchange="fxApply()"><option value="">—</option></select>
+                    </label>
+                    <label id="fxDayLabel" style="display:none">Select Date
+                        <select id="fxDaySelect" onchange="fxApply()"><option value="">—</option></select>
+                    </label>
+                    <label>Tehsil
+                        <select id="fxTehsil" onchange="fxOnTehsilChange()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Health Facility
+                        <select id="fxHF" onchange="fxApply()"><option value="">All Facilities</option></select>
+                    </label>
+                    <button type="button" class="btn btn-sm" onclick="loadFixedData()" style="background:#0d5c3d">Refresh Data</button>
+                    <button type="button" class="btn btn-sm" onclick="fxResetFilters()" style="background:#78909c">Reset</button>
+                    <span class="sweep-meta" id="fxMeta">Not loaded</span>
+                </div>
+
+                <div class="emr-summary-panel" id="fxSummaryPanel">
+                    <div class="emr-summary-head">
+                        <h3>Immunization Summary Panel</h3>
+                        <div class="emr-summary-meta">Data up to: <strong id="fxDataUpto">—</strong></div>
+                    </div>
+                    <div class="emr-summary-scope" id="fxSummaryScope">Scope: District Chakwal (All)</div>
+                    <div class="emr-summary-grid" id="fxSummaryGrid">
+                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                    </div>
+                </div>
+
+                <div class="emr-tabs" id="fxTabs">
+                    <button type="button" class="emr-tab active" data-fx="hf" onclick="fxSwitch('hf')">1. HF-Wise Entries</button>
+                    <button type="button" class="emr-tab" data-fx="tehsil" onclick="fxSwitch('tehsil')">2. Tehsil Summary</button>
+                    <button type="button" class="emr-tab" data-fx="antigen" onclick="fxSwitch('antigen')">3. Antigen Summary</button>
+                    <button type="button" class="emr-tab" data-fx="tehsilAg" onclick="fxSwitch('tehsilAg')">4. Tehsil-wise Antigen</button>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+                    <button type="button" class="btn btn-sm" onclick="fxDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" id="fxTabPdfBtn" onclick="fxExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
+                    <span style="font-size:12px;color:#666">Excel / PDF = current tab</span>
+                </div>
+
+                <div class="emr-stats" id="fxStats"></div>
+                <div id="fxStatus" class="sweep-loading">Click Refresh Data to load Fixed Site sheet…</div>
+                <div id="fxExtraVisual" style="display:none"></div>
+                <div class="emr-table-wrap" id="fxTableWrap" style="display:none">
+                    <table class="emr-table">
+                        <thead id="fxHead"></thead>
+                        <tbody id="fxBody"></tbody>
+                    </table>
+                </div>
+                    </div>
+                </div><!-- /emrModuleFixed -->
+
+
 
                 <!-- ===== MODULE: OR + FIXED SITES COMPILE ===== -->
                 <div id="emrModuleOrFixed" style="display:none">
@@ -956,73 +1028,6 @@
             </div><!-- /sweepExportArea -->
                 </div><!-- /emrModuleSweep -->
 
-            </div>
-
-
-
-            <div class="section-title" id="section-emr-fixed" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-                <span>Child Immunization (EMR) — Fixed Site</span>
-                <span id="fxSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
-            </div>
-            <div class="emr-card" id="emrFixedCard">
-                <p class="emr-note"><strong>Source:</strong> EMR Fixed Site Immunization Report. Health facility–based entries with tehsil and antigen summaries.</p>
-                <div class="emr-filter">
-                    <label>Period
-                        <select id="fxPeriod" onchange="fxOnPeriodChange()">
-                            <option value="month">Full Month</option>
-                            <option value="day">Day-wise</option>
-                        </select>
-                    </label>
-                    <label id="fxMonthLabel">Select Month
-                        <select id="fxMonthSelect" onchange="fxApply()"><option value="">—</option></select>
-                    </label>
-                    <label id="fxDayLabel" style="display:none">Select Date
-                        <select id="fxDaySelect" onchange="fxApply()"><option value="">—</option></select>
-                    </label>
-                    <label>Tehsil
-                        <select id="fxTehsil" onchange="fxOnTehsilChange()"><option value="">All Tehsils</option></select>
-                    </label>
-                    <label>Health Facility
-                        <select id="fxHF" onchange="fxApply()"><option value="">All Facilities</option></select>
-                    </label>
-                    <button type="button" class="btn btn-sm" onclick="loadFixedData()" style="background:#0d5c3d">Refresh Data</button>
-                    <button type="button" class="btn btn-sm" onclick="fxResetFilters()" style="background:#78909c">Reset</button>
-                    <span class="sweep-meta" id="fxMeta">Not loaded</span>
-                </div>
-
-                <div class="emr-summary-panel" id="fxSummaryPanel">
-                    <div class="emr-summary-head">
-                        <h3>Immunization Summary Panel</h3>
-                        <div class="emr-summary-meta">Data up to: <strong id="fxDataUpto">—</strong></div>
-                    </div>
-                    <div class="emr-summary-scope" id="fxSummaryScope">Scope: District Chakwal (All)</div>
-                    <div class="emr-summary-grid" id="fxSummaryGrid">
-                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
-                    </div>
-                </div>
-
-                <div class="emr-tabs" id="fxTabs">
-                    <button type="button" class="emr-tab active" data-fx="hf" onclick="fxSwitch('hf')">1. HF-Wise Entries</button>
-                    <button type="button" class="emr-tab" data-fx="tehsil" onclick="fxSwitch('tehsil')">2. Tehsil Summary</button>
-                    <button type="button" class="emr-tab" data-fx="antigen" onclick="fxSwitch('antigen')">3. Antigen Summary</button>
-                    <button type="button" class="emr-tab" data-fx="tehsilAg" onclick="fxSwitch('tehsilAg')">4. Tehsil-wise Antigen</button>
-                </div>
-
-                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
-                    <button type="button" class="btn btn-sm" onclick="fxDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
-                    <button type="button" class="btn btn-sm" id="fxTabPdfBtn" onclick="fxExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
-                    <span style="font-size:12px;color:#666">Excel / PDF = current tab</span>
-                </div>
-
-                <div class="emr-stats" id="fxStats"></div>
-                <div id="fxStatus" class="sweep-loading">Click Refresh Data to load Fixed Site sheet…</div>
-                <div id="fxExtraVisual" style="display:none"></div>
-                <div class="emr-table-wrap" id="fxTableWrap" style="display:none">
-                    <table class="emr-table">
-                        <thead id="fxHead"></thead>
-                        <tbody id="fxBody"></tbody>
-                    </table>
-                </div>
             </div>
 
 
@@ -2454,7 +2459,8 @@
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
                 {type:'section', title:'Urban Sweep-up Activity (10-15 Aug 2026)', desc:'Live reports, graphs, remaining UCs — inside EMR Outreach', action:'fn', target:'openSweepModule'},
-                {type:'section', title:'Child Immunization (EMR) — Outreach', desc:'Outreach reports, Attendance, Field Location Check-In', action:'scroll', target:'Child Immunization'},
+                {type:'section', title:'Child Immunization (EMR) Data', desc:'Outreach, Fixed Site, OR+Fixed Compile, Attendance, Location', action:'scroll', target:'Child Immunization'},
+                {type:'section', title:'Fixed Site Reports', desc:'HF-wise EMR Fixed Site (inside EMR Data)', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Vaccinators Attendance', desc:'EMR check-in / check-out status (inside Outreach)', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Field Location Check-In', desc:'GPS location submits, late after 09:30 (inside Outreach)', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Measles-Rubella (MR) Surveillance', desc:'Case line list, lab, EPID search', action:'scroll', target:'Measles-Rubella'},
@@ -4579,17 +4585,23 @@
                 b.classList.toggle('active', b.getAttribute('data-module')===emrModule);
             });
             const o = document.getElementById('emrModuleOutreach');
+            const fx = document.getElementById('emrModuleFixed');
             const f = document.getElementById('emrModuleOrFixed');
             const a = document.getElementById('emrModuleAttendance');
             const l = document.getElementById('emrModuleLocation');
             const s = document.getElementById('emrModuleSweep');
             if(o) o.style.display = emrModule==='outreach' ? '' : 'none';
+            if(fx) fx.style.display = emrModule==='fixed' ? '' : 'none';
             if(f) f.style.display = emrModule==='orFixed' ? '' : 'none';
             if(a) a.style.display = emrModule==='attendance' ? '' : 'none';
             if(l) l.style.display = emrModule==='location' ? '' : 'none';
             if(s) s.style.display = emrModule==='sweep' ? '' : 'none';
             // lazy load when module opened
             try{
+                if(emrModule==='fixed' && typeof loadFixedData==='function'){
+                    if(typeof fxRecords==='undefined' || !fxRecords || !fxRecords.length) loadFixedData();
+                    else if(typeof fxApply==='function') fxApply();
+                }
                 if(emrModule==='orFixed' && typeof orfLoad==='function'){
                     if(typeof orfRows==='undefined' || !orfRows || !orfRows.length) orfLoad();
                     else orfApply();
