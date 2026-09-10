@@ -8188,15 +8188,37 @@
             const hits=locRows.filter(function(r){
                 if(day && r.ymd && r.ymd!==day) return false;
                 const ru = locNormUser(r.username);
-                if(u && ru && ru===u) return true;
-                // phone variants: 03xx vs 3xx
-                if(u && ru && u.replace(/^0+/,'')===ru.replace(/^0+/,'')) return true;
                 const rn = String(r.name||'').trim().toLowerCase().replace(/\s+/g,' ');
+                // Prefer username (exact / phone zero-strip). Only use name when username missing on either side.
+                if(u && ru){
+                    if(ru===u) return true;
+                    if(u.replace(/^0+/,'')===ru.replace(/^0+/,'')) return true;
+                    return false; // both have username but different person — do not match by name
+                }
                 if(n && rn && n===rn) return true;
                 return false;
             });
             hits.sort(function(a,b){ return (b.ts?b.ts.getTime():0)-(a.ts?a.ts.getTime():0); });
             return hits;
+        }
+        /** Same-day multi: returns {ymd, hits[]} for days where this person submitted 2+ times */
+        function locMultiDayGroups(m, day){
+            const hits = locHitsFor(m, day || '');
+            const byDay = {};
+            hits.forEach(function(h){
+                const d = h.ymd || '';
+                if(!d) return;
+                if(!byDay[d]) byDay[d]=[];
+                byDay[d].push(h);
+            });
+            const groups=[];
+            Object.keys(byDay).sort().reverse().forEach(function(d){
+                if(byDay[d].length >= 2){
+                    byDay[d].sort(function(a,b){ return (a.ts?a.ts.getTime():0)-(b.ts?b.ts.getTime():0); });
+                    groups.push({ymd:d, hits:byDay[d]});
+                }
+            });
+            return groups;
         }
         function locHasSubmit(m, day){
             const hits = locHitsFor(m, day);
@@ -8361,29 +8383,30 @@
                 }
             }
             else if(locMode==='multi'){
-                // Vaccinators / UCs with 2+ location submits (selected day or all dates)
-                if(head) head.innerHTML='<tr><th>Sr</th><th>UC</th><th>Vaccinator Name</th><th>Kit Station 1</th><th>Map Location 1</th><th>Time &amp; Date 1</th><th>Kit Station 2</th><th>Map Location 2</th><th>Time &amp; Date 2</th><th>Total Submits</th></tr>';
+                // Only same-day 2+ submits (not multi-day single submits)
+                if(head) head.innerHTML='<tr><th>Sr</th><th>Date</th><th>UC</th><th>Vaccinator Name</th><th>Kit Station 1</th><th>Map Location 1</th><th>Time 1</th><th>Kit Station 2</th><th>Map Location 2</th><th>Time 2</th><th>Submits (that day)</th></tr>';
                 let i=0, html='', exp=[], multiCount=0;
                 masters.forEach(function(m){
-                    const hits = locHitsFor(m, day); // newest first
-                    if(hits.length < 2) return;
-                    multiCount++;
-                    i++;
-                    // chronological: oldest = location 1, next = location 2 (then total count)
-                    const ordered = hits.slice().sort(function(a,b){ return (a.ts?a.ts.getTime():0)-(b.ts?b.ts.getTime():0); });
-                    const h1 = ordered[0];
-                    const h2 = ordered[1];
-                    const map1 = h1.maps ? ('<a href="'+h1.maps+'" target="_blank" rel="noopener">Map 1</a>') : '—';
-                    const map2 = h2.maps ? ('<a href="'+h2.maps+'" target="_blank" rel="noopener">Map 2</a>') : '—';
-                    const uc = m.uc || h1.uc || '';
-                    html += '<tr><td>'+i+'</td><td>'+uc+'</td><td>'+m.name+'</td><td>'+(h1.kitStation||'—')+'</td><td>'+map1+'</td><td>'+locFmt(h1.ts)+'</td><td>'+(h2.kitStation||'—')+'</td><td>'+map2+'</td><td>'+locFmt(h2.ts)+'</td><td style="font-weight:800;color:#0d5c3d">'+hits.length+'</td></tr>';
-                    exp.push([i, uc, m.name, h1.kitStation||'', h1.maps||'', locFmt(h1.ts), h2.kitStation||'', h2.maps||'', locFmt(h2.ts), hits.length]);
+                    const groups = locMultiDayGroups(m, day);
+                    groups.forEach(function(g){
+                        multiCount++;
+                        i++;
+                        const ordered = g.hits;
+                        const h1 = ordered[0];
+                        const h2 = ordered[1];
+                        const map1 = h1.maps ? ('<a href="'+h1.maps+'" target="_blank" rel="noopener">Map 1</a>') : '—';
+                        const map2 = h2.maps ? ('<a href="'+h2.maps+'" target="_blank" rel="noopener">Map 2</a>') : '—';
+                        const uc = m.uc || h1.uc || '';
+                        const dateLbl = locYmdLabel(g.ymd);
+                        html += '<tr><td>'+i+'</td><td>'+dateLbl+'</td><td>'+uc+'</td><td>'+m.name+'</td><td>'+(h1.kitStation||'—')+'</td><td>'+map1+'</td><td>'+locFmt(h1.ts)+'</td><td>'+(h2.kitStation||'—')+'</td><td>'+map2+'</td><td>'+locFmt(h2.ts)+'</td><td style="font-weight:800;color:#0d5c3d">'+ordered.length+'</td></tr>';
+                        exp.push([i, dateLbl, uc, m.name, h1.kitStation||'', h1.maps||'', locFmt(h1.ts), h2.kitStation||'', h2.maps||'', locFmt(h2.ts), ordered.length]);
+                    });
                 });
                 if(stats) stats.innerHTML=
-                    '<div class="emr-stat"><div class="n">'+multiCount+'</div><div class="l">Multi-submit vaccinators</div></div>'+
+                    '<div class="emr-stat"><div class="n">'+multiCount+'</div><div class="l">Same-day multi submits</div></div>'+
                     '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>';
-                if(body) body.innerHTML=html||'<tr><td colspan="10">Kisi ne 1 se zyada location submit nahi ki</td></tr>';
-                locLastExport={headers:['Sr','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time & Date 1','Kit Station 2','Map Location 2','Time & Date 2','Total Submits'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):'')};
+                if(body) body.innerHTML=html||'<tr><td colspan="11">Kisi ne ek hi din 2+ location submit nahi ki</td></tr>';
+                locLastExport={headers:['Sr','Date','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time 1','Kit Station 2','Map Location 2','Time 2','Submits (that day)'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):' (same-day only)')};
             }
             else if(locMode==='pending'){
                 // Only true pending: no location AND no leave
