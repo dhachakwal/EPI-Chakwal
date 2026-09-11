@@ -7389,7 +7389,7 @@
 
         /* ===== Field Location Check-In (location.html → Sheet Location) ===== */
         const LOC_DASH_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
-        const LOC_CACHE_KEY = 'epi_loc_dash_v2';
+        const LOC_CACHE_KEY = 'epi_loc_dash_v3';
         const LOC_LATE_MINS = 9*60+30; // 09:30 AM
         let locMaster = [];
         let locRows = [];
@@ -7830,6 +7830,7 @@
                           jT=locIx(L,['tehsil']), jUc=locIx(L,['uc','union']), jKit=locIx(L,['kit station','kitstation','kit']),
                           jLat=locIx(L,['latitude','lat']), jLng=locIx(L,['longitude','long','lng']),
                           jAcc=locIx(L,['accuracy']), jMap=locIx(L,['maps_link','maps','map']);
+                    const seenLoc = {}; // exact duplicate rows from double form posts
                     locPack.rows.forEach(function(row){
                         const name=jN>=0?String(row[jN]||'').trim():'';
                         if(!name) return;
@@ -7841,14 +7842,20 @@
                         // Skip empty GPS rows (e.g. failed leave posts written into Location tab)
                         const latN = parseFloat(lat), lngN = parseFloat(lng);
                         if(isNaN(latN) || isNaN(lngN)) return;
+                        const username=jU>=0?String(row[jU]==null?'':row[jU]).replace(/\.0$/,'').trim():'';
+                        // Drop exact duplicates (same person + same timestamp + same pin) — sheet has many double-writes
+                        const tsKey = ts ? String(ts.getTime()) : '';
+                        const dedupeKey = locNormUser(username)+'|'+tsKey+'|'+locRound6(latN)+'|'+locRound6(lngN);
+                        if(seenLoc[dedupeKey]) return;
+                        seenLoc[dedupeKey]=1;
                         newRows.push({
                             ts:ts, ymd:ts?locYmd(ts):'',
                             name:name,
-                            username:jU>=0?String(row[jU]==null?'':row[jU]).replace(/\.0$/,'').trim():'',
+                            username:username,
                             tehsil:jT>=0?String(row[jT]||'').trim():'',
                             uc:jUc>=0?String(row[jUc]||'').trim():'',
                             kitStation:jKit>=0?String(row[jKit]||'').trim():'',
-                            lat:lat, lng:lng, accuracy:jAcc>=0?row[jAcc]:'', maps:maps
+                            lat:latN, lng:lngN, accuracy:jAcc>=0?row[jAcc]:'', maps:maps
                         });
                     });
                 }
@@ -8201,7 +8208,27 @@
             hits.sort(function(a,b){ return (b.ts?b.ts.getTime():0)-(a.ts?a.ts.getTime():0); });
             return hits;
         }
-        /** Same-day multi: returns {ymd, hits[]} for days where this person submitted 2+ times */
+        /** Distinct submits only: ignore near-duplicate GPS pings (same pin / <30s apart) */
+        function locDistinctHits(hits){
+            const sorted = (hits||[]).slice().sort(function(a,b){ return (a.ts?a.ts.getTime():0)-(b.ts?b.ts.getTime():0); });
+            const out=[];
+            sorted.forEach(function(h){
+                if(!out.length){ out.push(h); return; }
+                const prev=out[out.length-1];
+                const t0=prev.ts?prev.ts.getTime():0, t1=h.ts?h.ts.getTime():0;
+                const dt=Math.abs(t1-t0);
+                const dist = (typeof locDistKm==='function') ? locDistKm(
+                    {lat:parseFloat(prev.lat), lng:parseFloat(prev.lng)},
+                    {lat:parseFloat(h.lat), lng:parseFloat(h.lng)}
+                ) : 999;
+                const sameKit = String(prev.kitStation||'').trim().toLowerCase()===String(h.kitStation||'').trim().toLowerCase();
+                // Treat as duplicate ping if: within 2 min AND (same pin <40m OR same kit station)
+                if(dt < 120000 && (dist < 0.04 || sameKit && dist < 0.15)) return;
+                out.push(h);
+            });
+            return out;
+        }
+        /** Same-day multi: only days with 2+ DISTINCT submits (different place / meaningful gap) */
         function locMultiDayGroups(m, day){
             const hits = locHitsFor(m, day || '');
             const byDay = {};
@@ -8213,9 +8240,9 @@
             });
             const groups=[];
             Object.keys(byDay).sort().reverse().forEach(function(d){
-                if(byDay[d].length >= 2){
-                    byDay[d].sort(function(a,b){ return (a.ts?a.ts.getTime():0)-(b.ts?b.ts.getTime():0); });
-                    groups.push({ymd:d, hits:byDay[d]});
+                const distinct = locDistinctHits(byDay[d]);
+                if(distinct.length >= 2){
+                    groups.push({ymd:d, hits:distinct, rawCount:byDay[d].length});
                 }
             });
             return groups;
@@ -8405,8 +8432,8 @@
                 if(stats) stats.innerHTML=
                     '<div class="emr-stat"><div class="n">'+multiCount+'</div><div class="l">Same-day multi submits</div></div>'+
                     '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>';
-                if(body) body.innerHTML=html||'<tr><td colspan="11">Kisi ne ek hi din 2+ location submit nahi ki</td></tr>';
-                locLastExport={headers:['Sr','Date','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time 1','Kit Station 2','Map Location 2','Time 2','Submits (that day)'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):' (same-day only)')};
+                if(body) body.innerHTML=html||'<tr><td colspan="11">Kisi ne ek hi din 2+ <strong>alag</strong> locations submit nahi ki (duplicate GPS rows ignore)</td></tr>';
+                locLastExport={headers:['Sr','Date','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time 1','Kit Station 2','Map Location 2','Time 2','Distinct submits'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):' (distinct same-day only)')};
             }
             else if(locMode==='pending'){
                 // Only true pending: no location AND no leave
