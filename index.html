@@ -3746,13 +3746,8 @@
                 el.textContent = 'Data not loaded yet';
                 return;
             }
-            const d = best;
-            const s = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
-            const h = d.getHours(), m = d.getMinutes();
-            const ap = h>=12?'PM':'AM';
-            const h12 = (h%12)||12;
-            const mm = (m<10?'0':'')+m;
-            el.textContent = 'Data in this section is current as of '+s+' '+h12+':'+mm+' '+ap;
+            const fmt = (typeof emrFormatAsOfDate==='function') ? emrFormatAsOfDate(best) : String(best);
+            el.textContent = 'Data in this section is current as of '+fmt;
         }
 
         function fxApply(){
@@ -5724,6 +5719,15 @@
 
         
         
+        function emrFormatAsOfDate(d){
+            if(!d || !(d instanceof Date) || isNaN(d.getTime())) return '—';
+            const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            let h=d.getHours(), m=d.getMinutes();
+            const ampm=h>=12?'PM':'AM';
+            h=h%12; if(h===0) h=12;
+            const mm=(m<10?'0':'')+m;
+            return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear()+' '+h+':'+mm+' '+ampm;
+        }
         function emrUpdateSectionAsOf(){
             const el = document.getElementById('emrSectionAsOf');
             if(!el) return;
@@ -5732,7 +5736,7 @@
                 el.textContent = 'Data not loaded yet';
                 return;
             }
-            // raw like 8/15/2026 6:48 PM
+            // e.g. 10 Sep 2026 4:06 PM
             el.textContent = 'Data in this section is current as of '+ raw;
         }
 
@@ -5743,12 +5747,7 @@
                 if(u.date && (!best || u.date > best)) best = u.date;
             });
             if(!best) return '—';
-            // 12h format
-            let h = best.getHours(), m = best.getMinutes();
-            const ampm = h>=12?'PM':'AM';
-            h = h%12; if(h===0) h=12;
-            const mm = (m<10?'0':'')+m;
-            return (best.getMonth()+1)+'/'+best.getDate()+'/'+best.getFullYear()+' '+h+':'+mm+' '+ampm;
+            return emrFormatAsOfDate(best);
         }
 
         
