@@ -759,6 +759,7 @@
                     <button type="button" class="emr-tab" data-emr2="duplicate" onclick="emr2Switch('duplicate')">13. Duplicate Children</button>
                     <button type="button" class="emr-tab" data-emr2="ucAg" onclick="emr2Switch('ucAg')">14. UC-wise Antigen Entries Status</button>
                     <button type="button" class="emr-tab" data-emr2="doseDiff" onclick="emr2Switch('doseDiff')">15. Difference Between Same Doses</button>
+                    <button type="button" class="emr-tab" data-emr2="compiled" onclick="emr2Switch('compiled')">16. Compiled Report</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -4726,6 +4727,7 @@
         let emr2Rows = [];       // normalized like emrRows (EMR_COLS layout) + _source
         let emr2AllRows = [];    // before source filter
         let emr2Targets = [];
+        let emr2Map = {ucs:[], facByUc:{}, allFac:{}, unmapped:[]};
         let emr2Loaded = false;
         let emr2Loading = false;
         let emr2LastExport = {headers:[], rows:[]};
@@ -4925,6 +4927,7 @@
                     emrRows = bakRows;
                 }
                 emr2Targets = emr2LoadTargets(wb);
+                emr2Map = emr2LoadTotalMap(wb);
                 emr2Loaded = true;
                 // tehsil filter
                 const tehs = {};
@@ -5044,6 +5047,202 @@
             if(st && stMain) st.style.display = stMain.style.display;
             emr2LastExport = {headers:(emrLastExport&&emrLastExport.headers)||[], rows:(emrLastExport&&emrLastExport.rows)||[]};
         }
+
+        function emr2ShortFac(name){
+            let s = String(name||'').trim().replace(/\s+/g,' ');
+            if(!s) return '';
+            // DHQ / THQ / Trauma
+            s = s.replace(/^District Headquarter Hospital\s*,?\s*/i,'DHQ ');
+            s = s.replace(/^Tehsil Headquarter Hospital\s*,?\s*/i,'THQ ');
+            s = s.replace(/^Trauma Center-?\s*Tehsil Headquarter Hospital\s*,?\s*/i,'Trauma THQ ');
+            s = s.replace(/^Government City Hospital\s*,?\s*/i,'GCH ');
+            s = s.replace(/^Basic Health Unit\s*,?\s*/i,'BHU ');
+            s = s.replace(/^Rural Health Center\s*,?\s*/i,'RHC ');
+            s = s.replace(/^MNHC\s*,\s*/i,'MNHC ');
+            s = s.replace(/^MNH\s*,\s*/i,'MNH ');
+            s = s.replace(/,\s*Chakwal\s*$/i,'').trim();
+            s = s.replace(/\s+,/g,',').replace(/,\s+/g,', ').trim();
+            return s || name;
+        }
+        function emr2LoadTotalMap(wb){
+            const aoa = emr2SheetRows(wb, 'Total');
+            const ucs = [];
+            const facByUc = {};
+            const allFac = {};
+            const seenUc = {};
+            aoa.forEach(function(row){
+                const tehsil = String(row[2]||'').trim();
+                const uc = String(row[3]||'').trim();
+                const fac = String(row[4]||'').trim();
+                const attach = String(row[5]||'').trim();
+                if(!uc || /^total\s*ucs$/i.test(uc) || /^sr/i.test(String(row[0]||''))) return;
+                if(!seenUc[uc]){
+                    seenUc[uc]=1;
+                    ucs.push({tehsil:tehsil, uc:uc});
+                }
+                if(fac){
+                    allFac[fac]=1;
+                    const key = attach || uc;
+                    if(!facByUc[key]) facByUc[key]=[];
+                    if(facByUc[key].indexOf(fac)<0) facByUc[key].push(fac);
+                }
+            });
+            return {ucs:ucs, facByUc:facByUc, allFac:allFac, unmapped:[]};
+        }
+        function emr2FindUnmappedFacilities(){
+            // Fixed rows whose facility name is not in Total sheet col E
+            const known = (emr2Map && emr2Map.allFac) ? emr2Map.allFac : {};
+            const found = {};
+            (emr2AllRows||[]).forEach(function(r){
+                if(r._source!=='fixed') return;
+                const fac = emrCell(r, EMR_COLS.uc);
+                if(fac && !known[fac]) found[fac]=1;
+            });
+            return Object.keys(found).sort();
+        }
+        function emr2CountAntigens(rows){
+            const ym = emrGetReportMonth();
+            const counts = {entries: rows.length};
+            (EMR_VAX_ORDER||[]).forEach(function(a){
+                let n=0;
+                rows.forEach(function(r){ if(emrHasDoseThisMonth(r, a[0], ym)) n++; });
+                counts[a[0]] = n;
+            });
+            return counts;
+        }
+        function emr2RenderCompiled(){
+            // Use ALL OR+Fixed for compile (ignore source filter) but keep period/tehsil/UC via temp filter on each set
+            const tFilter = (document.getElementById('emr2Tehsil')||{}).value||'';
+            const uFilter = (document.getElementById('emr2UC')||{}).value||'';
+            const bakRows = emrRows;
+            const bakMode = emrMode;
+            // Ensure period filters read from synced emrPeriod
+            emr2SyncFiltersToEmr();
+            try{
+                emrRows = emr2AllRows || [];
+                emrMode = 'compiled';
+                // Build period-filtered outreach / fixed pools
+                const allFiltered = (typeof emrFiltered==='function') ? emrFiltered() : emrRows;
+                const orRows = allFiltered.filter(function(r){ return r._source==='outreach'; });
+                const fxRows = allFiltered.filter(function(r){ return r._source==='fixed'; });
+                // index fixed by facility name (stored in UC col)
+                const fxByFac = {};
+                fxRows.forEach(function(r){
+                    const f = emrCell(r, EMR_COLS.uc);
+                    if(!f) return;
+                    if(!fxByFac[f]) fxByFac[f]=[];
+                    fxByFac[f].push(r);
+                });
+                const orByUc = {};
+                orRows.forEach(function(r){
+                    const u = emrCell(r, EMR_COLS.uc);
+                    if(!u) return;
+                    if(!orByUc[u]) orByUc[u]=[];
+                    orByUc[u].push(r);
+                });
+                const map = emr2Map || {ucs:[], facByUc:{}};
+                let list = (map.ucs && map.ucs.length) ? map.ucs.slice() : [];
+                // If Total map empty, fallback to UC names from outreach
+                if(!list.length){
+                    const set={};
+                    orRows.forEach(function(r){
+                        const u=emrCell(r,EMR_COLS.uc), t=emrCell(r,EMR_COLS.tehsil);
+                        if(u) set[u]=t||'';
+                    });
+                    list = Object.keys(set).sort().map(function(u){ return {tehsil:set[u], uc:u}; });
+                }
+                if(tFilter) list = list.filter(function(x){ return x.tehsil===tFilter; });
+                if(uFilter) list = list.filter(function(x){ return x.uc===uFilter; });
+                // sort by tehsil then UC
+                list.sort(function(a,b){
+                    const ra=emrTehsilRank(a.tehsil), rb=emrTehsilRank(b.tehsil);
+                    if(ra!==rb) return ra-rb;
+                    return String(a.uc).localeCompare(String(b.uc));
+                });
+                const agKeys = (EMR_VAX_ORDER||[]).map(function(a){ return a[0]; });
+                const agLabels = (EMR_VAX_ORDER||[]).map(function(a){ return a[1]; });
+                const headers = ['Sr','Tehsil','UC + Center (Compiled)','OR Entries','Fixed Entries','Total'].concat(agLabels);
+                const exportRows = [];
+                const bodyHtml = [];
+                let sumOr=0, sumFx=0, sumTot=0;
+                const sumAg = {};
+                agKeys.forEach(function(k){ sumAg[k]=0; });
+                list.forEach(function(item, idx){
+                    const uc = item.uc;
+                    const tehsil = item.tehsil||'';
+                    const facs = (map.facByUc && map.facByUc[uc]) ? map.facByUc[uc] : [];
+                    const orSet = orByUc[uc] || [];
+                    let fxSet = [];
+                    facs.forEach(function(f){ if(fxByFac[f]) fxSet = fxSet.concat(fxByFac[f]); });
+                    const combined = orSet.concat(fxSet);
+                    const cOr = emr2CountAntigens(orSet);
+                    const cFx = emr2CountAntigens(fxSet);
+                    const cAll = emr2CountAntigens(combined);
+                    sumOr += cOr.entries; sumFx += cFx.entries; sumTot += cAll.entries;
+                    const shortFacs = facs.map(emr2ShortFac).filter(Boolean);
+                    let label = uc;
+                    if(shortFacs.length) label = uc + ' & ' + shortFacs.join(' + ');
+                    const agVals = agKeys.map(function(k){ sumAg[k]+=cAll[k]||0; return cAll[k]||0; });
+                    exportRows.push([idx+1, tehsil, label, cOr.entries, cFx.entries, cAll.entries].concat(agVals));
+                    bodyHtml.push('<tr>'+
+                        '<td>'+(idx+1)+'</td>'+
+                        '<td>'+tehsil+'</td>'+
+                        '<td style="text-align:left;font-weight:600">'+label.replace(/</g,'&lt;')+'</td>'+
+                        '<td>'+cOr.entries+'</td><td>'+cFx.entries+'</td><td><strong>'+cAll.entries+'</strong></td>'+
+                        agVals.map(function(v){ return '<td>'+v+'</td>'; }).join('')+
+                        '</tr>');
+                });
+                // totals row
+                bodyHtml.push('<tr style="font-weight:700;background:#e8f5e9">'+
+                    '<td colspan="3">Total</td>'+
+                    '<td>'+sumOr+'</td><td>'+sumFx+'</td><td>'+sumTot+'</td>'+
+                    agKeys.map(function(k){ return '<td>'+sumAg[k]+'</td>'; }).join('')+
+                    '</tr>');
+                exportRows.push(['','','Total',sumOr,sumFx,sumTot].concat(agKeys.map(function(k){ return sumAg[k]; })));
+                // unmapped facilities warning
+                const unmapped = emr2FindUnmappedFacilities();
+                const head = document.getElementById('emr2Head');
+                const body = document.getElementById('emr2Body');
+                const wrap = document.getElementById('emr2TableWrap');
+                const st = document.getElementById('emr2Status');
+                const stats = document.getElementById('emr2Stats');
+                if(head){
+                    head.innerHTML = '<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
+                }
+                if(body) body.innerHTML = bodyHtml.join('') || '<tr><td colspan="'+headers.length+'">No rows</td></tr>';
+                if(wrap) wrap.style.display='block';
+                if(stats){
+                    stats.innerHTML =
+                        '<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">UC groups</div></div>'+
+                        '<div class="emr-stat"><div class="n">'+sumOr.toLocaleString()+'</div><div class="l">OR entries</div></div>'+
+                        '<div class="emr-stat"><div class="n">'+sumFx.toLocaleString()+'</div><div class="l">Fixed entries</div></div>'+
+                        '<div class="emr-stat"><div class="n">'+sumTot.toLocaleString()+'</div><div class="l">Compiled total</div></div>'+
+                        (unmapped.length?('<div class="emr-stat" style="border-color:#e65100"><div class="n" style="color:#e65100">'+unmapped.length+'</div><div class="l">Unmapped facilities</div></div>'):'');
+                }
+                if(st){
+                    if(unmapped.length){
+                        st.style.display='block';
+                        st.innerHTML = '⚠️ <strong>New Fixed facilities not in Total sheet (add to column E/F):</strong> '+
+                            unmapped.map(function(f){ return emr2ShortFac(f)+' <span style="color:#888">('+f.replace(/</g,'&lt;')+')</span>'; }).join(' · ');
+                    } else {
+                        st.style.display='none'; st.textContent='';
+                    }
+                }
+                emr2LastExport = {headers:headers, rows:exportRows};
+                // summary panel light update
+                const grid = document.getElementById('emr2SummaryGrid');
+                if(grid){
+                    grid.innerHTML = '<div class="emr-sum-item"><div class="n">'+sumTot.toLocaleString()+'</div><div class="l">Compiled entries</div></div>'+
+                        agKeys.slice(0,8).map(function(k,i){
+                            return '<div class="emr-sum-item"><div class="n">'+(sumAg[k]||0)+'</div><div class="l">'+agLabels[i]+'</div></div>';
+                        }).join('');
+                }
+            }finally{
+                emrRows = bakRows;
+                emrMode = bakMode;
+            }
+        }
+
         function emr2OnSourceChange(){
             const st=document.getElementById('emr2Status');
             if(st){ st.style.display='block'; st.textContent='Filtering source…'; }
@@ -5065,6 +5264,17 @@
                 btn.classList.toggle('active', btn.getAttribute('data-emr2')===emr2Mode);
             });
             if(st0){ st0.style.display='block'; st0.textContent='Computing report ('+emr2Rows.length.toLocaleString()+' rows)…'; }
+            // Compiled Report (tab 16) — UC + linked Fixed centers
+            if(emr2Mode === 'compiled'){
+                try{
+                    emr2RenderCompiled();
+                    if(st0 && st0.textContent.indexOf('Computing')===0) st0.style.display='none';
+                }catch(err){
+                    console.error(err);
+                    if(st0){ st0.style.display='block'; st0.textContent='Compiled error: '+(err.message||err); }
+                }
+                return;
+            }
             // Run Outreach engine SYNCHRONOUSLY (emrApply uses setTimeout — that races with restore)
             const bak = { rows:emrRows, targets:emrTargets, mode:emrMode, late:emrLateFilter, exp:emrLastExport };
             try{
