@@ -686,8 +686,15 @@
 
                 <!-- ===== MODULE: OUTREACH 2 (same layout; data source TBD) ===== -->
                 <div id="emrModuleOutreach2" style="display:none">
-                <p class="emr-note"><strong>Source:</strong> Same layout as Outreach Reports. Data source / sheet abhi pending — aap bataenge to connect kar diya jayega. Filters, 15 report tabs, Excel / PDF / PNG structure ready.</p>
+                <p class="emr-note"><strong>Source:</strong> OR + Fixed compiled child-level data (Google Sheet). <strong>Outreach</strong> + <strong>Fixed</strong> sheets combined (data through 24 Sep). Same 15 report tabs as Outreach Reports. Use <em>Source</em> filter for Outreach only / Fixed only / Both.</p>
                 <div class="emr-filter">
+                    <label>Source
+                        <select id="emr2Source" onchange="emr2Apply()">
+                            <option value="">All (OR + Fixed)</option>
+                            <option value="outreach">Outreach only</option>
+                            <option value="fixed">Fixed only</option>
+                        </select>
+                    </label>
                     <label>Period
                         <select id="emr2Period" onchange="emr2OnPeriodChange()">
                             <option value="month:2026-09" selected>September 2026</option>
@@ -4687,7 +4694,11 @@
             // lazy load when module opened
             try{
                 if(emrModule==='outreach2' && typeof emr2Load==='function'){
-                    emr2Load();
+                    if(!emr2Loaded) emr2Load();
+                    else emr2Apply();
+                }
+                if(emrModule==='outreach' && typeof emrApply==='function' && emrRows && emrRows.length){
+                    emrApply();
                 }
                 if(emrModule==='fixed' && typeof loadFixedData==='function'){
                     if(typeof fxRecords==='undefined' || !fxRecords || !fxRecords.length) loadFixedData();
@@ -4709,9 +4720,16 @@
             }catch(e){}
         }
 
-        // ===== Outreach Reports 2 (shell — data source TBD) =====
+        // ===== Outreach Reports 2 — OR + Fixed child data (same reports as Outreach) =====
+        const EMR2_SHEET_ID = '1zFFVXTQWLqo-Am5mzoDRwvDg9dAIXkTcjlDFH_dXQXg';
         let emr2Mode = 'uc';
-        let emr2Rows = [];
+        let emr2Rows = [];       // normalized like emrRows (EMR_COLS layout) + _source
+        let emr2AllRows = [];    // before source filter
+        let emr2Targets = [];
+        let emr2Loaded = false;
+        let emr2Loading = false;
+        let emr2LastExport = {headers:[], rows:[]};
+
         function emr2OnPeriodChange(){
             const v = (document.getElementById('emr2Period')||{}).value||'';
             const day = v==='day';
@@ -4719,12 +4737,33 @@
             const b = document.getElementById('emr2DayToLabel');
             if(a) a.style.display = day ? '' : 'none';
             if(b) b.style.display = day ? '' : 'none';
+            if(day && typeof emr2PopulateDays==='function') emr2PopulateDays();
             emr2Apply();
         }
-        function emr2OnFilterChange(){ emr2Apply(); }
+        function emr2OnFilterChange(){
+            // rebuild UC list for selected tehsil
+            const t = (document.getElementById('emr2Tehsil')||{}).value||'';
+            const ucs = {};
+            emr2Rows.forEach(function(r){
+                if(t && emrCell(r, EMR_COLS.tehsil)!==t) return;
+                const u = emrCell(r, EMR_COLS.uc);
+                if(u) ucs[u]=1;
+            });
+            const usel = document.getElementById('emr2UC');
+            if(usel){
+                const cur = usel.value;
+                usel.innerHTML = '<option value="">All UCs</option>'+Object.keys(ucs).sort().map(function(u){
+                    return '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';
+                }).join('');
+                if(cur && ucs[cur]) usel.value = cur;
+            }
+            emr2Apply();
+        }
         function emr2ResetFilters(){
-            const ids = ['emr2Period','emr2Tehsil','emr2UC','emr2Search','emr2DayFrom','emr2DayTo'];
-            ids.forEach(function(id){ const el=document.getElementById(id); if(el) el.value = (id==='emr2Period'?'month:2026-09':''); });
+            ['emr2Source','emr2Tehsil','emr2UC','emr2Search','emr2DayFrom','emr2DayTo'].forEach(function(id){
+                const el=document.getElementById(id); if(el) el.value='';
+            });
+            const p=document.getElementById('emr2Period'); if(p) p.value='month:2026-09';
             emr2OnPeriodChange();
         }
         function emr2Switch(mode){
@@ -4734,32 +4773,339 @@
             });
             emr2Apply();
         }
-        function emr2Load(){
+        function emr2ParseDate(v){
+            if(v==null || v==='') return null;
+            if(Object.prototype.toString.call(v)==='[object Date]' && !isNaN(v.getTime())) return v;
+            if(typeof v==='number' && typeof XLSX!=='undefined' && XLSX.SSF){
+                try{
+                    const o = XLSX.SSF.parse_date_code(v);
+                    if(o) return new Date(o.y, o.m-1, o.d, o.H||0, o.M||0, o.S||0);
+                }catch(e){}
+            }
+            const s = String(v).trim();
+            const d = new Date(s);
+            if(!isNaN(d.getTime())) return d;
+            const m = s.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
+            if(m) return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5]);
+            return null;
+        }
+        function emr2UpdatedCell(v){
+            const d = emr2ParseDate(v);
+            if(!d) return {raw:String(v||''), date:null, hour:null, minute:null};
+            return {raw:String(v||''), date:d, hour:d.getHours(), minute:d.getMinutes()};
+        }
+        function emr2NormRowOutreach(row){
+            // sheet: SrNo,child_reg_id,Division,District,Tehsil,UCID,UCName,MRNumber,Name,FatherName,...,Phone,Gender,DOB,Age,bcg...Lat,Lng,LastUpdated
+            const g = function(i){ return row[i]==null?'':row[i]; };
+            const out = new Array(35);
+            out[EMR_COLS.division] = g(2);
+            out[EMR_COLS.district] = g(3);
+            out[EMR_COLS.tehsil] = String(g(4)||'').trim();
+            out[EMR_COLS.uc] = String(g(6)||'').trim();
+            out[EMR_COLS.mr] = g(7);
+            out[EMR_COLS.name] = g(8);
+            out[EMR_COLS.father] = g(9);
+            out[EMR_COLS.age] = g(18);
+            out[EMR_COLS.gender] = g(16);
+            out[EMR_COLS.address] = g(14);
+            out[EMR_COLS.phone] = g(15);
+            // antigens 19-38
+            const map = [
+                [19,'bcg'],[20,'opv0'],[21,'opvI'],[22,'opvII'],[23,'opvIII'],
+                [24,'pentaI'],[25,'pentaII'],[26,'pentaIII'],
+                [27,'pneumoI'],[28,'pneumoII'],[29,'pneumoIII'],
+                [30,'ipv'],[31,'measlesI'],[32,'measlesII'],[33,'hepB'],
+                [34,'rota1'],[35,'rota2'],[36,'ipv2'],[37,'dpt'],[38,'tcv']
+            ];
+            map.forEach(function(p){ out[EMR_COLS[p[1]]] = g(p[0]); });
+            out[EMR_COLS.polioId] = '';
+            out[EMR_COLS.lat] = g(39);
+            out[EMR_COLS.lng] = g(40);
+            out[EMR_COLS.updated] = emr2UpdatedCell(g(41));
+            out._source = 'outreach';
+            // preindex for month filter
+            const u = out[EMR_COLS.updated];
+            if(u && u.date){ out._uy = u.date.getFullYear(); out._um = u.date.getMonth()+1; out._ud = u.date.getDate(); }
+            return out;
+        }
+        function emr2NormRowFixed(row){
+            // Tehsil=4, facilityname=8 as UC label, MR=9, Name=10, Father=11, Phone=17, Gender=18, Age=20, antigens 21-40, lat41 lng42 updated43
+            const g = function(i){ return row[i]==null?'':row[i]; };
+            const out = new Array(35);
+            out[EMR_COLS.division] = g(2);
+            out[EMR_COLS.district] = g(3);
+            out[EMR_COLS.tehsil] = String(g(4)||'').trim();
+            const fac = String(g(8)||'').trim();
+            out[EMR_COLS.uc] = fac || String(g(5)||'').trim(); // facility name as geo label
+            out[EMR_COLS.mr] = g(9);
+            out[EMR_COLS.name] = g(10);
+            out[EMR_COLS.father] = g(11);
+            out[EMR_COLS.age] = g(20);
+            out[EMR_COLS.gender] = g(18);
+            out[EMR_COLS.address] = g(16);
+            out[EMR_COLS.phone] = g(17);
+            const map = [
+                [21,'bcg'],[22,'opv0'],[23,'opvI'],[24,'opvII'],[25,'opvIII'],
+                [26,'pentaI'],[27,'pentaII'],[28,'pentaIII'],
+                [29,'pneumoI'],[30,'pneumoII'],[31,'pneumoIII'],
+                [32,'ipv'],[33,'measlesI'],[34,'measlesII'],[35,'hepB'],
+                [36,'rota1'],[37,'rota2'],[38,'ipv2'],[39,'dpt'],[40,'tcv']
+            ];
+            map.forEach(function(p){ out[EMR_COLS[p[1]]] = g(p[0]); });
+            out[EMR_COLS.polioId] = '';
+            out[EMR_COLS.lat] = g(41);
+            out[EMR_COLS.lng] = g(42);
+            out[EMR_COLS.updated] = emr2UpdatedCell(g(43));
+            out._source = 'fixed';
+            out._facilityType = String(g(5)||'').trim();
+            const u = out[EMR_COLS.updated];
+            if(u && u.date){ out._uy = u.date.getFullYear(); out._um = u.date.getMonth()+1; out._ud = u.date.getDate(); }
+            return out;
+        }
+        function emr2SheetRows(wb, name){
+            const names = wb.SheetNames||[];
+            const sn = names.find(function(n){ return String(n).toLowerCase()===name.toLowerCase(); }) || name;
+            if(!wb.Sheets[sn]) return [];
+            const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:true});
+            return aoa.slice(1);
+        }
+        function emr2LoadTargets(wb){
+            const aoa = emr2SheetRows(wb, 'Target and Population');
+            // rows may include header-like; detect tehsil+geolevel+pop
+            const out = [];
+            aoa.forEach(function(row){
+                const tehsil = String(row[0]||'').trim();
+                const geo = String(row[1]||'').trim();
+                if(!tehsil || !geo || /tehsil/i.test(tehsil)) return;
+                const nb = parseFloat(String(row[9]||'').replace(/,/g,''))||0; // monthly newborn
+                const sv = parseFloat(String(row[10]||'').replace(/,/g,''))||0;
+                out.push({tehsil:tehsil, geolevel:geo, monthlyNewborn:nb, monthlySurviving:sv,
+                    yearlyNewborn:parseFloat(String(row[3]||'').replace(/,/g,''))||0,
+                    yearlySurviving:parseFloat(String(row[4]||'').replace(/,/g,''))||0});
+            });
+            // emrTargetFor expects tehsil-level aggregates — build unique tehsil sums
+            const byT = {};
+            out.forEach(function(r){
+                if(!byT[r.tehsil]) byT[r.tehsil] = {tehsil:r.tehsil, monthlyNewborn:0, monthlySurviving:0, yearlyNewborn:0, yearlySurviving:0};
+                byT[r.tehsil].monthlyNewborn += r.monthlyNewborn;
+                byT[r.tehsil].monthlySurviving += r.monthlySurviving;
+                byT[r.tehsil].yearlyNewborn += r.yearlyNewborn;
+                byT[r.tehsil].yearlySurviving += r.yearlySurviving;
+            });
+            return Object.keys(byT).map(function(k){ return byT[k]; });
+        }
+        async function emr2Load(force){
+            if(emr2Loading) return;
+            if(emr2Loaded && !force && emr2AllRows.length){ emr2ApplySource(); emr2Apply(); return; }
             const st = document.getElementById('emr2Status');
             const meta = document.getElementById('emr2Meta');
-            if(meta) meta.textContent = 'No data source linked yet';
-            if(st){
-                st.style.display = 'block';
-                st.textContent = 'Outreach Reports 2 UI ready (same as Outreach). Google Sheet / data source batayein — phir yeh module live data se fill hoga.';
+            emr2Loading = true;
+            if(st){ st.style.display='block'; st.textContent='Loading OR + Fixed sheet…'; }
+            if(meta) meta.textContent='Loading…';
+            try{
+                if(typeof XLSX==='undefined') throw new Error('XLSX missing');
+                const url = 'https://docs.google.com/spreadsheets/d/'+EMR2_SHEET_ID+'/export?format=xlsx&_='+Date.now();
+                const res = await fetch(url, {cache:'no-store'});
+                if(!res.ok) throw new Error('HTTP '+res.status);
+                const buf = await res.arrayBuffer();
+                const wb = XLSX.read(buf, {type:'array', cellDates:true});
+                const orRows = emr2SheetRows(wb, 'Outreach').map(emr2NormRowOutreach).filter(function(r){
+                    return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.name);
+                });
+                const fxRows = emr2SheetRows(wb, 'Fixed').map(emr2NormRowFixed).filter(function(r){
+                    return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.name);
+                });
+                emr2AllRows = orRows.concat(fxRows);
+                emr2Targets = emr2LoadTargets(wb);
+                emr2Loaded = true;
+                // tehsil filter
+                const tehs = {};
+                emr2AllRows.forEach(function(r){ const t=emrCell(r,EMR_COLS.tehsil); if(t) tehs[t]=1; });
+                const tsel = document.getElementById('emr2Tehsil');
+                if(tsel){
+                    const cur=tsel.value;
+                    tsel.innerHTML='<option value="">All Tehsils</option>'+Object.keys(tehs).sort().map(function(t){
+                        return '<option value="'+t.replace(/"/g,'&quot;')+'">'+t+'</option>';
+                    }).join('');
+                    if(cur && tehs[cur]) tsel.value=cur;
+                }
+                emr2PopulateDays();
+                emr2ApplySource();
+                if(meta) meta.textContent = 'OR: '+orRows.length.toLocaleString()+' · Fixed: '+fxRows.length.toLocaleString()+' · Total: '+emr2AllRows.length.toLocaleString()+' · '+new Date().toLocaleString();
+                if(st) st.style.display='none';
+                emr2Apply();
+            }catch(err){
+                console.error(err);
+                if(st){ st.style.display='block'; st.textContent='Load failed: '+(err.message||err); }
+                if(meta) meta.textContent='Load failed';
+            }finally{
+                emr2Loading = false;
             }
-            emr2Apply();
+        }
+        function emr2PopulateDays(){
+            const days = {};
+            emr2AllRows.forEach(function(r){
+                const u = r[EMR_COLS.updated];
+                if(u && u.date){
+                    const y=u.date.getFullYear(), m=u.date.getMonth()+1, d=u.date.getDate();
+                    const ymd = y+'-'+(m<10?'0':'')+m+'-'+(d<10?'0':'')+d;
+                    days[ymd]=1;
+                }
+            });
+            const keys = Object.keys(days).sort().reverse();
+            ['emr2DayFrom','emr2DayTo'].forEach(function(id){
+                const el=document.getElementById(id);
+                if(!el) return;
+                const cur=el.value;
+                el.innerHTML='<option value="">—</option>'+keys.map(function(k){
+                    return '<option value="'+k+'">'+k+'</option>';
+                }).join('');
+                if(cur && days[cur]) el.value=cur;
+            });
+        }
+        function emr2ApplySource(){
+            const src = (document.getElementById('emr2Source')||{}).value||'';
+            emr2Rows = !src ? emr2AllRows.slice() : emr2AllRows.filter(function(r){ return r._source===src; });
+            emr2OnFilterChangeRebuildUCOnly();
+        }
+        function emr2OnFilterChangeRebuildUCOnly(){
+            const t = (document.getElementById('emr2Tehsil')||{}).value||'';
+            const ucs = {};
+            emr2Rows.forEach(function(r){
+                if(t && emrCell(r, EMR_COLS.tehsil)!==t) return;
+                const u = emrCell(r, EMR_COLS.uc);
+                if(u) ucs[u]=1;
+            });
+            const usel = document.getElementById('emr2UC');
+            if(usel){
+                const cur = usel.value;
+                usel.innerHTML = '<option value="">All UCs</option>'+Object.keys(ucs).sort().map(function(u){
+                    return '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';
+                }).join('');
+                if(cur && ucs[cur]) usel.value = cur; else usel.value='';
+            }
+        }
+        function emr2SyncFiltersToEmr(){
+            const map = [
+                ['emr2Period','emrPeriod'],
+                ['emr2DayFrom','emrDayFrom'],
+                ['emr2DayTo','emrDayTo'],
+                ['emr2Tehsil','emrTehsil'],
+                ['emr2UC','emrUC'],
+                ['emr2Search','emrSearch']
+            ];
+            map.forEach(function(p){
+                const a=document.getElementById(p[0]), b=document.getElementById(p[1]);
+                if(a && b){
+                    // ensure option exists for period/day
+                    if((p[1]==='emrPeriod' || p[1]==='emrDayFrom' || p[1]==='emrDayTo') && a.value){
+                        let found=false;
+                        for(let i=0;i<b.options.length;i++){ if(b.options[i].value===a.value){ found=true; break; } }
+                        if(!found){ const o=document.createElement('option'); o.value=a.value; o.textContent=a.value; b.appendChild(o); }
+                    }
+                    b.value = a.value;
+                }
+            });
+            // show/hide day labels on main (harmless while hidden)
+            if(typeof emrOnPeriodChange==='function'){
+                const v=(document.getElementById('emrPeriod')||{}).value||'';
+                const day=v==='day';
+                const a=document.getElementById('emrDayLabel'), b=document.getElementById('emrDayToLabel');
+                if(a) a.style.display=day?'':'none';
+                if(b) b.style.display=day?'':'none';
+            }
+        }
+        function emr2CopyDomFromEmr(){
+            const pairs = [
+                ['emrHead','emr2Head'],['emrBody','emr2Body'],['emrStats','emr2Stats'],
+                ['emrStatus','emr2Status'],['emrSummaryGrid','emr2SummaryGrid'],
+                ['emrSummaryScope','emr2SummaryScope'],['emrDataUpto','emr2DataUpto']
+            ];
+            pairs.forEach(function(p){
+                const a=document.getElementById(p[0]), b=document.getElementById(p[1]);
+                if(a && b){
+                    if(b.tagName==='STRONG' || b.tagName==='SPAN') b.textContent = a.textContent;
+                    else b.innerHTML = a.innerHTML;
+                }
+            });
+            const tw=document.getElementById('emrTableWrap');
+            const tw2=document.getElementById('emr2TableWrap');
+            if(tw && tw2) tw2.style.display = tw.style.display;
+            const st=document.getElementById('emr2Status');
+            const stMain=document.getElementById('emrStatus');
+            if(st && stMain) st.style.display = stMain.style.display;
+            emr2LastExport = {headers:(emrLastExport&&emrLastExport.headers)||[], rows:(emrLastExport&&emrLastExport.rows)||[]};
         }
         function emr2Apply(){
-            const head = document.getElementById('emr2Head');
-            const body = document.getElementById('emr2Body');
-            const wrap = document.getElementById('emr2TableWrap');
-            const st = document.getElementById('emr2Status');
-            if(wrap) wrap.style.display = 'none';
-            if(head) head.innerHTML = '';
-            if(body) body.innerHTML = '';
-            if(st){
-                st.style.display = 'block';
-                st.textContent = 'Tab: '+(emr2Mode||'uc')+' — data source pending. Jab sheet/link mil jayega, yahan Outreach jaisi reports aayengi.';
+            // source filter first
+            const src = (document.getElementById('emr2Source')||{}).value||'';
+            emr2Rows = !src ? emr2AllRows.slice() : emr2AllRows.filter(function(r){ return r._source===src; });
+            if(!emr2AllRows.length){
+                const st=document.getElementById('emr2Status');
+                if(st){ st.style.display='block'; st.textContent='Click Refresh Data to load OR + Fixed sheet.'; }
+                return;
+            }
+            // Run existing Outreach report engine on this dataset
+            const bak = { rows:emrRows, targets:emrTargets, mode:emrMode, late:emrLateFilter, exp:emrLastExport };
+            try{
+                emrRows = emr2Rows;
+                emrTargets = emr2Targets.length ? emr2Targets : emrTargets;
+                emrMode = emr2Mode || 'uc';
+                emr2SyncFiltersToEmr();
+                if(typeof emrApply==='function') emrApply();
+                emr2CopyDomFromEmr();
+            }catch(err){
+                console.error(err);
+                const st=document.getElementById('emr2Status');
+                if(st){ st.style.display='block'; st.textContent='Report error: '+(err.message||err); }
+            }finally{
+                emrRows = bak.rows;
+                emrTargets = bak.targets;
+                emrMode = bak.mode;
+                emrLateFilter = bak.late;
+                emrLastExport = bak.exp;
             }
         }
-        function emr2DownloadExcel(){ alert('Outreach Reports 2: pehle data source connect karein.'); }
-        function emr2ExportTabPdf(){ alert('Outreach Reports 2: pehle data source connect karein.'); }
-        function emr2ExportTabPng(){ alert('Outreach Reports 2: pehle data source connect karein.'); }
+        function emr2DownloadExcel(){
+            emr2Apply();
+            if(typeof XLSX==='undefined'){ alert('XLSX missing'); return; }
+            const headers = emr2LastExport.headers||[];
+            const rows = emr2LastExport.rows||[];
+            if(!headers.length){ alert('No table data'); return; }
+            const aoa=[headers].concat(rows);
+            const ws=XLSX.utils.aoa_to_sheet(aoa);
+            const wb=XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Report');
+            const name = 'OR_Fixed_'+(emr2Mode||'report')+'_'+(new Date().toISOString().slice(0,10))+'.xlsx';
+            XLSX.writeFile(wb, name);
+        }
+        function emr2ExportTabPdf(){
+            emr2Apply();
+            // temporarily put export into emrLastExport and call emrExportTabPdf
+            const bak = emrLastExport;
+            const bakMode = emrMode;
+            try{
+                emrLastExport = emr2LastExport;
+                emrMode = emr2Mode;
+                if(typeof emrExportTabPdf==='function') emrExportTabPdf();
+                else alert('PDF export unavailable');
+            }finally{
+                emrLastExport = bak;
+                emrMode = bakMode;
+            }
+        }
+        async function emr2ExportTabPng(){
+            emr2Apply();
+            const wrap=document.getElementById('emr2TableWrap');
+            if(!wrap || typeof html2canvas==='undefined'){ alert('PNG not available'); return; }
+            try{
+                const canvas=await html2canvas(wrap,{scale:1.25, backgroundColor:'#fff'});
+                const a=document.createElement('a');
+                a.href=canvas.toDataURL('image/png');
+                a.download='OR_Fixed_'+(emr2Mode||'tab')+'.png';
+                a.click();
+            }catch(e){ alert('PNG failed: '+(e.message||e)); }
+        }
 
         function emrSetStats(items){
             const box = document.getElementById('emrStats');
