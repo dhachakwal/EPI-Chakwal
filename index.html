@@ -580,6 +580,7 @@
                 <!-- Top module switcher -->
                 <div class="emr-tabs" id="emrModuleTabs" style="margin-bottom:14px;border-bottom:2px solid #c8e6c9;padding-bottom:10px">
                     <button type="button" class="emr-tab active" data-module="outreach" onclick="emrSwitchModule('outreach')">📋 Outreach Reports</button>
+                    <button type="button" class="emr-tab" data-module="outreach2" onclick="emrSwitchModule('outreach2')">📋 Outreach Reports 2</button>
                     <button type="button" class="emr-tab" data-module="fixed" onclick="emrSwitchModule('fixed')">🏥 Fixed Site Reports</button>
                     <button type="button" class="emr-tab" data-module="orFixed" onclick="emrSwitchModule('orFixed')">📊 OR + Fixed Sites Compile</button>
                     <button type="button" class="emr-tab" data-module="attendance" onclick="emrSwitchModule('attendance')">⏱ Vaccinators Attendance</button>
@@ -682,6 +683,93 @@
                     </table>
                 </div>
                 </div><!-- /emrModuleOutreach -->
+
+                <!-- ===== MODULE: OUTREACH 2 (same layout; data source TBD) ===== -->
+                <div id="emrModuleOutreach2" style="display:none">
+                <p class="emr-note"><strong>Source:</strong> Same layout as Outreach Reports. Data source / sheet abhi pending — aap bataenge to connect kar diya jayega. Filters, 15 report tabs, Excel / PDF / PNG structure ready.</p>
+                <div class="emr-filter">
+                    <label>Period
+                        <select id="emr2Period" onchange="emr2OnPeriodChange()">
+                            <option value="month:2026-09" selected>September 2026</option>
+                            <option value="month:2026-08">August 2026</option>
+                            <option value="month:2026-07">July 2026</option>
+                            <option value="month:2026-06">June 2026</option>
+                            <option value="month:2026-05">May 2026</option>
+                            <option value="month:2026-04">April 2026</option>
+                            <option value="month:2026-03">March 2026</option>
+                            <option value="month:2026-02">February 2026</option>
+                            <option value="month:2026-01">January 2026</option>
+                            <option value="day">Date range</option>
+                        </select>
+                    </label>
+                    <label id="emr2DayLabel" style="display:none">From
+                        <select id="emr2DayFrom" onchange="emr2Apply()"><option value="">—</option></select>
+                    </label>
+                    <label id="emr2DayToLabel" style="display:none">To
+                        <select id="emr2DayTo" onchange="emr2Apply()"><option value="">—</option></select>
+                    </label>
+                    <label>Tehsil
+                        <select id="emr2Tehsil" onchange="emr2OnFilterChange()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Union Council
+                        <select id="emr2UC" onchange="emr2Apply()"><option value="">All UCs</option></select>
+                    </label>
+                    <label>Search (Name / MR / Phone)
+                        <span style="display:flex;gap:6px;align-items:center">
+                            <input type="text" id="emr2Search" placeholder="Name / MR / Phone…" style="min-width:150px">
+                            <button type="button" class="btn btn-sm" onclick="emr2Apply()" style="background:#0d5c3d;padding:8px 12px;white-space:nowrap">🔍 Search</button>
+                            <button type="button" class="btn btn-sm" onclick="emr2ResetFilters()" style="background:#78909c;padding:8px 12px;white-space:nowrap" title="Reset all filters">↺ Reset</button>
+                        </span>
+                    </label>
+                    <button type="button" class="btn btn-sm" onclick="emr2Load()" style="background:#0d5c3d">🔄 Refresh Data</button>
+                    <span class="sweep-meta" id="emr2Meta">Not loaded — waiting for data source</span>
+                </div>
+
+                <div class="emr-summary-panel" id="emr2SummaryPanel">
+                    <div class="emr-summary-head">
+                        <h3>Immunization Summary Panel</h3>
+                        <div class="emr-summary-meta">Data up to: <strong id="emr2DataUpto">—</strong></div>
+                    </div>
+                    <div class="emr-summary-scope" id="emr2SummaryScope">Scope: District Chakwal (All)</div>
+                    <div class="emr-summary-grid" id="emr2SummaryGrid">
+                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Awaiting data</div></div>
+                    </div>
+                </div>
+
+                <div class="emr-tabs" id="emr2Tabs">
+                    <button type="button" class="emr-tab active" data-emr2="uc" onclick="emr2Switch('uc')">1. UC-wise Entries</button>
+                    <button type="button" class="emr-tab" data-emr2="tehsil" onclick="emr2Switch('tehsil')">2. Tehsil Summary</button>
+                    <button type="button" class="emr-tab" data-emr2="antigen" onclick="emr2Switch('antigen')">3. Antigen Summary</button>
+                    <button type="button" class="emr-tab" data-emr2="tehsilAg" onclick="emr2Switch('tehsilAg')">4. Tehsil-wise Antigen</button>
+                    <button type="button" class="emr-tab" data-emr2="phone" onclick="emr2Switch('phone')">5. Missing Phone Number</button>
+                    <button type="button" class="emr-tab" data-emr2="father" onclick="emr2Switch('father')">6. Missing Father Name</button>
+                    <button type="button" class="emr-tab" data-emr2="map" onclick="emr2Switch('map')">7. Geo Map Links</button>
+                    <button type="button" class="emr-tab" data-emr2="late" onclick="emr2Switch('late')">8. Late Entries Status</button>
+                    <button type="button" class="emr-tab" data-emr2="dropout" onclick="emr2Switch('dropout')">9. Drop-out</button>
+                    <button type="button" class="emr-tab" data-emr2="targets" onclick="emr2Switch('targets')">10. Targets vs Coverage</button>
+                    <button type="button" class="emr-tab" data-emr2="defaulter" onclick="emr2Switch('defaulter')">11. Defaulter Children Vaccinated</button>
+                    <button type="button" class="emr-tab" data-emr2="overdue" onclick="emr2Switch('overdue')">12. Overdue Children (Not Vaccinated)</button>
+                    <button type="button" class="emr-tab" data-emr2="duplicate" onclick="emr2Switch('duplicate')">13. Duplicate Children</button>
+                    <button type="button" class="emr-tab" data-emr2="ucAg" onclick="emr2Switch('ucAg')">14. UC-wise Antigen Entries Status</button>
+                    <button type="button" class="emr-tab" data-emr2="doseDiff" onclick="emr2Switch('doseDiff')">15. Difference Between Same Doses</button>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+                    <button type="button" class="btn btn-sm" onclick="emr2DownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" onclick="emr2ExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
+                    <button type="button" class="btn btn-sm" onclick="emr2ExportTabPng()" style="background:#00838f">🖼 PNG (This Tab)</button>
+                    <span style="font-size:12px;color:#666">Same report structure as Outreach Reports — data connect pending</span>
+                </div>
+
+                <div class="emr-stats" id="emr2Stats"></div>
+                <div id="emr2Status" class="sweep-loading">Outreach Reports 2 ready. Data source batayein — phir reports live ho jayengi.</div>
+                <div class="emr-table-wrap" id="emr2TableWrap" style="display:none">
+                    <table class="emr-table">
+                        <thead id="emr2Head"></thead>
+                        <tbody id="emr2Body"></tbody>
+                    </table>
+                </div>
+                </div><!-- /emrModuleOutreach2 -->
 
                 <!-- ===== MODULE: FIXED SITE ===== -->
                 <div id="emrModuleFixed" style="display:none">
@@ -4583,12 +4671,14 @@
                 b.classList.toggle('active', b.getAttribute('data-module')===emrModule);
             });
             const o = document.getElementById('emrModuleOutreach');
+            const o2 = document.getElementById('emrModuleOutreach2');
             const fx = document.getElementById('emrModuleFixed');
             const f = document.getElementById('emrModuleOrFixed');
             const a = document.getElementById('emrModuleAttendance');
             const l = document.getElementById('emrModuleLocation');
             const s = document.getElementById('emrModuleSweep');
             if(o) o.style.display = emrModule==='outreach' ? '' : 'none';
+            if(o2) o2.style.display = emrModule==='outreach2' ? '' : 'none';
             if(fx) fx.style.display = emrModule==='fixed' ? '' : 'none';
             if(f) f.style.display = emrModule==='orFixed' ? '' : 'none';
             if(a) a.style.display = emrModule==='attendance' ? '' : 'none';
@@ -4596,6 +4686,9 @@
             if(s) s.style.display = emrModule==='sweep' ? '' : 'none';
             // lazy load when module opened
             try{
+                if(emrModule==='outreach2' && typeof emr2Load==='function'){
+                    emr2Load();
+                }
                 if(emrModule==='fixed' && typeof loadFixedData==='function'){
                     if(typeof fxRecords==='undefined' || !fxRecords || !fxRecords.length) loadFixedData();
                     else if(typeof fxApply==='function') fxApply();
@@ -4615,6 +4708,58 @@
                 }
             }catch(e){}
         }
+
+        // ===== Outreach Reports 2 (shell — data source TBD) =====
+        let emr2Mode = 'uc';
+        let emr2Rows = [];
+        function emr2OnPeriodChange(){
+            const v = (document.getElementById('emr2Period')||{}).value||'';
+            const day = v==='day';
+            const a = document.getElementById('emr2DayLabel');
+            const b = document.getElementById('emr2DayToLabel');
+            if(a) a.style.display = day ? '' : 'none';
+            if(b) b.style.display = day ? '' : 'none';
+            emr2Apply();
+        }
+        function emr2OnFilterChange(){ emr2Apply(); }
+        function emr2ResetFilters(){
+            const ids = ['emr2Period','emr2Tehsil','emr2UC','emr2Search','emr2DayFrom','emr2DayTo'];
+            ids.forEach(function(id){ const el=document.getElementById(id); if(el) el.value = (id==='emr2Period'?'month:2026-09':''); });
+            emr2OnPeriodChange();
+        }
+        function emr2Switch(mode){
+            emr2Mode = mode || 'uc';
+            document.querySelectorAll('#emr2Tabs .emr-tab').forEach(function(btn){
+                btn.classList.toggle('active', btn.getAttribute('data-emr2')===emr2Mode);
+            });
+            emr2Apply();
+        }
+        function emr2Load(){
+            const st = document.getElementById('emr2Status');
+            const meta = document.getElementById('emr2Meta');
+            if(meta) meta.textContent = 'No data source linked yet';
+            if(st){
+                st.style.display = 'block';
+                st.textContent = 'Outreach Reports 2 UI ready (same as Outreach). Google Sheet / data source batayein — phir yeh module live data se fill hoga.';
+            }
+            emr2Apply();
+        }
+        function emr2Apply(){
+            const head = document.getElementById('emr2Head');
+            const body = document.getElementById('emr2Body');
+            const wrap = document.getElementById('emr2TableWrap');
+            const st = document.getElementById('emr2Status');
+            if(wrap) wrap.style.display = 'none';
+            if(head) head.innerHTML = '';
+            if(body) body.innerHTML = '';
+            if(st){
+                st.style.display = 'block';
+                st.textContent = 'Tab: '+(emr2Mode||'uc')+' — data source pending. Jab sheet/link mil jayega, yahan Outreach jaisi reports aayengi.';
+            }
+        }
+        function emr2DownloadExcel(){ alert('Outreach Reports 2: pehle data source connect karein.'); }
+        function emr2ExportTabPdf(){ alert('Outreach Reports 2: pehle data source connect karein.'); }
+        function emr2ExportTabPng(){ alert('Outreach Reports 2: pehle data source connect karein.'); }
 
         function emrSetStats(items){
             const box = document.getElementById('emrStats');
