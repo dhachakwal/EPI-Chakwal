@@ -689,7 +689,7 @@
                 <p class="emr-note"><strong>Source:</strong> OR + Fixed compiled child-level data (Google Sheet). <strong>Outreach</strong> + <strong>Fixed</strong> sheets combined (data through 24 Sep). Same 15 report tabs as Outreach Reports. Use <em>Source</em> filter for Outreach only / Fixed only / Both.</p>
                 <div class="emr-filter">
                     <label>Source
-                        <select id="emr2Source" onchange="emr2Apply()">
+                        <select id="emr2Source" onchange="emr2OnSourceChange()">
                             <option value="">All (OR + Fixed)</option>
                             <option value="outreach">Outreach only</option>
                             <option value="fixed">Fixed only</option>
@@ -765,7 +765,7 @@
                     <button type="button" class="btn btn-sm" onclick="emr2DownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
                     <button type="button" class="btn btn-sm" onclick="emr2ExportTabPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
                     <button type="button" class="btn btn-sm" onclick="emr2ExportTabPng()" style="background:#00838f">🖼 PNG (This Tab)</button>
-                    <span style="font-size:12px;color:#666">Same report structure as Outreach Reports — data connect pending</span>
+                    <span style="font-size:12px;color:#666">Excel / PDF / PNG = open tab · Source = Outreach / Fixed / Both</span>
                 </div>
 
                 <div class="emr-stats" id="emr2Stats"></div>
@@ -5036,33 +5036,48 @@
             if(st && stMain) st.style.display = stMain.style.display;
             emr2LastExport = {headers:(emrLastExport&&emrLastExport.headers)||[], rows:(emrLastExport&&emrLastExport.rows)||[]};
         }
+        function emr2OnSourceChange(){
+            const st=document.getElementById('emr2Status');
+            if(st){ st.style.display='block'; st.textContent='Filtering source…'; }
+            // rebuild rows + UC list then apply
+            setTimeout(function(){ emr2Apply(); }, 10);
+        }
         function emr2Apply(){
             // source filter first
             const src = (document.getElementById('emr2Source')||{}).value||'';
             emr2Rows = !src ? emr2AllRows.slice() : emr2AllRows.filter(function(r){ return r._source===src; });
+            const st0=document.getElementById('emr2Status');
             if(!emr2AllRows.length){
-                const st=document.getElementById('emr2Status');
-                if(st){ st.style.display='block'; st.textContent='Click Refresh Data to load OR + Fixed sheet.'; }
+                if(st0){ st0.style.display='block'; st0.textContent='Click Refresh Data to load OR + Fixed sheet.'; }
                 return;
             }
-            // Run existing Outreach report engine on this dataset
+            if(!emr2Mode) emr2Mode = 'uc';
+            // highlight active sub-tab
+            document.querySelectorAll('#emr2Tabs .emr-tab').forEach(function(btn){
+                btn.classList.toggle('active', btn.getAttribute('data-emr2')===emr2Mode);
+            });
+            if(st0){ st0.style.display='block'; st0.textContent='Computing report ('+emr2Rows.length.toLocaleString()+' rows)…'; }
+            // Run Outreach engine SYNCHRONOUSLY (emrApply uses setTimeout — that races with restore)
             const bak = { rows:emrRows, targets:emrTargets, mode:emrMode, late:emrLateFilter, exp:emrLastExport };
             try{
+                if(window._emrApplyTimer){ clearTimeout(window._emrApplyTimer); window._emrApplyTimer=null; }
                 emrRows = emr2Rows;
                 emrTargets = emr2Targets.length ? emr2Targets : emrTargets;
                 emrMode = emr2Mode || 'uc';
                 emr2SyncFiltersToEmr();
-                if(typeof emrApply==='function') emrApply();
+                if(typeof emrApplyNow==='function') emrApplyNow();
+                else if(typeof emrApply==='function') emrApply();
                 emr2CopyDomFromEmr();
+                if(st0 && st0.textContent.indexOf('Computing')===0) st0.style.display='none';
             }catch(err){
                 console.error(err);
-                const st=document.getElementById('emr2Status');
-                if(st){ st.style.display='block'; st.textContent='Report error: '+(err.message||err); }
+                if(st0){ st0.style.display='block'; st0.textContent='Report error: '+(err.message||err); }
             }finally{
                 emrRows = bak.rows;
                 emrTargets = bak.targets;
                 emrMode = bak.mode;
                 emrLateFilter = bak.late;
+                // keep emr2LastExport from copy; restore main export
                 emrLastExport = bak.exp;
             }
         }
