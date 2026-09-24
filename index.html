@@ -3418,7 +3418,7 @@
         const FX_SHEET_ID = '1RecvAyFGOTYC7zwlLAMeQoFamDc29IBMwy6N63kL2cA';
         // [key, label, flagCol, dateCol]
         const FX_VAX_DEF = [
-            ['hepB','Hep Birth Dose',32,52],['bcg','BCG',20,38],['opv0','OPV-0',21,39],['opvI','OPV-1',24,42],
+            ['hepB','Hep-B',32,52],['bcg','BCG',20,38],['opv0','OPV-0',21,39],['opvI','OPV-1',24,42],
             ['pentaI','Penta-1',22,40],['pneumoI','PCV13-1',23,41],['rota1','Rota-1',33,53],
             ['opvII','OPV-2',null,45],['pentaII','Penta-2',25,43],['pneumoII','PCV13-2',26,44],['rota2','Rota-2',34,54],
             ['opvIII','OPV-3',28,48],['pentaIII','Penta-3',27,46],['pneumoIII','PCV13-3',null,47],
@@ -4109,14 +4109,14 @@
             ['pentaI','Penta-1'],['pentaII','Penta-2'],['pentaIII','Penta-3'],
             ['pneumoI','PCV13-1'],['pneumoII','PCV13-2'],['pneumoIII','PCV13-3'],
             ['ipv','IPV-1'],['measlesI','MR-1'],['measlesII','MR-2'],
-            ['hepB','Hep Birth Dose'],['rota1','Rota-1'],['rota2','Rota-2'],['ipv2','IPV-2'],
+            ['hepB','Hep-B'],['rota1','Rota-1'],['rota2','Rota-2'],['ipv2','IPV-2'],
             ['dpt','DTP'],['tcv','TCV']
         ];
         // Display order for child card (sheet key + label)
         
         const EMR_COVERAGE_ANTIGENS = [
             {key:'bcg', label:'BCG', target:'newborn'},
-            {key:'hepB', label:'Hep Birth Dose', target:'newborn'},
+            {key:'hepB', label:'Hep-B', target:'newborn'},
             {key:'pentaI', label:'Penta-1', target:'surviving'},
             {key:'pentaII', label:'Penta-2', target:'surviving'},
             {key:'pentaIII', label:'Penta-3', target:'surviving'},
@@ -4127,7 +4127,7 @@
         ];
 
         const EMR_VAX_ORDER = [
-            ['hepB','Hep Birth Dose'],['bcg','BCG'],['opv0','OPV-0'],['opvI','OPV-1'],
+            ['hepB','Hep-B'],['bcg','BCG'],['opv0','OPV-0'],['opvI','OPV-1'],
             ['pentaI','Penta-1'],['pneumoI','PCV13-1'],['rota1','Rota-1'],
             ['opvII','OPV-2'],['pentaII','Penta-2'],['pneumoII','PCV13-2'],['rota2','Rota-2'],
             ['opvIII','OPV-3'],['pentaIII','Penta-3'],['pneumoIII','PCV13-3'],
@@ -5773,7 +5773,7 @@
         /** Shared PDF column sizing + short labels (site-wide) */
         function pdfShortHeader(h){
             let s = String(h==null?'':h).trim();
-            if(/^Hep Birth Dose$/i.test(s) || /^Hep Birth$/i.test(s)) return 'Hep-B';
+            if(/^Hep-B$/i.test(s) || /^Hep Birth$/i.test(s)) return 'Hep-B';
             if(/^Union Council \(UC\)$/i.test(s) || /^Union Council$/i.test(s)) return 'Union Council (UC)';
             return s;
         }
@@ -6822,7 +6822,7 @@
         // Due age (days from birth) — defaulter if dose after due + 30 days
         const EMR_DUE_SCHEDULE = [
             {key:'bcg', label:'BCG', dueDays:30},
-            {key:'hepB', label:'Hep Birth Dose', dueDays:15},
+            {key:'hepB', label:'Hep-B', dueDays:15},
             {key:'opv0', label:'OPV-0', dueDays:15},
             {key:'pentaI', label:'Penta-1', dueDays:42},
             {key:'pentaII', label:'Penta-2', dueDays:70},
@@ -6909,7 +6909,7 @@
          */
         const EMR_OVERDUE_SCHEDULE = [
             {key:'bcg', label:'BCG', dueMode:'dob', dueDays:30, maxAgeDays:365},
-            {key:'hepB', label:'Hep Birth Dose', dueMode:'dob', dueDays:1, maxAgeDays:15},
+            {key:'hepB', label:'Hep-B', dueMode:'dob', dueDays:1, maxAgeDays:15},
             {key:'opv0', label:'OPV-0', dueMode:'dob', dueDays:1, maxAgeDays:15},
             {key:'pentaI', label:'Penta-1', dueMode:'dob', dueDays:45, maxAgeDays:5*365},
             {key:'opvI', label:'OPV-1', dueMode:'dob', dueDays:45, maxAgeDays:5*365},
