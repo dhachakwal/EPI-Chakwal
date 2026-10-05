@@ -686,7 +686,7 @@
 
                 <!-- ===== MODULE: OUTREACH 2 (same layout; data source TBD) ===== -->
                 <div id="emrModuleOutreach2" style="display:none">
-                <p class="emr-note"><strong>Source:</strong> OR + Fixed compiled child-level data (Google Sheet). <strong>Outreach</strong> + <strong>Fixed</strong> sheets combined (data through 24 Sep). Same 15 report tabs as Outreach Reports. Use <em>Source</em> filter for Outreach only / Fixed only / Both.</p>
+                <p class="emr-note"><strong>Source:</strong> OR + Fixed compiled child-level data (Google Sheet). <strong>Outreach</strong> + <strong>Fixed</strong> sheets combined (latest upload). Same 15 report tabs as Outreach Reports. Use <em>Source</em> filter for Outreach only / Fixed only / Both.</p>
                 <div class="emr-filter">
                     <label>Source
                         <select id="emr2Source" onchange="emr2OnSourceChange()">
@@ -4797,69 +4797,125 @@
             return {raw:String(v||''), date:d, hour:d.getHours(), minute:d.getMinutes()};
         }
         function emr2NormRowOutreach(row){
-            // sheet: SrNo,child_reg_id,Division,District,Tehsil,UCID,UCName,MRNumber,Name,FatherName,...,Phone,Gender,DOB,Age,bcg...Lat,Lng,LastUpdated
-            const g = function(i){ return row[i]==null?'':row[i]; };
+            // NEW schema (Oct 2026): DivisionName,DistrictName,TehsilName,UCName,MRNumber,Name,FatherName,age,Gender,Address,PhoneNumber,
+            // bcg..TCV, Polio_ChildId, Latitude, Longitude, LastUpdatedDate (+ trailing duplicate lat/lng/updated cols)
+            const g = function(i){ return (row && row[i]!=null) ? row[i] : ''; };
             const out = new Array(35);
-            out[EMR_COLS.division] = g(2);
-            out[EMR_COLS.district] = g(3);
-            out[EMR_COLS.tehsil] = String(g(4)||'').trim();
-            out[EMR_COLS.uc] = String(g(6)||'').trim();
-            out[EMR_COLS.mr] = g(7);
-            out[EMR_COLS.name] = g(8);
-            out[EMR_COLS.father] = g(9);
-            out[EMR_COLS.age] = g(18);
-            out[EMR_COLS.gender] = g(16);
-            out[EMR_COLS.address] = g(14);
-            out[EMR_COLS.phone] = g(15);
-            // antigens 19-38
-            const map = [
-                [19,'bcg'],[20,'opv0'],[21,'opvI'],[22,'opvII'],[23,'opvIII'],
-                [24,'pentaI'],[25,'pentaII'],[26,'pentaIII'],
-                [27,'pneumoI'],[28,'pneumoII'],[29,'pneumoIII'],
-                [30,'ipv'],[31,'measlesI'],[32,'measlesII'],[33,'hepB'],
-                [34,'rota1'],[35,'rota2'],[36,'ipv2'],[37,'dpt'],[38,'tcv']
-            ];
-            map.forEach(function(p){ out[EMR_COLS[p[1]]] = g(p[0]); });
-            out[EMR_COLS.polioId] = '';
-            out[EMR_COLS.lat] = g(39);
-            out[EMR_COLS.lng] = g(40);
-            out[EMR_COLS.updated] = emr2UpdatedCell(g(41));
+            out[EMR_COLS.division] = g(0);
+            out[EMR_COLS.district] = g(1);
+            out[EMR_COLS.tehsil] = String(g(2)||'').trim();
+            out[EMR_COLS.uc] = String(g(3)||'').trim();
+            out[EMR_COLS.mr] = g(4);
+            out[EMR_COLS.name] = g(5);
+            out[EMR_COLS.father] = g(6);
+            out[EMR_COLS.age] = g(7);
+            out[EMR_COLS.gender] = g(8);
+            out[EMR_COLS.address] = g(9);
+            out[EMR_COLS.phone] = g(10);
+            // antigens 11-30 (dose dates in cells)
+            out[EMR_COLS.bcg] = g(11);
+            out[EMR_COLS.opv0] = g(12);
+            out[EMR_COLS.opvI] = g(13);
+            out[EMR_COLS.opvII] = g(14);
+            out[EMR_COLS.opvIII] = g(15);
+            out[EMR_COLS.pentaI] = g(16);
+            out[EMR_COLS.pentaII] = g(17);
+            out[EMR_COLS.pentaIII] = g(18);
+            out[EMR_COLS.pneumoI] = g(19);
+            out[EMR_COLS.pneumoII] = g(20);
+            out[EMR_COLS.pneumoIII] = g(21);
+            out[EMR_COLS.ipv] = g(22);
+            out[EMR_COLS.measlesI] = g(23);
+            out[EMR_COLS.measlesII] = g(24);
+            out[EMR_COLS.hepB] = g(25);
+            out[EMR_COLS.rota1] = g(26);
+            out[EMR_COLS.rota2] = g(27);
+            out[EMR_COLS.ipv2] = g(28);
+            out[EMR_COLS.dpt] = g(29);
+            out[EMR_COLS.tcv] = g(30);
+            out[EMR_COLS.polioId] = g(31);
+            // Prefer real trailing LastUpdatedDate (col 41) over ######## at 34
+            const lat = g(32) || g(39);
+            const lng = g(33) || g(40);
+            out[EMR_COLS.lat] = lat;
+            out[EMR_COLS.lng] = lng;
+            let upd = g(41);
+            if(upd==='' || upd==null || String(upd).indexOf('#')>=0) upd = g(34);
+            out[EMR_COLS.updated] = emr2UpdatedCell(upd);
             out._source = 'outreach';
-            // preindex for month filter
             const u = out[EMR_COLS.updated];
             if(u && u.date){ out._uy = u.date.getFullYear(); out._um = u.date.getMonth(); out._ud = u.date.getDate(); }
             return out;
         }
         function emr2NormRowFixed(row){
-            // Tehsil=4, facilityname=8 as UC label, MR=9, Name=10, Father=11, Phone=17, Gender=18, Age=20, antigens 21-40, lat41 lng42 updated43
-            const g = function(i){ return row[i]==null?'':row[i]; };
+            // NEW schema: DistrictName,TehsilName,HFName,HFCode,phase,facility_type,...,Gender,DOB,Polio,MR,CNIC,CreatedAt,ModifiedAt,reg,FirstName,LastName,Phone,...,
+            // bcg..TCV as Yes/No (20-37), then *_date_time columns (38-57)
+            const g = function(i){ return (row && row[i]!=null) ? row[i] : ''; };
             const out = new Array(35);
-            out[EMR_COLS.division] = g(2);
-            out[EMR_COLS.district] = g(3);
-            out[EMR_COLS.tehsil] = String(g(4)||'').trim();
-            const fac = String(g(8)||'').trim();
-            out[EMR_COLS.uc] = fac || String(g(5)||'').trim(); // facility name as geo label
-            out[EMR_COLS.mr] = g(9);
-            out[EMR_COLS.name] = g(10);
-            out[EMR_COLS.father] = g(11);
-            out[EMR_COLS.age] = g(20);
-            out[EMR_COLS.gender] = g(18);
-            out[EMR_COLS.address] = g(16);
-            out[EMR_COLS.phone] = g(17);
-            const map = [
-                [21,'bcg'],[22,'opv0'],[23,'opvI'],[24,'opvII'],[25,'opvIII'],
-                [26,'pentaI'],[27,'pentaII'],[28,'pentaIII'],
-                [29,'pneumoI'],[30,'pneumoII'],[31,'pneumoIII'],
-                [32,'ipv'],[33,'measlesI'],[34,'measlesII'],[35,'hepB'],
-                [36,'rota1'],[37,'rota2'],[38,'ipv2'],[39,'dpt'],[40,'tcv']
-            ];
-            map.forEach(function(p){ out[EMR_COLS[p[1]]] = g(p[0]); });
-            out[EMR_COLS.polioId] = '';
-            out[EMR_COLS.lat] = g(41);
-            out[EMR_COLS.lng] = g(42);
-            out[EMR_COLS.updated] = emr2UpdatedCell(g(43));
+            out[EMR_COLS.division] = '';
+            out[EMR_COLS.district] = g(0);
+            out[EMR_COLS.tehsil] = String(g(1)||'').trim();
+            const fac = String(g(2)||'').trim();
+            out[EMR_COLS.uc] = fac; // facility name as geo label
+            out[EMR_COLS.mr] = g(10);
+            const fn = String(g(15)||'').trim(), ln = String(g(16)||'').trim();
+            out[EMR_COLS.name] = (fn + (ln?(' '+ln):'')).trim();
+            out[EMR_COLS.father] = '';
+            out[EMR_COLS.age] = '';
+            out[EMR_COLS.gender] = g(7);
+            out[EMR_COLS.address] = '';
+            out[EMR_COLS.phone] = g(17) || g(18);
+            // Map Yes/No + date_time → store dose DATE in antigen cell for period logic
+            function doseCell(yesNoIdx, dateIdx){
+                const dt = (dateIdx>=0) ? g(dateIdx) : '';
+                if(dt!=null && String(dt).trim() && String(dt).indexOf('#')<0) return dt;
+                if(yesNoIdx<0) return '';
+                const yn = String(g(yesNoIdx)||'').trim().toLowerCase();
+                const has = yn && yn!=='no' && yn!=='n/a' && yn!=='na' && yn!=='-' && yn!=='null' && yn.indexOf('#')<0;
+                if(has) return yn==='yes' ? 'Yes' : g(yesNoIdx);
+                return '';
+            }
+            out[EMR_COLS.bcg] = doseCell(20, 38);
+            out[EMR_COLS.opv0] = doseCell(21, 39);
+            out[EMR_COLS.pentaI] = doseCell(22, 40);
+            out[EMR_COLS.pneumoI] = doseCell(23, 41);
+            out[EMR_COLS.opvI] = doseCell(24, 42);
+            out[EMR_COLS.pentaII] = doseCell(25, 43);
+            out[EMR_COLS.pneumoII] = doseCell(26, 44);
+            out[EMR_COLS.opvII] = doseCell(-1, 45); // no Yes/No col; date only if present
+            // override opvII if date-only
+            if(!out[EMR_COLS.opvII] && g(45)) out[EMR_COLS.opvII] = g(45);
+            out[EMR_COLS.pentaIII] = doseCell(27, 46);
+            out[EMR_COLS.pneumoIII] = doseCell(-1, 47);
+            if(!out[EMR_COLS.pneumoIII] && g(47)) out[EMR_COLS.pneumoIII] = g(47);
+            // pneumoIII yes/no missing in middle — try PneumoIII if any; fixed has pneumo at 23/26 only for 1/2
+            out[EMR_COLS.opvIII] = doseCell(28, 48);
+            out[EMR_COLS.ipv] = doseCell(29, 49);
+            out[EMR_COLS.measlesI] = doseCell(30, 50);
+            out[EMR_COLS.measlesII] = doseCell(31, 51);
+            out[EMR_COLS.hepB] = doseCell(32, 52);
+            out[EMR_COLS.rota1] = doseCell(33, 53);
+            out[EMR_COLS.rota2] = doseCell(34, 54);
+            out[EMR_COLS.ipv2] = doseCell(35, 55);
+            out[EMR_COLS.dpt] = doseCell(36, 56);
+            out[EMR_COLS.tcv] = doseCell(37, 57);
+            out[EMR_COLS.polioId] = g(9);
+            out[EMR_COLS.lat] = '';
+            out[EMR_COLS.lng] = '';
+            // Updated: ModifiedAt / CreatedAt often ######## — use latest dose date_time or time_stamp
+            let upd = g(13);
+            if(upd==='' || upd==null || String(upd).indexOf('#')>=0) upd = g(12);
+            if(upd==='' || upd==null || String(upd).indexOf('#')>=0) upd = g(19);
+            let best = emr2ParseDate(upd);
+            for(let di=38; di<=57; di++){
+                const d = emr2ParseDate(g(di));
+                if(d && (!best || d>best)) best = d;
+            }
+            if(best) out[EMR_COLS.updated] = {raw:String(upd||best.toISOString()), date:best, hour:best.getHours(), minute:best.getMinutes()};
+            else out[EMR_COLS.updated] = emr2UpdatedCell(upd);
             out._source = 'fixed';
             out._facilityType = String(g(5)||'').trim();
+            out._hfCode = String(g(3)||'').trim();
             const u = out[EMR_COLS.updated];
             if(u && u.date){ out._uy = u.date.getFullYear(); out._um = u.date.getMonth(); out._ud = u.date.getDate(); }
             return out;
