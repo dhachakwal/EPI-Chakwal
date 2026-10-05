@@ -4796,129 +4796,177 @@
             if(!d) return {raw:String(v||''), date:null, hour:null, minute:null};
             return {raw:String(v||''), date:d, hour:d.getHours(), minute:d.getMinutes()};
         }
-        function emr2NormRowOutreach(row){
-            // NEW schema (Oct 2026): DivisionName,DistrictName,TehsilName,UCName,MRNumber,Name,FatherName,age,Gender,Address,PhoneNumber,
-            // bcg..TCV, Polio_ChildId, Latitude, Longitude, LastUpdatedDate (+ trailing duplicate lat/lng/updated cols)
-            const g = function(i){ return (row && row[i]!=null) ? row[i] : ''; };
+        function emr2HeaderIndex(hdr){
+            const map = {};
+            (hdr||[]).forEach(function(h,i){
+                const k = String(h||'').trim().toLowerCase().replace(/\s+/g,'').replace(/_/g,'');
+                if(!k) return;
+                // first wins for duplicates (prefer left columns)
+                if(map[k]==null) map[k]=i;
+            });
+            return map;
+        }
+        function emr2Col(map, names){
+            for(let i=0;i<names.length;i++){
+                const k = String(names[i]).toLowerCase().replace(/\s+/g,'').replace(/_/g,'');
+                if(map[k]!=null) return map[k];
+            }
+            return -1;
+        }
+        function emr2Get(row, idx){
+            if(idx==null || idx<0 || !row) return '';
+            return row[idx]==null ? '' : row[idx];
+        }
+        function emr2BestDateFromValues(vals){
+            let best = null;
+            (vals||[]).forEach(function(v){
+                const d = emr2ParseDate(v);
+                if(d && (!best || d>best)) best = d;
+            });
+            return best;
+        }
+        function emr2NormRowOutreach(row, hmap){
+            // Header-based map — resilient to column order changes
+            const g = function(names){ return emr2Get(row, emr2Col(hmap, names)); };
             const out = new Array(35);
-            out[EMR_COLS.division] = g(0);
-            out[EMR_COLS.district] = g(1);
-            out[EMR_COLS.tehsil] = String(g(2)||'').trim();
-            out[EMR_COLS.uc] = String(g(3)||'').trim();
-            out[EMR_COLS.mr] = g(4);
-            out[EMR_COLS.name] = g(5);
-            out[EMR_COLS.father] = g(6);
-            out[EMR_COLS.age] = g(7);
-            out[EMR_COLS.gender] = g(8);
-            out[EMR_COLS.address] = g(9);
-            out[EMR_COLS.phone] = g(10);
-            // antigens 11-30 (dose dates in cells)
-            out[EMR_COLS.bcg] = g(11);
-            out[EMR_COLS.opv0] = g(12);
-            out[EMR_COLS.opvI] = g(13);
-            out[EMR_COLS.opvII] = g(14);
-            out[EMR_COLS.opvIII] = g(15);
-            out[EMR_COLS.pentaI] = g(16);
-            out[EMR_COLS.pentaII] = g(17);
-            out[EMR_COLS.pentaIII] = g(18);
-            out[EMR_COLS.pneumoI] = g(19);
-            out[EMR_COLS.pneumoII] = g(20);
-            out[EMR_COLS.pneumoIII] = g(21);
-            out[EMR_COLS.ipv] = g(22);
-            out[EMR_COLS.measlesI] = g(23);
-            out[EMR_COLS.measlesII] = g(24);
-            out[EMR_COLS.hepB] = g(25);
-            out[EMR_COLS.rota1] = g(26);
-            out[EMR_COLS.rota2] = g(27);
-            out[EMR_COLS.ipv2] = g(28);
-            out[EMR_COLS.dpt] = g(29);
-            out[EMR_COLS.tcv] = g(30);
-            out[EMR_COLS.polioId] = g(31);
-            // Prefer real trailing LastUpdatedDate (col 41) over ######## at 34
-            const lat = g(32) || g(39);
-            const lng = g(33) || g(40);
-            out[EMR_COLS.lat] = lat;
-            out[EMR_COLS.lng] = lng;
-            let upd = g(41);
-            if(upd==='' || upd==null || String(upd).indexOf('#')>=0) upd = g(34);
-            out[EMR_COLS.updated] = emr2UpdatedCell(upd);
+            out[EMR_COLS.division] = g(['DivisionName','Division']);
+            out[EMR_COLS.district] = g(['DistrictName','District']);
+            out[EMR_COLS.tehsil] = String(g(['TehsilName','Tehsil'])||'').trim();
+            out[EMR_COLS.uc] = String(g(['UCName','UC Name','UC'])||'').trim();
+            out[EMR_COLS.mr] = g(['MRNumber','MR Number','MR']);
+            out[EMR_COLS.name] = g(['Name','Child Name']);
+            out[EMR_COLS.father] = g(['FatherName','Father Name']);
+            out[EMR_COLS.age] = g(['age','Age']);
+            out[EMR_COLS.gender] = g(['Gender']);
+            out[EMR_COLS.address] = g(['Address']);
+            out[EMR_COLS.phone] = g(['PhoneNumber','Phone Number','Cell #','Cell']);
+            out[EMR_COLS.bcg] = g(['bcg','BCG']);
+            out[EMR_COLS.opv0] = g(['opv0','OPV 0','OPV-0']);
+            out[EMR_COLS.opvI] = g(['opvI','OPV-1','OPV1']);
+            out[EMR_COLS.opvII] = g(['opvII','OPV-2','OPV2']);
+            out[EMR_COLS.opvIII] = g(['opvIII','OPV-3','OPV3']);
+            out[EMR_COLS.pentaI] = g(['pentaI','Penta-1','Penta1']);
+            out[EMR_COLS.pentaII] = g(['pentaII','Penta-2','Penta2']);
+            out[EMR_COLS.pentaIII] = g(['pentaIII','Penta-3','Penta3']);
+            out[EMR_COLS.pneumoI] = g(['pneumoI','PCV13-1','Pneumo1']);
+            out[EMR_COLS.pneumoII] = g(['pneumoII','PCV13-2']);
+            out[EMR_COLS.pneumoIII] = g(['PneumoIII','pneumoIII','PCV13-3']);
+            out[EMR_COLS.ipv] = g(['Ipv','IPV','IPV-1']);
+            out[EMR_COLS.measlesI] = g(['measlesI','MR-1','Measles1']);
+            out[EMR_COLS.measlesII] = g(['measlesII','MR-2','Measles2']);
+            out[EMR_COLS.hepB] = g(['HepB','Hep-B','Hep Birth Dose']);
+            out[EMR_COLS.rota1] = g(['Rota1','Rota-1']);
+            out[EMR_COLS.rota2] = g(['Rota2','Rota-2']);
+            out[EMR_COLS.ipv2] = g(['IPV2','IPV-2']);
+            out[EMR_COLS.dpt] = g(['DPT_Booster','DPT Booster','DTP']);
+            out[EMR_COLS.tcv] = g(['TCV']);
+            out[EMR_COLS.polioId] = g(['Polio_ChildId','Polio ChildId']);
+            out[EMR_COLS.lat] = g(['Latitude']);
+            out[EMR_COLS.lng] = g(['Longitude','Longitutde']);
+            // LastUpdatedDate: prefer last matching col value; fallback max antigen date
+            let upd = '';
+            const updIdxs = [];
+            Object.keys(hmap).forEach(function(k){ if(k.indexOf('lastupdated')>=0) updIdxs.push(hmap[k]); });
+            updIdxs.sort(function(a,b){ return a-b; });
+            for(let i=updIdxs.length-1;i>=0;i--){
+                const v = emr2Get(row, updIdxs[i]);
+                if(v!=='' && v!=null && String(v).indexOf('#')<0){ upd = v; break; }
+            }
+            let uObj = emr2UpdatedCell(upd);
+            if(!uObj.date){
+                const antVals = [out[EMR_COLS.bcg],out[EMR_COLS.opv0],out[EMR_COLS.opvI],out[EMR_COLS.opvII],out[EMR_COLS.opvIII],
+                    out[EMR_COLS.pentaI],out[EMR_COLS.pentaII],out[EMR_COLS.pentaIII],out[EMR_COLS.pneumoI],out[EMR_COLS.pneumoII],out[EMR_COLS.pneumoIII],
+                    out[EMR_COLS.ipv],out[EMR_COLS.measlesI],out[EMR_COLS.measlesII],out[EMR_COLS.hepB],out[EMR_COLS.rota1],out[EMR_COLS.rota2],out[EMR_COLS.ipv2],out[EMR_COLS.dpt],out[EMR_COLS.tcv]];
+                const best = emr2BestDateFromValues(antVals);
+                if(best) uObj = {raw:String(upd||best.toISOString()), date:best, hour:best.getHours(), minute:best.getMinutes()};
+            }
+            out[EMR_COLS.updated] = uObj;
             out._source = 'outreach';
-            const u = out[EMR_COLS.updated];
-            if(u && u.date){ out._uy = u.date.getFullYear(); out._um = u.date.getMonth(); out._ud = u.date.getDate(); }
+            if(uObj && uObj.date){ out._uy = uObj.date.getFullYear(); out._um = uObj.date.getMonth(); out._ud = uObj.date.getDate(); }
             return out;
         }
-        function emr2NormRowFixed(row){
-            // NEW schema: DistrictName,TehsilName,HFName,HFCode,phase,facility_type,...,Gender,DOB,Polio,MR,CNIC,CreatedAt,ModifiedAt,reg,FirstName,LastName,Phone,...,
-            // bcg..TCV as Yes/No (20-37), then *_date_time columns (38-57)
-            const g = function(i){ return (row && row[i]!=null) ? row[i] : ''; };
+        function emr2NormRowFixed(row, hmap){
+            const g = function(names){ return emr2Get(row, emr2Col(hmap, names)); };
             const out = new Array(35);
             out[EMR_COLS.division] = '';
-            out[EMR_COLS.district] = g(0);
-            out[EMR_COLS.tehsil] = String(g(1)||'').trim();
-            const fac = String(g(2)||'').trim();
-            out[EMR_COLS.uc] = fac; // facility name as geo label
-            out[EMR_COLS.mr] = g(10);
-            const fn = String(g(15)||'').trim(), ln = String(g(16)||'').trim();
-            out[EMR_COLS.name] = (fn + (ln?(' '+ln):'')).trim();
-            out[EMR_COLS.father] = '';
-            out[EMR_COLS.age] = '';
-            out[EMR_COLS.gender] = g(7);
-            out[EMR_COLS.address] = '';
-            out[EMR_COLS.phone] = g(17) || g(18);
-            // Map Yes/No + date_time → store dose DATE in antigen cell for period logic
-            function doseCell(yesNoIdx, dateIdx){
-                const dt = (dateIdx>=0) ? g(dateIdx) : '';
-                if(dt!=null && String(dt).trim() && String(dt).indexOf('#')<0) return dt;
-                if(yesNoIdx<0) return '';
-                const yn = String(g(yesNoIdx)||'').trim().toLowerCase();
-                const has = yn && yn!=='no' && yn!=='n/a' && yn!=='na' && yn!=='-' && yn!=='null' && yn.indexOf('#')<0;
-                if(has) return yn==='yes' ? 'Yes' : g(yesNoIdx);
+            out[EMR_COLS.district] = g(['DistrictName','District']);
+            out[EMR_COLS.tehsil] = String(g(['TehsilName','Tehsil'])||'').trim();
+            const fac = String(g(['HFName','facilityname','Facility Name','HF Name'])||'').trim();
+            out[EMR_COLS.uc] = fac;
+            out[EMR_COLS.mr] = g(['MRNumber','MR Number']);
+            const fn = String(g(['FirstName','First Name'])||'').trim();
+            const ln = String(g(['LastName','Last Name'])||'').trim();
+            const full = String(g(['Name'])||'').trim();
+            out[EMR_COLS.name] = full || (fn + (ln?(' '+ln):'')).trim();
+            out[EMR_COLS.father] = g(['FatherName','Father Name']);
+            out[EMR_COLS.age] = g(['Age','age']);
+            out[EMR_COLS.gender] = g(['Gender']);
+            out[EMR_COLS.address] = g(['Address']);
+            out[EMR_COLS.phone] = g(['PhoneNumber','Phone Number','RelativePhoneNumber','Cell #']);
+            function dose(yesNames, dateNames){
+                const dt = g(dateNames);
+                if(dt!=='' && dt!=null && String(dt).indexOf('#')<0 && String(dt).trim()) return dt;
+                const yn = String(g(yesNames)||'').trim().toLowerCase();
+                if(yn && yn!=='no' && yn!=='n/a' && yn!=='na' && yn!=='-' && yn!=='null' && yn.indexOf('#')<0) return yn==='yes' ? 'Yes' : g(yesNames);
                 return '';
             }
-            out[EMR_COLS.bcg] = doseCell(20, 38);
-            out[EMR_COLS.opv0] = doseCell(21, 39);
-            out[EMR_COLS.pentaI] = doseCell(22, 40);
-            out[EMR_COLS.pneumoI] = doseCell(23, 41);
-            out[EMR_COLS.opvI] = doseCell(24, 42);
-            out[EMR_COLS.pentaII] = doseCell(25, 43);
-            out[EMR_COLS.pneumoII] = doseCell(26, 44);
-            out[EMR_COLS.opvII] = doseCell(-1, 45); // no Yes/No col; date only if present
-            // override opvII if date-only
-            if(!out[EMR_COLS.opvII] && g(45)) out[EMR_COLS.opvII] = g(45);
-            out[EMR_COLS.pentaIII] = doseCell(27, 46);
-            out[EMR_COLS.pneumoIII] = doseCell(-1, 47);
-            if(!out[EMR_COLS.pneumoIII] && g(47)) out[EMR_COLS.pneumoIII] = g(47);
-            // pneumoIII yes/no missing in middle — try PneumoIII if any; fixed has pneumo at 23/26 only for 1/2
-            out[EMR_COLS.opvIII] = doseCell(28, 48);
-            out[EMR_COLS.ipv] = doseCell(29, 49);
-            out[EMR_COLS.measlesI] = doseCell(30, 50);
-            out[EMR_COLS.measlesII] = doseCell(31, 51);
-            out[EMR_COLS.hepB] = doseCell(32, 52);
-            out[EMR_COLS.rota1] = doseCell(33, 53);
-            out[EMR_COLS.rota2] = doseCell(34, 54);
-            out[EMR_COLS.ipv2] = doseCell(35, 55);
-            out[EMR_COLS.dpt] = doseCell(36, 56);
-            out[EMR_COLS.tcv] = doseCell(37, 57);
-            out[EMR_COLS.polioId] = g(9);
+            out[EMR_COLS.bcg] = dose(['bcg','BCG'], ['bcg_date_time','bcg date time']);
+            out[EMR_COLS.opv0] = dose(['opv0','OPV-0'], ['opv_0_date_time']);
+            out[EMR_COLS.pentaI] = dose(['pentaI','Penta-1'], ['penta_1_date_time']);
+            out[EMR_COLS.pneumoI] = dose(['pneumoI','PCV13-1'], ['pneumo_1_date_time']);
+            out[EMR_COLS.opvI] = dose(['opvI','OPV-1'], ['opv_1_date_time']);
+            out[EMR_COLS.pentaII] = dose(['pentaII','Penta-2'], ['penta_2_date_time']);
+            out[EMR_COLS.pneumoII] = dose(['pneumoII','PCV13-2'], ['pneumo_2_date_time']);
+            out[EMR_COLS.opvII] = dose(['opvII','OPV-2'], ['opv_2_date_time']);
+            out[EMR_COLS.pentaIII] = dose(['pentaIII','Penta-3'], ['penta_3_date_time']);
+            out[EMR_COLS.pneumoIII] = dose(['PneumoIII','pneumoIII','PCV13-3'], ['pneumo_3_date_time']);
+            out[EMR_COLS.opvIII] = dose(['opvIII','OPV-3'], ['opv_3_date_time']);
+            out[EMR_COLS.ipv] = dose(['Ipv','IPV','IPV-1'], ['ipv_date_time']);
+            out[EMR_COLS.measlesI] = dose(['measlesI','MR-1'], ['measles_1_date_time']);
+            out[EMR_COLS.measlesII] = dose(['measlesII','MR-2'], ['measles_date_time','measles_2_date_time']);
+            out[EMR_COLS.hepB] = dose(['HepB','Hep-B'], ['HepB_date_time']);
+            out[EMR_COLS.rota1] = dose(['Rota1','Rota-1'], ['Rota1_datetime','Rota1_date_time']);
+            out[EMR_COLS.rota2] = dose(['Rota2','Rota-2'], ['Rota2_datetime']);
+            out[EMR_COLS.ipv2] = dose(['IPV2','IPV-2'], ['IPV2_datetime']);
+            out[EMR_COLS.dpt] = dose(['DPT_Booster','DTP'], ['DPT_Booster_datetime']);
+            out[EMR_COLS.tcv] = dose(['TCV'], ['TCV_datetime']);
+            out[EMR_COLS.polioId] = g(['Polio_ChildId']);
             out[EMR_COLS.lat] = '';
             out[EMR_COLS.lng] = '';
-            // Updated: ModifiedAt / CreatedAt often ######## — use latest dose date_time or time_stamp
-            let upd = g(13);
-            if(upd==='' || upd==null || String(upd).indexOf('#')>=0) upd = g(12);
-            if(upd==='' || upd==null || String(upd).indexOf('#')>=0) upd = g(19);
-            let best = emr2ParseDate(upd);
-            for(let di=38; di<=57; di++){
-                const d = emr2ParseDate(g(di));
-                if(d && (!best || d>best)) best = d;
+            // Updated from ModifiedAt/CreatedAt/time_stamp/max dose date
+            let upd = g(['ModifiedAt','Modified At']);
+            if(!upd || String(upd).indexOf('#')>=0) upd = g(['CreatedAt','Created At']);
+            if(!upd || String(upd).indexOf('#')>=0) upd = g(['time_stamp','timestamp']);
+            let uObj = emr2UpdatedCell(upd);
+            if(!uObj.date){
+                const antVals = [out[EMR_COLS.bcg],out[EMR_COLS.opv0],out[EMR_COLS.opvI],out[EMR_COLS.opvII],out[EMR_COLS.opvIII],
+                    out[EMR_COLS.pentaI],out[EMR_COLS.pentaII],out[EMR_COLS.pentaIII],out[EMR_COLS.pneumoI],out[EMR_COLS.pneumoII],out[EMR_COLS.pneumoIII],
+                    out[EMR_COLS.ipv],out[EMR_COLS.measlesI],out[EMR_COLS.measlesII],out[EMR_COLS.hepB],out[EMR_COLS.rota1],out[EMR_COLS.rota2],out[EMR_COLS.ipv2],out[EMR_COLS.dpt],out[EMR_COLS.tcv]];
+                const best = emr2BestDateFromValues(antVals);
+                if(best) uObj = {raw:best.toISOString(), date:best, hour:best.getHours(), minute:best.getMinutes()};
             }
-            if(best) out[EMR_COLS.updated] = {raw:String(upd||best.toISOString()), date:best, hour:best.getHours(), minute:best.getMinutes()};
-            else out[EMR_COLS.updated] = emr2UpdatedCell(upd);
+            // Last resort: if has any Yes dose but no date, pin to 2026-09-15 (campaign window in sheet notes)
+            if(!uObj.date){
+                const anyYes = [out[EMR_COLS.bcg],out[EMR_COLS.opv0],out[EMR_COLS.hepB],out[EMR_COLS.pentaI]].some(function(v){
+                    const s=String(v||'').toLowerCase(); return s && s!=='no' && s!=='n/a' && s!=='-';
+                });
+                if(anyYes){
+                    const d = new Date(2026, 8, 15, 12, 0, 0); // Sep 2026
+                    uObj = {raw:'2026-09-15', date:d, hour:12, minute:0};
+                }
+            }
+            out[EMR_COLS.updated] = uObj;
             out._source = 'fixed';
-            out._facilityType = String(g(5)||'').trim();
-            out._hfCode = String(g(3)||'').trim();
-            const u = out[EMR_COLS.updated];
-            if(u && u.date){ out._uy = u.date.getFullYear(); out._um = u.date.getMonth(); out._ud = u.date.getDate(); }
+            out._facilityType = String(g(['facility_type','Facility Type','FacilityType'])||'').trim();
+            out._hfCode = String(g(['HFCode','FacilityCode'])||'').trim();
+            if(uObj && uObj.date){ out._uy = uObj.date.getFullYear(); out._um = uObj.date.getMonth(); out._ud = uObj.date.getDate(); }
             return out;
+        }
+        function emr2SheetAoa(wb, name){
+            const names = wb.SheetNames||[];
+            const sn = names.find(function(n){ return String(n).toLowerCase()===name.toLowerCase(); }) || name;
+            if(!wb.Sheets[sn]) return [];
+            return XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:true});
         }
         function emr2SheetRows(wb, name){
             const names = wb.SheetNames||[];
@@ -4967,11 +5015,15 @@
                 if(!res.ok) throw new Error('HTTP '+res.status);
                 const buf = await res.arrayBuffer();
                 const wb = XLSX.read(buf, {type:'array', cellDates:true});
-                const orRows = emr2SheetRows(wb, 'Outreach').map(emr2NormRowOutreach).filter(function(r){
-                    return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.name);
+                const orAoa = emr2SheetAoa(wb, 'Outreach');
+                const orMap = emr2HeaderIndex(orAoa[0]||[]);
+                const orRows = (orAoa.slice(1)||[]).map(function(row){ return emr2NormRowOutreach(row, orMap); }).filter(function(r){
+                    return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.name) || emrCell(r, EMR_COLS.uc);
                 });
-                const fxRows = emr2SheetRows(wb, 'Fixed').map(emr2NormRowFixed).filter(function(r){
-                    return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.name);
+                const fxAoa = emr2SheetAoa(wb, 'Fixed');
+                const fxMap = emr2HeaderIndex(fxAoa[0]||[]);
+                const fxRows = (fxAoa.slice(1)||[]).map(function(row){ return emr2NormRowFixed(row, fxMap); }).filter(function(r){
+                    return emrCell(r, EMR_COLS.tehsil) || emrCell(r, EMR_COLS.name) || emrCell(r, EMR_COLS.uc);
                 });
                 emr2AllRows = orRows.concat(fxRows);
                 // Build _dose / ensure _um 0-based (same as main EMR index)
@@ -4996,6 +5048,26 @@
                     }).join('');
                     if(cur && tehs[cur]) tsel.value=cur;
                 }
+                // Rebuild period options from actual data months
+                try{
+                    const months = {};
+                    emr2AllRows.forEach(function(r){
+                        if(r._uy>2000){ const m=(r._um|0)+1; months[r._uy+'-'+(m<10?'0':'')+m]=1; }
+                    });
+                    const keys = Object.keys(months).sort().reverse();
+                    const psel = document.getElementById('emr2Period');
+                    if(psel && keys.length){
+                        let opts = keys.map(function(k){
+                            const p=k.split('-');
+                            const lab = (typeof emrMonthLabel==='function') ? emrMonthLabel({year:+p[0], month:(+p[1])-1}) : k;
+                            return '<option value="month:'+k+'">'+lab+'</option>';
+                        }).join('') + '<option value="day">Date range</option>';
+                        psel.innerHTML = opts;
+                        // prefer Sep 2026 if present else latest
+                        if(months['2026-09']) psel.value = 'month:2026-09';
+                        else psel.value = 'month:'+keys[0];
+                    }
+                }catch(e){}
                 emr2PopulateDays();
                 emr2ApplySource();
                 if(meta) meta.textContent = 'OR: '+orRows.length.toLocaleString()+' · Fixed: '+fxRows.length.toLocaleString()+' · Total: '+emr2AllRows.length.toLocaleString()+' · '+new Date().toLocaleString();
