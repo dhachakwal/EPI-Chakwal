@@ -995,6 +995,7 @@
                         <button type="button" class="emr-tab" data-loc="leaveToday" onclick="locSwitch('leaveToday')">9. On Leave (Today)</button>
                         <button type="button" class="emr-tab" data-loc="leaveBal" onclick="locSwitch('leaveBal')">10. Leave Balance</button>
                         <button type="button" class="emr-tab" data-loc="leaveReg" onclick="locSwitch('leaveReg')">11. Leave Register</button>
+                        <button type="button" class="emr-tab" data-loc="dailyStatus" onclick="locSwitch('dailyStatus')">12. Daily Status Report</button>
                         <button type="button" class="emr-tab" data-loc="map" onclick="locSwitch('map')">🗺️ Live Map</button>
                         <span style="margin-left:auto;display:flex;flex-wrap:wrap;gap:6px">
                             <button type="button" class="btn btn-sm" onclick="locExportExcel()" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📥 Excel</button>
@@ -9132,6 +9133,36 @@
         function locClickStat(mode){
             locSwitch(mode);
         }
+        
+        function locMinsOfDay(ts){
+            if(!ts) return null;
+            const p = locPktParts(ts);
+            if(!p) return null;
+            return p.h*60 + p.mi;
+        }
+        function locIsPolioLeave(leave){
+            if(!leave) return false;
+            const s = String((leave.leaveType||'')+' '+(leave.reason||'')).toLowerCase();
+            return /polio/.test(s);
+        }
+        /** Classify one vaccinator for a single day into status bucket */
+        function locDayStatusBucket(m, dayY){
+            const leave = (typeof locHasLeave==='function') ? locHasLeave(m, dayY) : null;
+            if(leave){
+                if(locIsPolioLeave(leave)) return {bucket:'polio', leave:leave, hit:null};
+                return {bucket:'leave', leave:leave, hit:null};
+            }
+            const hits = locHitsFor(m, dayY);
+            if(!hits || !hits.length) return {bucket:'absent', leave:null, hit:null};
+            let hit = hits[0];
+            hits.forEach(function(h){ if(h.ts && (!hit.ts || h.ts < hit.ts)) hit = h; });
+            const mins = locMinsOfDay(hit.ts);
+            if(mins==null) return {bucket:'presentAfter', leave:null, hit:hit};
+            if(mins < (9*60+30)) return {bucket:'presentEarly', leave:null, hit:hit};
+            if(mins <= (9*60+40)) return {bucket:'presentGrace', leave:null, hit:hit};
+            return {bucket:'presentAfter', leave:null, hit:hit};
+        }
+
         function locApply(){
             const day=(document.getElementById('locDay')||{}).value||'';
             const masters=locFilteredMasters();
@@ -9428,6 +9459,89 @@
                 if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">Abhi koi leave submit nahi</td></tr>';
                 locLastExport={headers:['Sr','Date','Name','Username','Tehsil','UC','Type','Reason','Application'], rows:exp, title:'Leave Register'};
             }
+            else if(locMode==='dailyStatus'){
+                const dayY = day || (typeof locTodayYmd==='function' ? locTodayYmd() : '');
+                if(!dayY){
+                    if(stats) stats.innerHTML='';
+                    if(head) head.innerHTML='<tr><th>Info</th></tr>';
+                    if(body) body.innerHTML='<tr><td>Please select a <strong>Date</strong> for Daily Status Report</td></tr>';
+                    locLastExport={headers:[],rows:[],title:''};
+                    return;
+                }
+                let nTotal=0, nEarly=0, nGrace=0, nAfter=0, nAbsent=0, nLeave=0, nPolio=0;
+                const detail=[];
+                masters.forEach(function(m){
+                    nTotal++;
+                    const st = locDayStatusBucket(m, dayY);
+                    if(st.bucket==='presentEarly') nEarly++;
+                    else if(st.bucket==='presentGrace') nGrace++;
+                    else if(st.bucket==='presentAfter') nAfter++;
+                    else if(st.bucket==='leave') nLeave++;
+                    else if(st.bucket==='polio') nPolio++;
+                    else nAbsent++;
+                    const timeTxt = st.hit && st.hit.ts ? locFmt(st.hit.ts) : (st.leave ? (st.leave.leaveType||st.leave.reason||'Leave') : '—');
+                    const labelMap = {
+                        presentEarly:'Present in Field (Before 09:30 AM)',
+                        presentGrace:'Present in Field (09:30 – 09:40 AM)',
+                        presentAfter:'Present in Field (After 09:40 AM)',
+                        absent:'Absent',
+                        leave:'On Leave',
+                        polio:'On Polio Duty'
+                    };
+                    detail.push({
+                        name:m.name, username:m.username||'', tehsil:m.tehsil||'', uc:m.uc||'',
+                        status:labelMap[st.bucket]||st.bucket, time:timeTxt, bucket:st.bucket
+                    });
+                });
+                const dateLbl = locYmdLabel(dayY);
+                const summary = [
+                    ['Total Vaccinator', nTotal],
+                    ['Present in Field (Before 09:30 AM)', nEarly],
+                    ['Present in Field (09:30 – 09:40 AM)', nGrace],
+                    ['Present in Field (After 09:40 AM)', nAfter],
+                    ['Absent', nAbsent],
+                    ['On Leave', nLeave],
+                    ['On Polio Duty', nPolio]
+                ];
+                if(stats){
+                    stats.innerHTML =
+                        '<div class="emr-stat"><div class="n">'+nTotal+'</div><div class="l">Total</div></div>'+
+                        '<div class="emr-stat" style="color:#2e7d32"><div class="n">'+nEarly+'</div><div class="l">Before 09:30</div></div>'+
+                        '<div class="emr-stat" style="color:#f9a825"><div class="n">'+nGrace+'</div><div class="l">09:30–09:40</div></div>'+
+                        '<div class="emr-stat" style="color:#e65100"><div class="n">'+nAfter+'</div><div class="l">After 09:40</div></div>'+
+                        '<div class="emr-stat" style="color:#c62828"><div class="n">'+nAbsent+'</div><div class="l">Absent</div></div>'+
+                        '<div class="emr-stat" style="color:#1565c0"><div class="n">'+nLeave+'</div><div class="l">On Leave</div></div>'+
+                        '<div class="emr-stat" style="color:#6a1b9a"><div class="n">'+nPolio+'</div><div class="l">Polio Duty</div></div>';
+                }
+                if(head) head.innerHTML='<tr><th colspan="2" style="text-align:center;background:#0d5c3d;color:#fff;font-size:15px">Vaccinators Daily Status Report<br><span style="font-weight:600;font-size:13px">Dated '+dateLbl+'</span></th></tr><tr><th style="text-align:left">Status</th><th style="width:110px">Count</th></tr>';
+                const colorRow = {
+                    'Total Vaccinator':'#f5f5f5',
+                    'Present in Field (Before 09:30 AM)':'#e8f5e9',
+                    'Present in Field (09:30 – 09:40 AM)':'#fff8e1',
+                    'Present in Field (After 09:40 AM)':'#fff3e0',
+                    'Absent':'#ffebee',
+                    'On Leave':'#e3f2fd',
+                    'On Polio Duty':'#f3e5f5'
+                };
+                let bodyHtml = summary.map(function(pair){
+                    const bg = colorRow[pair[0]] || '';
+                    const wt = pair[0]==='Total Vaccinator' ? 'font-weight:800' : 'font-weight:600';
+                    return '<tr style="background:'+bg+'"><td style="text-align:left;'+wt+'">'+pair[0]+'</td><td style="font-size:16px;font-weight:800">'+pair[1]+'</td></tr>';
+                }).join('');
+                bodyHtml += '<tr><td colspan="2" style="background:#0d5c3d;color:#fff;font-weight:700;text-align:left;padding:8px">Detail by Vaccinator</td></tr>';
+                detail.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+                detail.forEach(function(d){
+                    const bg = colorRow[d.status]||'';
+                    bodyHtml += '<tr style="background:'+bg+'"><td style="text-align:left"><strong>'+d.name+'</strong><br><span style="color:#666;font-size:11px">'+(d.uc||d.tehsil||'')+'</span></td><td style="font-size:12px">'+d.status+'<br><span style="color:#555">'+d.time+'</span></td></tr>';
+                });
+                if(body) body.innerHTML = bodyHtml;
+                const exp = summary.map(function(p){ return [p[0], p[1]]; });
+                exp.push(['','']);
+                exp.push(['Name','Username','Tehsil','UC','Status','Time / Reason']);
+                detail.forEach(function(d){ exp.push([d.name,d.username,d.tehsil,d.uc,d.status,d.time]); });
+                locLastExport={headers:['Category / Name','Count / Detail'], rows:exp, title:'Vaccinators Daily Status Report '+dateLbl.replace(/ /g,'-')};
+            }
+
             else if(locMode==='monthly'){
                 function tick(ok){
                     return ok
@@ -9528,7 +9642,7 @@
             }
         }
         function locTabLabel(){
-            const map={submitted:'Submitted Locations',pending:'Not Submitted',all:'All Vaccinators Status',late:'Late Location Submit',multi:'Multiple Location Submits',suspicious:'Suspicious Location',map:'Live Map'};
+            const map={submitted:'Submitted Locations',pending:'Not Submitted',all:'All Vaccinators Status',late:'Late Location Submit',multi:'Multiple Location Submits',suspicious:'Suspicious Location',dailyStatus:'Daily Status Report',map:'Live Map'};
             return map[locMode]||'Field Location';
         }
         function locExportDateLabel(){
