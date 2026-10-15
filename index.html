@@ -9140,34 +9140,32 @@
             if(!p) return null;
             return p.h*60 + p.mi;
         }
-        function locIsPolioLeave(leave){
-            if(!leave) return false;
-            let s = String((leave.leaveType||'')+' '+(leave.reason||'')).toLowerCase()
-                .replace(/\s+/g,' ').trim();
+        /** Match Polio / SNID / DDHO training text (Leave reason OR Kit Station) */
+        function locIsPolioText(raw){
+            let s = String(raw||'').toLowerCase().replace(/\s+/g,' ').trim();
             if(!s) return false;
-            // normalize common typos / spacing
             s = s.replace(/tarrning|traning|tranning|tarining|trai+n?i?n?g?/g,'training')
                  .replace(/poliotrai/g,'polio training')
                  .replace(/t\s*h\s*q/g,'thq')
                  .replace(/d\s*d\s*h\s*o|d\s*d\s*o\s*h/g,'ddho')
                  .replace(/d\s*h\s*d\s*c/g,'dhdc');
-            // Explicit polio (covers: Polio training, POLIO TRAINING, Polio training CEO office, THQ polio Training, etc.)
             if(/polio/.test(s)) return true;
-            // SNID / AIC training
             if(/\bsnid\b/.test(s)) return true;
             if(/\baic\b/.test(s) && /train/.test(s)) return true;
-            // DDHO / DDOH / DHDC office (DHDC hall health office, DDho office, etc.)
             if(/ddho/.test(s) || /ddoh/.test(s) || /dhdc/.test(s)) return true;
-            // THQ hospital training variants
             if(/thq/.test(s) && /train/.test(s)) return true;
             if(/hospital/.test(s) && /train/.test(s) && /talagang|kallar|choa|chakwal|saidan/.test(s)) return true;
-            // CEO office training related to campaign
             if(/ceo\s*office/.test(s) && /train/.test(s)) return true;
             if(/health\s*office/.test(s) && (/train/.test(s) || /dhdc/.test(s) || /hall/.test(s))) return true;
             return false;
         }
+        function locIsPolioLeave(leave){
+            if(!leave) return false;
+            return locIsPolioText((leave.leaveType||'')+' '+(leave.reason||''));
+        }
         /** Classify one vaccinator for a single day into status bucket */
         function locDayStatusBucket(m, dayY){
+            // 1) Leave sheet first
             const leave = (typeof locHasLeave==='function') ? locHasLeave(m, dayY) : null;
             if(leave){
                 if(locIsPolioLeave(leave)) return {bucket:'polio', leave:leave, hit:null};
@@ -9175,6 +9173,16 @@
             }
             const hits = locHitsFor(m, dayY);
             if(!hits || !hits.length) return {bucket:'absent', leave:null, hit:null};
+            // 2) Kit Station text = Polio training / DDHO / SNID etc. → On Polio Duty
+            //    (staff often mark duty place in Kit Station field)
+            let polioHit = null;
+            hits.forEach(function(h){
+                if(locIsPolioText(h.kitStation||'')){
+                    if(!polioHit || (h.ts && polioHit.ts && h.ts < polioHit.ts) || !polioHit.ts) polioHit = h;
+                }
+            });
+            if(polioHit) return {bucket:'polio', leave:null, hit:polioHit};
+            // 3) Present by earliest submit time
             let hit = hits[0];
             hits.forEach(function(h){ if(h.ts && (!hit.ts || h.ts < hit.ts)) hit = h; });
             const mins = locMinsOfDay(hit.ts);
@@ -9500,7 +9508,15 @@
                     else if(st.bucket==='leave') nLeave++;
                     else if(st.bucket==='polio') nPolio++;
                     else nAbsent++;
-                    const timeTxt = st.hit && st.hit.ts ? locFmt(st.hit.ts) : (st.leave ? (st.leave.leaveType||st.leave.reason||'Leave') : '—');
+                    let timeTxt = '—';
+                    if(st.bucket==='polio'){
+                        if(st.leave) timeTxt = (st.leave.leaveType||'')+' '+(st.leave.reason||'Polio Duty');
+                        else if(st.hit) timeTxt = (st.hit.kitStation||'Polio Duty')+(st.hit.ts?(' · '+locFmt(st.hit.ts)):'');
+                    } else if(st.leave){
+                        timeTxt = st.leave.leaveType||st.leave.reason||'Leave';
+                    } else if(st.hit && st.hit.ts){
+                        timeTxt = locFmt(st.hit.ts);
+                    }
                     const labelMap = {
                         presentEarly:'Present in Field (Before 09:30 AM)',
                         presentGrace:'Present in Field (09:30 – 09:40 AM)',
