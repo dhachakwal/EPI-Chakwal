@@ -18,6 +18,15 @@
         p,span,div,td,th,li,h1,h2,h3,h4,label,strong,.section-title,.collapsible-header{-webkit-user-select:text!important;user-select:text!important}
         button,.btn,.section-arrow,.emr-tab,.sweep-tab{-webkit-user-select:none;user-select:none}
         .btn-disabled{opacity:.5!important;cursor:not-allowed!important}
+        #supCard .sup-table{width:100%;border-collapse:collapse;font-size:13.5px}
+        #supCard .sup-table th{background:#0d5c3d;color:#fff;padding:8px;text-align:left;white-space:nowrap}
+        #supCard .sup-table td{padding:7px 8px;border-bottom:1px solid #e3e3e3;vertical-align:top}
+        #supCard .sup-table tr:nth-child(even) td{background:#f4faf6}
+        .sup-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:12px 0}
+        .sup-controls label{font-size:12.5px;font-weight:600;color:#0d5c3d;display:block;margin-bottom:4px}
+        .sup-controls select,.sup-controls input{padding:8px;border:1.5px solid #c8e6c9;border-radius:8px;font-size:13.5px;background:#fff}
+        #supStatus{font-size:13px;color:#555;margin:8px 0}
+
         .news-ticker{background:#0d5c3d;color:#fff;padding:8px 0;overflow:hidden;white-space:nowrap;margin:0;position:relative;z-index:5}
         .ticker-content{display:inline-block;padding-left:100%;animation:ticker 80s linear infinite;font-size:15px}
         @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
@@ -573,7 +582,36 @@
 
 
             
-            <div class="section-title" id="section-emr" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            
+<div class="section-title">EPI Supervisory Staff Data</div>
+<div class="emr-card" id="supCard">
+  <p style="font-size:13.5px;color:#444;margin-bottom:6px">Source: Supervisory staff apna data <strong>supervisors.html</strong> form se submit/update karte hain — data Google Sheet se live aata hai. CNIC is tab mein show nahi hota.</p>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-number" id="supStatTotal">—</div><div class="stat-label">Total Supervisory Staff</div></div>
+    <div class="stat-card"><div class="stat-number" id="supStatDistrict">—</div><div class="stat-label">District Level</div></div>
+    <div class="stat-card"><div class="stat-number" id="supStatChakwal">—</div><div class="stat-label">Tehsil Chakwal</div></div>
+    <div class="stat-card"><div class="stat-number" id="supStatChoa">—</div><div class="stat-label">Choa Saidan Shah</div></div>
+    <div class="stat-card"><div class="stat-number" id="supStatKallar">—</div><div class="stat-label">Kallar Kahar</div></div>
+    <div class="stat-card"><div class="stat-number" id="supStatTalagang">—</div><div class="stat-label">Talagang</div></div>
+  </div>
+  <div class="sup-controls">
+    <div><label for="supTehsil">Tehsil</label><select id="supTehsil" onchange="supRender()"><option value="">All Tehsils</option><option>District Level (All Tehsils)</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select></div>
+    <div><label for="supDesig">Designation</label><select id="supDesig" onchange="supRender()"><option value="">All Designations</option></select></div>
+    <div><label for="supSearch">Search (Name / Mobile)</label><input type="text" id="supSearch" placeholder="Search…" oninput="supRender()"></div>
+    <button type="button" class="btn" onclick="supLoad()">🔄 Refresh Data</button>
+    <button type="button" class="btn btn-outline" onclick="supDownloadExcel()">⬇ Download Excel</button>
+    <a class="btn" href="supervisors.html" target="_blank" rel="noopener">📝 Submit / Update Your Data</a>
+  </div>
+  <div id="supStatus">Not loaded — Refresh Data dabayein.</div>
+  <div style="overflow-x:auto">
+    <table class="sup-table">
+      <thead><tr><th>#</th><th>Name</th><th>Designation</th><th>Tehsil</th><th>UC / Area</th><th>Place of Posting</th><th>Mobile</th><th>WhatsApp</th><th>Email</th><th>Photo</th></tr></thead>
+      <tbody id="supBody"><tr><td colspan="10" style="text-align:center;color:#777">No data loaded</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section-title" id="section-emr" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
                 <span>Child Immunization (EMR) Data</span>
                 <span id="emrSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
             </div>
@@ -1005,7 +1043,13 @@
                             <button type="button" class="btn btn-sm" onclick="explOpenFromLoc()" style="background:#bf360c;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">📝 Explanation Letter</button>
                         </span>
                     </div>
-                    <div id="locStats" class="emr-stats" style="margin:10px 0"></div>
+                    <div id="locSearchRow" style="display:none;margin:10px 0 0;background:#eef7f1;border:1px solid #c8e6c9;border-radius:10px;padding:10px 12px;align-items:center;gap:10px;flex-wrap:wrap">
+<span style="font-weight:700;color:#0d5c3d;font-size:13px">🔍 Search</span>
+<input type="text" id="locSearch" placeholder="Name / Username / Tehsil / UC search karein…" oninput="locApply()" style="flex:1;min-width:220px;max-width:420px;padding:8px 10px;border:1.5px solid #c8e6c9;border-radius:8px;font-size:13.5px;background:#fff">
+<button type="button" onclick="locClearSearch()" style="background:#fff;color:#0d5c3d;border:1.5px solid #0d5c3d;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Clear</button>
+<span id="locSearchInfo" style="font-size:12.5px;color:#555"></span>
+</div>
+<div id="locStats" class="emr-stats" style="margin:10px 0"></div>
                     <div class="emr-table-wrap" id="locTableWrap">
                         <table class="emr-table">
                             <thead id="locHead"></thead>
@@ -2600,6 +2644,7 @@
         function buildSearchIndex(){
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
+            {type:'section', title:'EPI Supervisory Staff Data', desc:'Supervisory staff directory — naam, designation, tehsil, rabta number', action:'scroll', target:'Supervisory Staff Data'},
                 {type:'section', title:'Urban Sweep-up Activity (10-15 Aug 2026)', desc:'Live reports, graphs, remaining UCs — inside EMR Outreach', action:'fn', target:'openSweepModule'},
                 {type:'section', title:'Child Immunization (EMR) Data', desc:'Outreach, Fixed Site, OR+Fixed Compile, Attendance, Location', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Fixed Site Reports', desc:'HF-wise EMR Fixed Site (inside EMR Data)', action:'scroll', target:'Child Immunization'},
@@ -8925,6 +8970,8 @@
         }
         function locSwitch(mode){
             locMode=mode;
+            const locSrchRow=document.getElementById('locSearchRow');
+            if(locSrchRow) locSrchRow.style.display=(mode==='leaveBal'||mode==='leaveReg')?'flex':'none';
             document.querySelectorAll('#locTabs .emr-tab').forEach(function(b){
                 b.classList.toggle('active', b.getAttribute('data-loc')===mode);
             });
@@ -9233,8 +9280,20 @@
             return {bucket:'presentAfter', leave:null, hit:hit};
         }
 
+        function locSearchHit_(fields){
+            const q=((document.getElementById('locSearch')||{}).value||'').trim().toLowerCase();
+            if(!q) return true;
+            return fields.some(function(f){ return String(f==null?'':f).toLowerCase().indexOf(q)>=0; });
+        }
+        function locClearSearch(){
+            const inp=document.getElementById('locSearch');
+            if(inp) inp.value='';
+            locApply();
+            if(inp) inp.focus();
+        }
         function locApply(){
             const day=(document.getElementById('locDay')||{}).value||'';
+            const locQ=((document.getElementById('locSearch')||{}).value||'').trim().toLowerCase();
             const masters=locFilteredMasters();
             let submitted=0, pending=0, lateCount=0, totalSubs=0, susCount=0;
             let leaveCountSum = 0;
@@ -9489,6 +9548,7 @@
                 const today = (typeof locTodayYmd==='function')?locTodayYmd():'';
                 const mk = today.substring(0,7);
                 masters.forEach(function(m){
+                    if(locQ && !locSearchHit_([m.name, m.username, m.tehsil, m.uc])) return;
                     const opening = (m.openingRemaining!=null)?Number(m.openingRemaining):24;
                     let yearUsed=0, month=0; const seen={};
                     (locLeaveRows||[]).forEach(function(r){
@@ -9507,9 +9567,10 @@
                     exp.push([i,m.name,m.username,m.tehsil,m.uc,opening,yearUsed,rem,month+'/2',st]);
                     rows.push('<tr><td>'+i+'</td><td style="text-align:left;font-weight:600">'+m.name+'</td><td>'+locDispUser(m.username)+'</td><td>'+(m.tehsil||'')+'</td><td style="text-align:left">'+(m.uc||'')+'</td><td>'+opening+'</td><td>'+yearUsed+'</td><td style="font-weight:700">'+rem+'</td><td>'+month+'/2</td><td style="color:'+col+';font-weight:700">'+st+'</td></tr>');
                 });
-                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+masters.length+'</div><div class="l">Vaccinators</div></div><div class="emr-stat"><div class="n">2</div><div class="l">Max / month</div></div><div class="emr-stat"><div class="n">24</div><div class="l">Max / year pool</div></div>';
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+(locQ?rows.length:masters.length)+'</div><div class="l">'+(locQ?'Vaccinators (filtered)':'Vaccinators')+'</div></div><div class="emr-stat"><div class="n">2</div><div class="l">Max / month</div></div><div class="emr-stat"><div class="n">24</div><div class="l">Max / year pool</div></div>';
+                const lsiBal=document.getElementById('locSearchInfo'); if(lsiBal) lsiBal.textContent = locQ ? (rows.length + ' record(s) mile') : '';
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Opening Bal</th><th>Used (Sep+)</th><th>Year Remaining</th><th>This Month</th><th>Status</th></tr>';
-                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="10">No master data</td></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="10">'+(locQ?'Is search mein koi record nahi mila':'No master data')+'</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Opening','Used','Remaining','Month','Status'], rows:exp, title:'Leave Balance'};
             }
             else if(locMode==='leaveReg'){
@@ -9517,16 +9578,18 @@
                     if(a.ymd!==b.ymd) return (b.ymd||'').localeCompare(a.ymd||'');
                     return String(a.name).localeCompare(String(b.name));
                 });
+                const listF = locQ ? list.filter(function(r){ return locSearchHit_([r.name, r.username, r.tehsil, r.uc, r.ymd, r.leaveType, r.reason]); }) : list;
                 let i=0, rows=[], exp=[];
-                list.forEach(function(r){
+                listF.forEach(function(r){
                     i++;
                     const link = r.link ? ('<a href="'+r.link+'" target="_blank" rel="noopener">View</a>') : '—';
                     exp.push([i,r.ymd,r.name,r.username,r.tehsil,r.uc,r.leaveType||'Casual',r.reason||'',r.link||'']);
                     rows.push('<tr><td>'+i+'</td><td>'+(r.ymd||'')+'</td><td style="text-align:left;font-weight:600">'+r.name+'</td><td>'+(r.username||'')+'</td><td>'+(r.tehsil||'')+'</td><td style="text-align:left">'+(r.uc||'')+'</td><td>Casual</td><td style="text-align:left">'+(r.reason||'')+'</td><td>'+link+'</td></tr>');
                 });
-                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">Leave records</div></div>';
+                if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+listF.length+'</div><div class="l">Leave records'+(locQ?' (filtered)':'')+'</div></div>'+(locQ?'<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">Total records</div></div>':'');
+                const lsiReg=document.getElementById('locSearchInfo'); if(lsiReg) lsiReg.textContent = locQ ? (listF.length + ' record(s) mile · kul ' + list.length) : '';
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Date</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Type</th><th>Reason</th><th>Application</th></tr>';
-                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">Abhi koi leave submit nahi</td></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">'+(locQ?'Is search mein koi record nahi mila':'Abhi koi leave submit nahi')+'</td></tr>';
                 locLastExport={headers:['Sr','Date','Name','Username','Tehsil','UC','Type','Reason','Application'], rows:exp, title:'Leave Register'};
             }
             else if(locMode==='dailyStatus'){
@@ -12463,7 +12526,127 @@
         }
 
         
-        // ===== MR CIF Form =====
+        
+        // ===== EPI Supervisory Staff Data =====
+        const SUP_SHEET_ID = ''; /* SETUP: Supervisory Staff wali Google Sheet ki ID yahan lagegi (guide: SUPERVISORY_SETUP.md) */
+        const SUP_SHEET_TAB = 'Supervisors';
+        let supRowsAll = [];
+        function supColIdx_(labels, names){
+            for(let i = 0; i < labels.length; i++){
+                const L = labels[i];
+                for(let j = 0; j < names.length; j++){ if(L === names[j]) return i; }
+            }
+            for(let i = 0; i < labels.length; i++){
+                const L = labels[i];
+                for(let j = 0; j < names.length; j++){ if(L.indexOf(names[j]) >= 0) return i; }
+            }
+            return -1;
+        }
+        function supLoad(){
+            const st = document.getElementById('supStatus');
+            if(!SUP_SHEET_ID){
+                if(st) st.textContent = 'Data source (Google Sheet) abhi connect nahi hai — setup mukammal hone ke baad data yahan live ayega.';
+                supRowsAll = []; supRender(); return;
+            }
+            if(st) st.textContent = 'Loading…';
+            const url = 'https://docs.google.com/spreadsheets/d/' + SUP_SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SUP_SHEET_TAB) + '&_=' + Date.now();
+            fetch(url, {cache:'no-store'}).then(function(r){ return r.text(); }).then(function(text){
+                const data = parseGviz(text);
+                const labels = (data.table.cols || []).map(function(c){ return String((c && c.label) || '').trim().toLowerCase(); });
+                const ix = {
+                    name: supColIdx_(labels, ['name']),
+                    desig: supColIdx_(labels, ['designation']),
+                    tehsil: supColIdx_(labels, ['tehsil']),
+                    uc: supColIdx_(labels, ['uc / area','uc','area']),
+                    posting: supColIdx_(labels, ['place of posting','posting']),
+                    mobile: supColIdx_(labels, ['mobile']),
+                    whatsapp: supColIdx_(labels, ['whatsapp']),
+                    email: supColIdx_(labels, ['email']),
+                    photo: supColIdx_(labels, ['photo url','photo']),
+                    status: supColIdx_(labels, ['status'])
+                };
+                supRowsAll = [];
+                (data.table.rows || []).forEach(function(r){
+                    function v(i){ return i >= 0 && r.c && r.c[i] ? cellVal(r.c[i]).trim() : ''; }
+                    const name = v(ix.name);
+                    if(!name) return;
+                    supRowsAll.push({name:name, desig:v(ix.desig), tehsil:v(ix.tehsil), uc:v(ix.uc), posting:v(ix.posting), mobile:v(ix.mobile), whatsapp:v(ix.whatsapp), email:v(ix.email), photo:v(ix.photo), status:v(ix.status)});
+                });
+                supBuildDesigOptions_();
+                supRender();
+            }).catch(function(e){
+                if(st) st.textContent = 'Data load nahi hua: ' + (e.message || e);
+            });
+        }
+        function supBuildDesigOptions_(){
+            const sel = document.getElementById('supDesig'); if(!sel) return;
+            const cur = sel.value;
+            const seen = {};
+            supRowsAll.forEach(function(r){ if(r.desig) seen[r.desig] = 1; });
+            sel.innerHTML = '<option value="">All Designations</option>';
+            Object.keys(seen).sort().forEach(function(d){
+                const o = document.createElement('option'); o.textContent = d; sel.appendChild(o);
+            });
+            sel.value = cur;
+        }
+        function supActiveRows_(){
+            return supRowsAll.filter(function(r){
+                const s = String(r.status || '').toLowerCase();
+                return s.indexOf('retired') < 0 && s.indexOf('transferred') < 0;
+            });
+        }
+        function supFiltered_(){
+            const teh = (document.getElementById('supTehsil') || {}).value || '';
+            const des = (document.getElementById('supDesig') || {}).value || '';
+            const q = ((document.getElementById('supSearch') || {}).value || '').trim().toLowerCase();
+            return supActiveRows_().filter(function(r){
+                if(teh && r.tehsil !== teh) return false;
+                if(des && r.desig !== des) return false;
+                if(q && (r.name + ' ' + r.mobile + ' ' + r.posting).toLowerCase().indexOf(q) < 0) return false;
+                return true;
+            });
+        }
+        function supSetStat_(id, n){ const el = document.getElementById(id); if(el) el.textContent = n; }
+        function supRender(){
+            const rows = supFiltered_();
+            const active = supActiveRows_();
+            supSetStat_('supStatTotal', active.length);
+            supSetStat_('supStatDistrict', active.filter(function(r){ return r.tehsil.indexOf('District') === 0; }).length);
+            supSetStat_('supStatChakwal', active.filter(function(r){ return r.tehsil === 'Chakwal'; }).length);
+            supSetStat_('supStatChoa', active.filter(function(r){ return r.tehsil === 'Choa Saidan Shah'; }).length);
+            supSetStat_('supStatKallar', active.filter(function(r){ return r.tehsil === 'Kallar Kahar'; }).length);
+            supSetStat_('supStatTalagang', active.filter(function(r){ return r.tehsil === 'Talagang'; }).length);
+            const body = document.getElementById('supBody'); if(!body) return;
+            const st = document.getElementById('supStatus');
+            if(!supRowsAll.length){
+                body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">No data</td></tr>';
+                return;
+            }
+            if(st) st.textContent = rows.length + ' staff member(s) dikhai de rahe hain · Kul active: ' + active.length;
+            if(!rows.length){
+                body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">Is filter mein koi record nahi mila</td></tr>';
+                return;
+            }
+            function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            body.innerHTML = rows.map(function(r, i){
+                const photo = r.photo ? '<a href="' + esc(r.photo) + '" target="_blank" rel="noopener">View</a>' : '—';
+                const wa = r.whatsapp ? '<a href="https://wa.me/92' + esc(r.whatsapp.replace(/\D/g,'').replace(/^0/,'')) + '" target="_blank" rel="noopener">' + esc(r.whatsapp) + '</a>' : '—';
+                return '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.name) + '</strong></td><td>' + esc(r.desig) + '</td><td>' + esc(r.tehsil) + '</td><td>' + esc(r.uc) + '</td><td>' + esc(r.posting) + '</td><td>' + esc(r.mobile) + '</td><td>' + wa + '</td><td>' + esc(r.email || '—') + '</td><td>' + photo + '</td></tr>';
+            }).join('');
+        }
+        function supDownloadExcel(){
+            const rows = supFiltered_();
+            if(!rows.length){ alert('Download ke liye koi data nahi.'); return; }
+            if(typeof XLSX === 'undefined'){ alert('Excel library load nahi hui — page refresh karein.'); return; }
+            const data = rows.map(function(r, i){ return {'#': i + 1, 'Name': r.name, 'Designation': r.desig, 'Tehsil': r.tehsil, 'UC / Area': r.uc, 'Place of Posting': r.posting, 'Mobile': r.mobile, 'WhatsApp': r.whatsapp, 'Email': r.email}; });
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Supervisory Staff');
+            XLSX.writeFile(wb, 'EPI_Supervisory_Staff_Chakwal.xlsx');
+        }
+        document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ supLoad(); }catch(e){} }, 1200); });
+
+// ===== MR CIF Form =====
         const CIF_STORAGE_KEY = 'epi_cif_script_url';
         const CIF_DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDomeqswqMwDaRp9WiYABENjcfq1lsNdWUZk9u58WzbuE2wQI_3m1fwQUGKqDs1hBM/exec';
         function cifVal(id){
