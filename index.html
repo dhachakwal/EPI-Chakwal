@@ -738,6 +738,7 @@
                     <button type="button" class="emr-tab" data-emr="duplicate" onclick="emrSwitch('duplicate')">13. Duplicate Children</button>
                     <button type="button" class="emr-tab" data-emr="ucAg" onclick="emrSwitch('ucAg')">14. UC-wise Antigen Entries Status</button>
                     <button type="button" class="emr-tab" data-emr="doseDiff" onclick="emrSwitch('doseDiff')">15. Difference Between Same Doses</button>
+                    <button type="button" class="emr-tab" data-emr="noentry" onclick="emrSwitch('noentry')">16. Zero-Entry Vaccinators</button>
                 </div>
 
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
@@ -5922,7 +5923,8 @@
                 targets:'10. Targets vs Coverage', defaulter:'11. Defaulter Children Vaccinated',
                 overdue:'12. Overdue Children (Not Vaccinated)', duplicate:'13. Duplicate Children',
                 ucAg:'14. UC-wise Antigen Entries Status',
-                doseDiff:'15. Difference Between Same Doses'
+                doseDiff:'15. Difference Between Same Doses',
+                noentry:'16. Zero-Entry Vaccinators'
             };
             return map[emrMode] || ('Tab: '+emrMode);
         }
@@ -5942,7 +5944,8 @@
                 overdue:"Overdue Children Data",
                 duplicate:"Duplicate Children's Data",
                 doseDiff:"Difference Between Same Doses",
-                ucAg:"UC-wise Antigen Entries Status"
+                ucAg:"UC-wise Antigen Entries Status",
+                noentry:"Zero-Entry Vaccinators Data"
             };
             return map[emrMode] || ((emrMode||'EMR')+' Data');
         }
@@ -7290,6 +7293,134 @@
         }
 
 
+        // ===== Zero-Entry Vaccinators (Tab 16) =====
+        let neRoster = null, neRosterError = '', neRosterLoading = false, neDateSel = '';
+        function neNormUc(s){ return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+        function nePad2(n){ return (n < 10 ? '0' : '') + n; }
+        function neYmdOf(r){
+            const u = emrUpdatedObj(r);
+            if(u && u.date) return u.date.getFullYear() + '-' + nePad2(u.date.getMonth() + 1) + '-' + nePad2(u.date.getDate());
+            return '';
+        }
+        function neFmtDay(ymd){
+            const p = String(ymd || '').split('-');
+            if(p.length !== 3) return ymd || '';
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return Number(p[2]) + ' ' + months[Number(p[1]) - 1] + ' ' + p[0];
+        }
+        async function neEnsureRoster(){
+            if(neRoster || neRosterLoading) return;
+            neRosterLoading = true;
+            try{
+                const wb = await attFetchWorkbook();
+                const rowsIn = attSheetRows(wb, ['Chek-In', 'Check-In', 'Check In'], 'in');
+                const byKey = {};
+                rowsIn.forEach(function(r){
+                    if(!r.username && !r.name) return;
+                    const key = attNormUser(r.username || r.name);
+                    if(!key) return;
+                    if(!byKey[key]) byKey[key] = {name: r.name || '', username: r.username || '', tehsil: r.tehsil || '', uc: r.uc || '', checkins: {}};
+                    const p = byKey[key];
+                    if(r.name) p.name = r.name;
+                    if(r.tehsil) p.tehsil = r.tehsil;
+                    if(r.uc) p.uc = r.uc;
+                    if(r.username && String(r.username).indexOf('_') >= 0) p.username = r.username;
+                    if(r.ymd) p.checkins[r.ymd] = r.time ? attFmtTime(r.time) : 'Yes';
+                });
+                const byNameUc = {};
+                Object.keys(byKey).forEach(function(k){
+                    const p = byKey[k];
+                    const nk = String(p.name || '').toLowerCase().replace(/\s+/g, ' ').trim() + '|' + neNormUc(p.uc);
+                    if(byNameUc[nk]){
+                        const q = byNameUc[nk];
+                        Object.keys(p.checkins).forEach(function(d){ if(!q.checkins[d]) q.checkins[d] = p.checkins[d]; });
+                        if(String(p.username).indexOf('_') >= 0) q.username = p.username;
+                    } else byNameUc[nk] = p;
+                });
+                neRoster = Object.keys(byNameUc).map(function(k){ return byNameUc[k]; });
+            }catch(e){
+                console.error(e);
+                neRosterError = String((e && e.message) || e);
+                neRoster = [];
+            }
+            neRosterLoading = false;
+            if(emrMode === 'noentry') emrApply();
+        }
+        function neRender(data){
+            const extra = document.getElementById('emrExtraVisual');
+            const NE_HEAD = ['Sr', 'Vaccinator', 'Username', 'Tehsil', 'UC', 'Check-In', 'Entries'];
+            if(!neRoster && !neRosterError){
+                emrSetStats([{n: '…', l: 'Roster load ho raha hai'}]);
+                if(extra){
+                    extra.style.display = 'block';
+                    extra.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:12px 14px;color:#555">⏳ Attendance sheet se vaccinators ki list load ho rahi hai…</div>';
+                }
+                emrRenderTable(NE_HEAD, '<tr><td colspan="7" style="text-align:center;color:#888">Loading…</td></tr>', NE_HEAD, [], null);
+                neEnsureRoster();
+                return;
+            }
+            if(neRosterError){
+                emrSetStats([{n: 'Error', l: 'Roster load nahi hua'}]);
+                if(extra){
+                    extra.style.display = 'block';
+                    extra.innerHTML = '<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:12px;padding:12px 14px;color:#7a4a00">⚠️ Attendance sheet load nahi ho saki (' + neRosterError + '). Refresh Data daba kar dobara koshish karein.</div>';
+                }
+                emrRenderTable(NE_HEAD, '<tr><td colspan="7" style="text-align:center;color:#888">No data</td></tr>', NE_HEAD, [], null);
+                return;
+            }
+            const daySet = {};
+            data.forEach(function(r){ const y = neYmdOf(r); if(y) daySet[y] = true; });
+            const days = Object.keys(daySet).sort().reverse();
+            if(!neDateSel || !daySet[neDateSel]) neDateSel = days.length ? days[0] : '';
+            const perUc = {};
+            data.forEach(function(r){
+                if(neYmdOf(r) === neDateSel){
+                    const k = neNormUc(emrCell(r, EMR_COLS.uc));
+                    perUc[k] = (perUc[k] || 0) + 1;
+                }
+            });
+            const tehEl = document.getElementById('emrTehsil');
+            const ucEl = document.getElementById('emrUC');
+            const tehF = tehEl ? tehEl.value : '';
+            const ucF = ucEl ? ucEl.value : '';
+            const rosterF = neRoster.filter(function(p){
+                if(tehF && p.tehsil !== tehF) return false;
+                if(ucF && neNormUc(p.uc) !== neNormUc(ucF)) return false;
+                return true;
+            });
+            const zero = rosterF.filter(function(p){ return (perUc[neNormUc(p.uc)] || 0) === 0; });
+            zero.sort(function(a, b){
+                return (a.tehsil + '|' + a.uc + '|' + a.name).localeCompare(b.tehsil + '|' + b.uc + '|' + b.name);
+            });
+            const withEntry = rosterF.length - zero.length;
+            const zeroChecked = zero.filter(function(p){ return !!p.checkins[neDateSel]; }).length;
+            emrSetStats([
+                {n: rosterF.length.toLocaleString(), l: 'Total Vaccinators'},
+                {n: withEntry.toLocaleString(), l: 'Entry Bheji'},
+                {n: zero.length.toLocaleString(), l: 'Zero-Entry'},
+                {n: zeroChecked.toLocaleString(), l: 'Check-In Kiya, Entry Nahi'}
+            ]);
+            if(extra){
+                extra.style.display = 'block';
+                extra.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">'
+                    + '<label style="font-weight:700;color:#0d5c3d">Report Date <select id="neDate" onchange="neDateSel=this.value;emrApply();" style="padding:7px 10px;border:2px solid #0d5c3d;border-radius:8px;font-weight:600">'
+                    + days.map(function(d){ return '<option value="' + d + '"' + (d === neDateSel ? ' selected' : '') + '>' + neFmtDay(d) + '</option>'; }).join('')
+                    + '</select></label>'
+                    + '<span style="font-size:12.5px;color:#555">Entries EMR Outreach data se <strong>UC-wise</strong> gini jati hain (sheet mein vaccinator ka naam nahi hota) — jis UC ki us din koi entry na ho, us UC ke tamam vaccinators is list mein ate hain. Check-In ka data Vaccinators Attendance sheet se hai.</span>'
+                    + '</div>';
+            }
+            const exp = [];
+            let i = 0;
+            const rowsHtml = zero.map(function(p){
+                i++;
+                const ci = p.checkins[neDateSel];
+                const ciTxt = ci ? (ci === 'Yes' ? 'Yes' : 'Yes — ' + ci) : 'No';
+                const row = [i, p.name, attDisplayUser(p.username), p.tehsil, p.uc, ciTxt, 0];
+                exp.push(row);
+                return '<tr><td>' + row[0] + '</td><td>' + row[1] + '</td><td>' + row[2] + '</td><td>' + row[3] + '</td><td>' + row[4] + '</td><td>' + (ci ? row[5] : '<span style="color:#c62828;font-weight:700">No</span>') + '</td><td><strong>0</strong></td></tr>';
+            }).join('');
+            emrRenderTable(['Sr', 'Vaccinator', 'Username', 'Tehsil', 'UC', 'Check-In (' + neFmtDay(neDateSel) + ')', 'Entries'], rowsHtml, NE_HEAD, exp, ['Total', zero.length + ' vaccinators', '', '', '', '', '']);
+        }
         function emrApply(){
             const chartWrap = document.getElementById('emrChartWrap');
             if(chartWrap) chartWrap.style.display = (emrMode === 'targets') ? 'block' : 'none';
@@ -7882,6 +8013,9 @@
                 }
             }
 
+            else if(emrMode === 'noentry'){
+                neRender(data);
+            }
             else if(emrMode === 'ucAg'){
                 const ym = emrGetReportMonth();
                 const map = {};
