@@ -2152,7 +2152,7 @@
             const err = document.getElementById('siteLockErr');
             const val = (inp && inp.value) ? inp.value.trim() : '';
             if(sha256Hex(val) === SITE_PASSWORD_HASH){
-                try{ sessionStorage.setItem('epi_chakwal_unlocked','1'); }catch(e){}
+                try{ localStorage.setItem('epi_chakwal_unlocked','1'); }catch(e){}
                 const lock = document.getElementById('siteLock');
                 if(lock) lock.style.display = 'none';
                 document.body.classList.remove('site-locked');
@@ -2164,7 +2164,7 @@
         }
         function checkSiteLock(){
             let ok = false;
-            try{ ok = sessionStorage.getItem('epi_chakwal_unlocked') === '1'; }catch(e){}
+            try{ ok = localStorage.getItem('epi_chakwal_unlocked') === '1'; }catch(e){}
             const lock = document.getElementById('siteLock');
             if(ok){
                 if(lock) lock.style.display = 'none';
