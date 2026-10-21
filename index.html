@@ -7347,7 +7347,13 @@
             if(emrMode === 'noentry') emrApply();
         }
         function neRender(data){
-            const extra = document.getElementById('emrExtraVisual');
+            let extra = document.getElementById('emrExtraVisual');
+            if(!extra){
+                extra = document.createElement('div');
+                extra.id = 'emrExtraVisual';
+                const statsEl = document.getElementById('emrStats');
+                if(statsEl && statsEl.parentNode) statsEl.parentNode.insertBefore(extra, statsEl.nextSibling);
+            }
             const NE_HEAD = ['Sr', 'Vaccinator', 'Username', 'Tehsil', 'UC', 'Check-In', 'Entries'];
             if(!neRoster && !neRosterError){
                 emrSetStats([{n: '…', l: 'Roster load ho raha hai'}]);
