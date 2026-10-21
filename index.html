@@ -12865,6 +12865,14 @@
                 const usable = pageW - margin * 2;
                 const hdrs = pdfNormalizeHeaders(headers);
                 const colW = pdfBuildColWidths(hdrs, rows, usable);
+                // 'DPT Booster' header poora nazar aye — us ki column thori chorri, sab se chorri column se adjust
+                const dptIdx = hdrs.findIndex(function(h){ return String(h).toLowerCase().indexOf('dpt') === 0; });
+                if(dptIdx >= 0 && colW[dptIdx] < 17){
+                    const need = 17 - colW[dptIdx];
+                    let widest = 0;
+                    colW.forEach(function(w, i){ if(w > colW[widest]) widest = i; });
+                    if(widest !== dptIdx && colW[widest] - need > 20){ colW[dptIdx] += need; colW[widest] -= need; }
+                }
                 const ncols = hdrs.length;
                 let y = margin;
                 pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(13, 92, 61);
