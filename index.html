@@ -611,6 +611,45 @@
   </div>
 </div>
 
+<div class="section-title" id="section-sv" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <span>Summary by Vaccinators</span>
+    <span id="svSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px"></span>
+</div>
+<div class="emr-card" id="svCard">
+    <p class="emr-note"><strong>Source:</strong> HMIS &rarr; EPI &rarr; Reports &rarr; Summary By Vaccinations. Data Google Sheet <strong>&ldquo;Summary by Vaccinator Chakwal&rdquo;</strong> se live aata hai aur har raat auto-update hota hai (mahine ki 1 tareekh se aj tak ka data). Fixed Site facilities ki UC site ke HR (92 Health Facilities) data se linked hai.</p>
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-number" id="svStatOutreach">—</div><div class="stat-label">Outreach Doses</div></div>
+        <div class="stat-card"><div class="stat-number" id="svStatFixed">—</div><div class="stat-label">Fixed Site Doses</div></div>
+        <div class="stat-card"><div class="stat-number" id="svStatCombined">—</div><div class="stat-label">Combined Doses</div></div>
+        <div class="stat-card"><div class="stat-number" id="svStatRows">—</div><div class="stat-label" id="svStatRowsLabel">UCs (Outreach)</div></div>
+    </div>
+    <div class="emr-tabs" id="svTabs">
+        <button type="button" class="emr-tab active" data-sv="outreach" onclick="svSwitch('outreach')">📋 Outreach</button>
+        <button type="button" class="emr-tab" data-sv="fixed" onclick="svSwitch('fixed')">🏥 Fixed Site</button>
+        <button type="button" class="emr-tab" data-sv="compiled" onclick="svSwitch('compiled')">📊 Compiled</button>
+    </div>
+    <div class="emr-filter">
+        <label>Tehsil
+            <select id="svTehsil" onchange="svRender()">
+                <option value="">All Tehsils</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option><option>Lawa</option>
+            </select>
+        </label>
+        <label>Search
+            <input type="text" id="svSearch" placeholder="UC / facility name…" oninput="svRender()">
+        </label>
+        <button type="button" class="btn" onclick="svLoad()">🔄 Refresh Data</button>
+        <button type="button" class="btn btn-outline" onclick="svDownloadExcel()">⬇ Download Excel</button>
+    </div>
+    <div id="svStatus">Loading…</div>
+    <div style="overflow-x:auto">
+        <table class="emr-table" id="svTable">
+            <thead id="svHead"></thead>
+            <tbody id="svBody"><tr><td style="text-align:center;color:#777">No data loaded</td></tr></tbody>
+        </table>
+    </div>
+    <div id="svNote" style="font-size:12.5px;color:#666;margin-top:8px"></div>
+</div>
+
 <div class="section-title" id="section-emr" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
                 <span>Child Immunization (EMR) Data</span>
                 <span id="emrSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px">Data loading…</span>
@@ -2645,6 +2684,7 @@
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
             {type:'section', title:'EPI Supervisory Staff Data', desc:'Supervisory staff directory — naam, designation, tehsil, rabta number', action:'scroll', target:'Supervisory Staff Data'},
+            {type:'section', title:'Summary by Vaccinators', desc:'HMIS Summary By Vaccinations — UC-wise Outreach, facility-wise Fixed Site aur dono ki Compiled report (har raat auto-update)', action:'scroll', target:'Summary by Vaccinators'},
                 {type:'section', title:'Urban Sweep-up Activity (10-15 Aug 2026)', desc:'Live reports, graphs, remaining UCs — inside EMR Outreach', action:'fn', target:'openSweepModule'},
                 {type:'section', title:'Child Immunization (EMR) Data', desc:'Outreach, Fixed Site, OR+Fixed Compile, Attendance, Location', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Fixed Site Reports', desc:'HF-wise EMR Fixed Site (inside EMR Data)', action:'scroll', target:'Child Immunization'},
@@ -12549,6 +12589,240 @@
 
         
         
+        // ===== Summary by Vaccinators (HMIS) =====
+        const SV_SHEET_ID = '16YcZU2RwgWMtNjfjukHqsNTH-EW5T-TcZ5XNwgh79ls';
+        const SV_ANTIGENS = ['BCG','OPV0','Penta1','Pneumo1','OPV1','OPV2','OPV3','Penta2','Pneumo2','Penta3','Pneumo3','IPV','Measles1','Measles2','HepB','Rota1','Rota2','IPV2','DPT Booster','TCV','HPV'];
+        const SV_TEHSILS = ['Chakwal','Choa Saidan Shah','Kallar Kahar','Talagang','Lawa'];
+        let svOutreachRows = [], svFixedRows = [], svMode = 'outreach', svCurrentExport = [];
+                const SV_FAC_UC = {
+            'districtheadquarterhospitalchakwal': 'CHAKWAL URBAN V',
+            'mnhdhudialchakwal': 'DHUDIAL',
+            'mnhcchakralchakwal': 'CHAK MALOOK',
+            'mnhcjhatlajaswalchakwal': 'JASWAL',
+            'mnhckhairpurchakwal': 'KHAIRPUR',
+            'mnhcmainganchakwal': 'MAINGON',
+            'mnhcbheenchakwal': 'BHEEN',
+            'mnhcchakumrachakwal': 'CHAK UMRA',
+            'mnhcdabchakwal': 'DAB',
+            'mnhcdharabichakwal': 'BALKASSAR',
+            'mnhcjandchakwal': 'JAND',
+            'mnhcjandialfaizullahchakwal': 'CHOA GANJ ALI SHAH',
+            'mnhckarialachakwal': 'KARYALA',
+            'mnhckarsalchakwal': 'KARSAL',
+            'mnhckhokharzairchakwal': 'KHAI',
+            'mnhcmangwalchakwal': 'MANGWAL',
+            'mnhcminwalchakwal': 'BALOKASSAR',
+            'mnhcmulhalmughlanchakwal': 'MULHAL MUGHLAN',
+            'mnhcmureedchakwal': 'MUREED',
+            'mnhcnachindichakwal': 'JAND KHANZADA',
+            'mnhcneelachakwal': 'WARWAL',
+            'mnhcpadshahanchakwal': 'PADSHAN',
+            'mnhcranjhachakwal': 'KOT CHOHDRIAN',
+            'mnhcroopwalchakwal': 'KOT CHOHDRIAN',
+            'mnhcsaralchakwal': 'SARAL',
+            'mnhcsehgalabadchakwal': 'SAIGOLABAD',
+            'mnhcshahpursayyedanchakwal': 'CHOA GANJ ALI SHAH',
+            'mnhcsohawadewalianchakwal': 'JASWAL',
+            'ruralhealthcenterdullahchakwal': 'DULLAH',
+            'ruralhealthcentermundaychakwal': 'BAIGAL',
+            'ruralhealthcenterpirphullahichakwal': 'MOGLA',
+            'mnhcarachoasaidanshahchakwal': 'ARA',
+            'mnhcbadshahpurchoasaidanshahchakwal': 'DALWAL',
+            'mnhcdulmialchoasaidanshahchakwal': 'DULMIAL',
+            'mnhclehrsultanpurchoasaidanshahchakwal': 'LEHAR SULTAN PUR',
+            'mnhcratoochachoasaidanshahchakwal': 'SALOI',
+            'basichealthunitbhounkallarkaharchakwal': 'BHOUN',
+            'mnhcbharpurkallarkaharchakwal': 'BHERPUR',
+            'mnhcmunarakallarkaharchakwal': 'MUNARA',
+            'mnhcnoorpurkallarkaharchakwal': 'NURPUR',
+            'mnhcsardhikallarkaharchakwal': 'BUCHAL KHURD',
+            'mnhcsarkalankallarkaharchakwal': 'NURPUR',
+            'ruralhealthcenterbuchalkalankallarkaharchakwal': 'BUCHAL KALAN',
+            'traumacentertehsilheadquarterhospitalkallarkaharchakwal': 'KALLAR KAHAR',
+            'governmentcityhospitaltalagangchakwal': 'TALAGANG URBAN I',
+            'mnhcbudhialtalagangchakwal': 'BHUDIAL',
+            'mnhcchinjitalagangchakwal': 'BHILOMAR',
+            'mnhcdhaulartalagangchakwal': 'DHOULAR',
+            'mnhcdhermondtalagangchakwal': 'DHERMOND',
+            'mnhcdhokhumtalagangchakwal': 'PIRA FATEHIAL',
+            'mnhcghooltalagangchakwal': 'LAWA RURAL',
+            'mnhcjasialtalagangchakwal': 'JASIAL',
+            'mnhckotgullahtalagangchakwal': 'KOT GULLAH',
+            'mnhckotsarangtalagangchakwal': 'KOT SARANG',
+            'mnhclaititalagangchakwal': 'LETTI',
+            'mnhcmultankhurdtalagangchakwal': 'MULTAN KHURD',
+            'mnhcnakkakahuttalagangchakwal': 'NAKKA KAHUT',
+            'mnhcpachnandtalagangchakwal': 'PICHNAND',
+            'mnhcpatwalitalagangchakwal': 'BHUDIAL',
+            'mnhcpirafatialtalagangchakwal': 'PIRA FATEHIAL',
+            'mnhcsukkatalagangchakwal': 'KOT QAZI',
+            'mnhctehitalagangchakwal': 'TEHI',
+            'mnhcthoamehramkhantalagangchakwal': 'THOA MEHRAM KHAN I',
+            'mnhcbhillomartalagangchakwal': 'BHILOMAR',
+            'ruralhealthcenterkotqazitalagangchakwal': 'KOT QAZI',
+            'tehsilheadquarterhospitaltalagangchakwal': 'TALAGANG URBAN II'
+        };
+        function svNormName(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+        function svEsc(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function svTitleUC(s){ return String(s || '').toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); }).replace(/\b(Ii|Iii|Iv|Vi)\b/g, function(m){ return m.toUpperCase(); }); }
+        function svNum(n){ return Number(n || 0).toLocaleString('en-US'); }
+        function svFacUC(f){ return SV_FAC_UC[svNormName(f.name)] || ''; }
+        async function svFetchTab(tab){
+            const url = 'https://docs.google.com/spreadsheets/d/' + SV_SHEET_ID + '/gviz/tq?tqx=out:json&headers=1&sheet=' + encodeURIComponent(tab);
+            const res = await fetch(url);
+            const text = await res.text();
+            const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+            const out = [];
+            (data.table.rows || []).forEach(function(r){
+                const c = r.c || [];
+                const teh = (c[0] && c[0].v != null) ? String(c[0].v).trim() : '';
+                const name = (c[1] && c[1].v != null) ? String(c[1].v).trim() : '';
+                if(!teh || !name || teh.toLowerCase() === 'tehsil') return;
+                const vals = [];
+                for(let i = 0; i < 21; i++){ const cell = c[2 + i]; vals.push(cell && cell.v != null ? (Number(cell.v) || 0) : 0); }
+                out.push({tehsil: teh, name: name, vals: vals, total: vals.reduce(function(a, b){ return a + b; }, 0)});
+            });
+            return out;
+        }
+        async function svLoad(){
+            const st = document.getElementById('svStatus');
+            if(st){ st.style.display = 'block'; st.textContent = 'Loading Summary by Vaccinator sheet…'; }
+            try{
+                svOutreachRows = await svFetchTab('Outreach');
+                svFixedRows = await svFetchTab('Fixed');
+                svRender();
+                const asof = document.getElementById('svSectionAsOf');
+                if(asof) asof.textContent = new Date().toLocaleString('en-US', {month: 'long', year: 'numeric'}) + ' · Month to Date · Har raat auto-update';
+                if(st) st.style.display = 'none';
+            }catch(err){
+                console.error(err);
+                if(st) st.innerHTML = 'Failed to load sheet. Ensure sharing is “Anyone with the link”.';
+            }
+        }
+        function svSwitch(mode){
+            svMode = mode;
+            document.querySelectorAll('#svTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-sv') === mode); });
+            svRender();
+        }
+        function svCompiledData(){
+            const map = {}, order = [];
+            function add(teh, uc, vals){
+                const k = teh.toUpperCase() + '|' + uc.toUpperCase();
+                if(!map[k]){ map[k] = {tehsil: teh, name: uc, vals: new Array(21).fill(0), total: 0}; order.push(k); }
+                for(let i = 0; i < 21; i++) map[k].vals[i] += vals[i];
+                map[k].total += vals.reduce(function(a, b){ return a + b; }, 0);
+            }
+            svOutreachRows.forEach(function(r){ add(r.tehsil, r.name, r.vals); });
+            const unmapped = {};
+            svFixedRows.forEach(function(r){
+                const uc = svFacUC(r);
+                if(uc){ add(r.tehsil, uc, r.vals); }
+                else{
+                    if(!unmapped[r.tehsil]) unmapped[r.tehsil] = {vals: new Array(21).fill(0), total: 0, names: []};
+                    for(let i = 0; i < 21; i++) unmapped[r.tehsil].vals[i] += r.vals[i];
+                    unmapped[r.tehsil].total += r.total;
+                    unmapped[r.tehsil].names.push(r.name);
+                }
+            });
+            const rows = order.map(function(k){ return map[k]; });
+            Object.keys(unmapped).forEach(function(t){
+                rows.push({tehsil: t, name: '⚠ Unmapped Facilities', vals: unmapped[t].vals, total: unmapped[t].total, unmapped: true});
+            });
+            return rows;
+        }
+        function svRender(){
+            const head = document.getElementById('svHead');
+            const body = document.getElementById('svBody');
+            if(!head || !body) return;
+            const tehEl = document.getElementById('svTehsil');
+            const searchEl = document.getElementById('svSearch');
+            const tehF = tehEl ? tehEl.value : '';
+            const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+            let cols, rows;
+            if(svMode === 'fixed'){
+                cols = ['Tehsil', 'Facility', 'UC'].concat(SV_ANTIGENS, ['Total']);
+                rows = svFixedRows.map(function(r){ return {tehsil: r.tehsil, label: r.name, sub: svFacUC(r), vals: r.vals, total: r.total}; });
+            } else if(svMode === 'compiled'){
+                cols = ['Tehsil', 'UC'].concat(SV_ANTIGENS, ['Total']);
+                rows = svCompiledData().map(function(r){ return {tehsil: r.tehsil, label: svTitleUC(r.name), sub: null, vals: r.vals, total: r.total, unmapped: r.unmapped}; });
+            } else {
+                cols = ['Tehsil', 'UC'].concat(SV_ANTIGENS, ['Total']);
+                rows = svOutreachRows.map(function(r){ return {tehsil: r.tehsil, label: svTitleUC(r.name), sub: null, vals: r.vals, total: r.total}; });
+            }
+            rows = rows.filter(function(r){
+                if(tehF && r.tehsil !== tehF) return false;
+                if(q){
+                    const hay = (r.label + ' ' + (r.sub ? svTitleUC(r.sub) : '')).toLowerCase();
+                    if(hay.indexOf(q) < 0) return false;
+                }
+                return true;
+            });
+            // stats (respect current filter)
+            const oSum = svOutreachRows.filter(function(r){ return !tehF || r.tehsil === tehF; }).reduce(function(a, r){ return a + r.total; }, 0);
+            const fSum = svFixedRows.filter(function(r){ return !tehF || r.tehsil === tehF; }).reduce(function(a, r){ return a + r.total; }, 0);
+            const setStat = function(id, v){ const e = document.getElementById(id); if(e) e.textContent = v; };
+            setStat('svStatOutreach', svNum(oSum));
+            setStat('svStatFixed', svNum(fSum));
+            setStat('svStatCombined', svNum(oSum + fSum));
+            setStat('svStatRows', rows.length.toLocaleString('en-US'));
+            const rl = document.getElementById('svStatRowsLabel');
+            if(rl) rl.textContent = svMode === 'fixed' ? 'Facilities (Fixed)' : (svMode === 'compiled' ? 'UCs (Compiled)' : 'UCs (Outreach)');
+            // header
+            head.innerHTML = '<tr>' + cols.map(function(c){ return '<th>' + svEsc(c) + '</th>'; }).join('') + '</tr>';
+            // body with tehsil groups + subtotals + grand total
+            const groups = {}, gOrder = [];
+            rows.forEach(function(r){
+                if(!groups[r.tehsil]){ groups[r.tehsil] = []; gOrder.push(r.tehsil); }
+                groups[r.tehsil].push(r);
+            });
+            const tehOrder = SV_TEHSILS.filter(function(t){ return groups[t]; }).concat(gOrder.filter(function(t){ return SV_TEHSILS.indexOf(t) < 0; }));
+            const hasSub = (svMode === 'fixed');
+            let html = '', grand = new Array(21).fill(0), grandTotal = 0;
+            svCurrentExport = [cols.slice()];
+            tehOrder.forEach(function(t){
+                const grows = groups[t];
+                const sub = new Array(21).fill(0);
+                let subTotal = 0;
+                grows.forEach(function(r){
+                    for(let i = 0; i < 21; i++){ sub[i] += r.vals[i]; grand[i] += r.vals[i]; }
+                    subTotal += r.total; grandTotal += r.total;
+                    const rowStyle = r.unmapped ? ' style="background:#fff3e0"' : '';
+                    html += '<tr' + rowStyle + '><td>' + svEsc(r.tehsil) + '</td><td>' + svEsc(r.label) + '</td>' + (hasSub ? '<td>' + svEsc(r.sub ? svTitleUC(r.sub) : '—') + '</td>' : '') + r.vals.map(function(v){ return '<td>' + svNum(v) + '</td>'; }).join('') + '<td><strong>' + svNum(r.total) + '</strong></td></tr>';
+                    svCurrentExport.push([r.tehsil, r.label].concat(hasSub ? [r.sub ? svTitleUC(r.sub) : ''] : [], r.vals, [r.total]));
+                });
+                html += '<tr style="background:#e8f5e9;font-weight:700"><td colspan="' + (hasSub ? 3 : 2) + '">Tehsil Total — ' + svEsc(t) + '</td>' + sub.map(function(v){ return '<td>' + svNum(v) + '</td>'; }).join('') + '<td>' + svNum(subTotal) + '</td></tr>';
+                svCurrentExport.push(['', 'Tehsil Total — ' + t].concat(hasSub ? [''] : [], sub, [subTotal]));
+            });
+            if(rows.length){
+                html += '<tr style="background:#0d5c3d;color:#fff;font-weight:700"><td colspan="' + (hasSub ? 3 : 2) + '">DISTRICT TOTAL</td>' + grand.map(function(v){ return '<td>' + svNum(v) + '</td>'; }).join('') + '<td>' + svNum(grandTotal) + '</td></tr>';
+                svCurrentExport.push(['', 'DISTRICT TOTAL'].concat(hasSub ? [''] : [], grand, [grandTotal]));
+            } else {
+                html = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#777">No data — filter change karke dekhein ya Refresh Data dabayein.</td></tr>';
+            }
+            body.innerHTML = html;
+            // note
+            const note = document.getElementById('svNote');
+            if(note){
+                const unm = svFixedRows.filter(function(r){ return !svFacUC(r); });
+                let txt = '';
+                if(svMode === 'outreach') txt = 'Note: Tehsil Lawa ka data HMIS mein Talagang tehsil ke andar ata hai (LAWA RURAL / LAWA URBAN UCs wahan shamil hain).';
+                if(unm.length && svMode !== 'outreach'){
+                    txt += (txt ? ' ' : '') + '⚠ Ye facilities site ke HR (92 Health Facilities) data mein nahi mileen, is liye UC link nahi ho saka: ' + unm.map(function(r){ return svEsc(r.name) + ' — ' + svNum(r.total) + ' doses'; }).join('; ') + '. Agar in ki UC maloom hai to bata dein, mapping mein shamil kar di jayegi.';
+                }
+                note.textContent = txt;
+                note.style.display = txt ? 'block' : 'none';
+            }
+        }
+        function svDownloadExcel(){
+            if(!svCurrentExport.length){ alert('Pehle data load hone dein.'); return; }
+            const ws = XLSX.utils.aoa_to_sheet(svCurrentExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, ('Summary ' + svMode).substring(0, 28));
+            XLSX.writeFile(wb, 'EPI_Chakwal_SummaryByVaccinator_' + svMode + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+        }
+        if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', function(){ svLoad(); }); }
+        else { svLoad(); }
+
         // ===== EPI Supervisory Staff Data =====
         const SUP_SHEET_ID = ''; /* SETUP: Supervisory Staff wali Google Sheet ki ID yahan lagegi (guide: SUPERVISORY_SETUP.md) */
         const SUP_SHEET_TAB = 'Supervisors';
