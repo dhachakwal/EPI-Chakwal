@@ -639,6 +639,7 @@
         </label>
         <button type="button" class="btn" onclick="svLoad()">🔄 Refresh Data</button>
         <button type="button" class="btn btn-outline" onclick="svDownloadExcel()">⬇ Download Excel</button>
+        <button type="button" class="btn btn-outline" id="svPdfBtn" onclick="svDownloadPdf()">📄 Download PDF</button>
     </div>
     <div id="svStatus">Loading…</div>
     <div style="overflow-x:auto">
@@ -12815,12 +12816,96 @@
                 note.style.display = txt ? 'block' : 'none';
             }
         }
+        function svDateRangeLabel(){
+            const now = new Date();
+            const fmt = function(d){ return d.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}); };
+            if(now.getDate() === 1){ const f = new Date(now.getFullYear(), now.getMonth(), 1); return fmt(f) + ' - ' + fmt(f); }
+            const from = new Date(now.getFullYear(), now.getMonth(), 1);
+            const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            return fmt(from) + ' - ' + fmt(to);
+        }
+        function svReportTitle(){
+            const range = svDateRangeLabel();
+            if(svMode === 'fixed') return 'Summary Report By Fixed Site (' + range + ')';
+            if(svMode === 'compiled') return 'Fixed + Outreach Summary Report (' + range + ')';
+            return 'Summary Report By Outreach (' + range + ')';
+        }
+        function svFileName(ext){
+            return svReportTitle().replace(/[\\/:*?"<>|]/g, '') + ext;
+        }
         function svDownloadExcel(){
             if(!svCurrentExport.length){ alert('Pehle data load hone dein.'); return; }
             const ws = XLSX.utils.aoa_to_sheet(svCurrentExport);
+            const ncols = svCurrentExport[0].length;
+            ws['!cols'] = svCurrentExport[0].map(function(h, i){
+                if(i === 0) return {wch: 18};
+                if(i === 1) return {wch: svMode === 'fixed' ? 54 : 26};
+                if(svMode === 'fixed' && i === 2) return {wch: 22};
+                if(i === ncols - 1) return {wch: 11};
+                return {wch: 9};
+            });
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, ('Summary ' + svMode).substring(0, 28));
-            XLSX.writeFile(wb, 'EPI_Chakwal_SummaryByVaccinator_' + svMode + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+            XLSX.writeFile(wb, svFileName('.xlsx'));
+        }
+        function svDownloadPdf(){
+            if(typeof window.jspdf === 'undefined'){ alert('jsPDF library missing. Page refresh karein.'); return; }
+            if(!svCurrentExport.length){ alert('Pehle data load hone dein.'); return; }
+            const headers = svCurrentExport[0].slice();
+            const rows = svCurrentExport.slice(1).map(function(r){ return r.map(function(v){ return v == null ? '' : String(v); }); });
+            const btn = document.getElementById('svPdfBtn');
+            const old = btn ? btn.textContent : '';
+            if(btn) btn.textContent = 'Preparing PDF…';
+            try{
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 10;
+                const usable = pageW - margin * 2;
+                const hdrs = pdfNormalizeHeaders(headers);
+                const colW = pdfBuildColWidths(hdrs, rows, usable);
+                const ncols = hdrs.length;
+                let y = margin;
+                pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(13, 92, 61);
+                pdf.text(svReportTitle(), pageW / 2, y, {align: 'center'}); y += 6;
+                pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(100, 100, 100);
+                pdf.text('EPI District Chakwal · Generated: ' + new Date().toLocaleString(), pageW / 2, y, {align: 'center'}); y += 7;
+                function drawHead(){
+                    pdf.setFillColor(13, 92, 61); pdf.rect(margin, y, usable, 7, 'F');
+                    pdf.setTextColor(255, 255, 255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8);
+                    let x = margin;
+                    hdrs.forEach(function(h, i){ pdf.text(pdfFitText(pdf, h, colW[i] - 2), x + 1.2, y + 4.8); x += colW[i]; });
+                    y += 7; pdf.setFont('helvetica', 'normal'); pdf.setTextColor(20, 20, 20);
+                }
+                drawHead();
+                rows.forEach(function(row, ri){
+                    if(y + 6 > pageH - margin){ pdf.addPage(); y = margin; drawHead(); }
+                    const label = String(row[1] || '');
+                    const isGrand = label.indexOf('DISTRICT TOTAL') === 0;
+                    const isSub = label.indexOf('Tehsil Total') === 0;
+                    if(isGrand){ pdf.setFillColor(13, 92, 61); pdf.rect(margin, y, usable, 6, 'F'); }
+                    else if(isSub){ pdf.setFillColor(200, 230, 201); pdf.rect(margin, y, usable, 6, 'F'); }
+                    else if(ri % 2){ pdf.setFillColor(232, 245, 233); pdf.rect(margin, y, usable, 6, 'F'); }
+                    pdf.setDrawColor(200, 200, 200); pdf.setLineWidth(0.1);
+                    if(isGrand){ pdf.setTextColor(255, 255, 255); pdf.setFont('helvetica', 'bold'); }
+                    else if(isSub){ pdf.setFont('helvetica', 'bold'); }
+                    pdf.setFontSize(7.5);
+                    let x = margin;
+                    for(let i = 0; i < ncols; i++){
+                        pdf.rect(x, y, colW[i], 6);
+                        pdf.text(pdfFitText(pdf, String(row[i] == null ? '' : row[i]), colW[i] - 2), x + 1.2, y + 4.1);
+                        x += colW[i];
+                    }
+                    if(isGrand || isSub){ pdf.setFont('helvetica', 'normal'); pdf.setTextColor(20, 20, 20); }
+                    y += 6;
+                });
+                pdf.save(svFileName('.pdf'));
+            }catch(e){
+                console.error(e);
+                alert('PDF failed: ' + (e.message || e));
+            }
+            if(btn) btn.textContent = old || '📄 Download PDF';
         }
         if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', function(){ svLoad(); }); }
         else { svLoad(); }
