@@ -60,9 +60,9 @@ input[type="checkbox"]{width:auto;margin-right:6px}
   <div class="card">
     <div class="note">
       <strong>Instructions</strong><br>
-      1) Apna Naam, Designation aur Tehsil durust select karein<br>
-      2) Place of Posting aur Mobile No. durust likhein<br>
-      3) Agar aap ka record pehle se mojood hai to <strong>wahi Mobile No.</strong> likhne se record <strong>UPDATE</strong> ho jayega — duplicate nahi banega
+      1) Please select your correct Name, Designation and Tehsil<br>
+      2) Please enter your correct Place of Posting and Mobile No.<br>
+      3) If your record already exists, entering the <strong>same Mobile No.</strong> will <strong>UPDATE</strong> your record — no duplicate will be created
     </div>
 
     <label for="supName">Full Name <span class="req">*</span></label>
@@ -112,7 +112,7 @@ input[type="checkbox"]{width:auto;margin-right:6px}
     <label for="supEmail">Email (optional)</label>
     <input type="email" id="supEmail" placeholder="name@example.com" autocomplete="email">
 
-    <label for="supCnic">CNIC (optional — sirf office record ke liye, website par show nahi hoga)</label>
+    <label for="supCnic">CNIC (optional — for office record only; it will not be shown on the website)</label>
     <input type="text" id="supCnic" placeholder="35202-XXXXXXX-X" autocomplete="off" inputmode="numeric">
 
     <label for="supBps">BPS / Scale</label>
@@ -135,7 +135,7 @@ input[type="checkbox"]{width:auto;margin-right:6px}
 
     <label for="supPhoto">Profile Photo (optional)</label>
     <input type="file" id="supPhoto" accept="image/*" style="padding:8px;border:1.5px solid #c8e6c9;border-radius:10px;width:100%;background:#fafffe">
-    <div class="file-hint">Sirf photo (JPG/PNG). Photo automatic chhoti ho kar upload hogi.</div>
+    <div class="file-hint">Photo only (JPG/PNG). The photo will be compressed automatically before upload.</div>
 
     <button type="button" class="btn btn-sub" id="btnSupSubmit" onclick="submitSupervisor()">✅ Submit Data</button>
     <button type="button" class="btn btn-sec" id="btnSupReset" onclick="resetSupForm()" style="margin-top:8px">↺ Reset</button>
@@ -253,7 +253,7 @@ function supPhotoToBase64(file){
         resolve(cv.toDataURL('image/jpeg', 0.82));
       }catch(e){ reject(e); }
     };
-    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Photo parhi nahi gayi.')); };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('The photo could not be read.')); };
     img.src = url;
   });
 }
@@ -278,13 +278,13 @@ function submitSupervisor(){
   var photoFile = document.getElementById('supPhoto').files[0] || null;
 
   if(!name) return showErr('Full Name likhein.');
-  if(!desig) return showErr('Designation select karein.');
-  if(!teh) return showErr('Tehsil select karein.');
+  if(!desig) return showErr('Please select a Designation.');
+  if(!teh) return showErr('Please select a Tehsil.');
   if(!posting) return showErr('Place of Posting likhein.');
-  if(!/^03\d{9}$/.test(mobile)) return showErr('Mobile No. durust likhein (03XX-XXXXXXX, 11 digits).');
-  if(whatsapp && !/^03\d{9}$/.test(whatsapp)) return showErr('WhatsApp No. durust likhein (11 digits).');
-  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Email durust likhein ya khali chor dein.');
-  if(!SUP_SCRIPT_URL) return showErr('Form abhi data source se connect nahi hai (Apps Script URL pending). Office / DSV se rabta karein.');
+  if(!/^03\d{9}$/.test(mobile)) return showErr('Please enter a valid Mobile No. (03XX-XXXXXXX, 11 digits).');
+  if(whatsapp && !/^03\d{9}$/.test(whatsapp)) return showErr('Please enter a valid WhatsApp No. (11 digits).');
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Please enter a valid email, or leave it blank.');
+  if(!SUP_SCRIPT_URL) return showErr('The form is not connected to the data source yet (Apps Script URL pending). Please contact the Office / DSV.');
 
   var btn = document.getElementById('btnSupSubmit');
   btn.disabled = true; btn.textContent = 'Submitting…';
@@ -307,12 +307,12 @@ function submitSupervisor(){
     return res.text().then(function(txt){
       var done = false;
       try{ var j = JSON.parse(txt); done = !!j.ok; }catch(e){ done = res.ok; }
-      if(!done) throw new Error('Server ne data save nahi kiya.');
+      if(!done) throw new Error('The server did not save the data.');
       if(ok) ok.style.display = 'block';
       resetSupForm(true);
     });
   }).catch(function(e){
-    showErr('Submit nahi hua: ' + (e.message || e) + ' — internet check karke dobara try karein.');
+    showErr('Submission failed: ' + (e.message || e) + ' — please check your internet connection and try again.');
   }).finally(function(){
     btn.disabled = false; btn.textContent = '✅ Submit Data';
   });
@@ -339,4 +339,3 @@ supLoadUcMap();
 </script>
 </body>
 </html>
-

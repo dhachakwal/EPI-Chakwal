@@ -440,7 +440,7 @@
     </div>
 </div>
 
-    <div class="admin-bar" id="adminBar">🔓 Admin Mode ON — aap data edit kar sakte hain &nbsp; <button onclick="exitAdmin()" style="margin-left:8px;padding:3px 10px;border:1px solid #e65100;background:#fff;border-radius:4px;cursor:pointer;color:#e65100;font-weight:600">Exit Admin</button></div>
+    <div class="admin-bar" id="adminBar">🔓 Admin Mode ON — you can edit the data &nbsp; <button onclick="exitAdmin()" style="margin-left:8px;padding:3px 10px;border:1px solid #e65100;background:#fff;border-radius:4px;cursor:pointer;color:#e65100;font-weight:600">Exit Admin</button></div>
 
     <div class="news-ticker"><div class="ticker-content">★ DQS (Data Quality Self-Assessment) for the 2nd Quarter has been successfully completed &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ TPVIC Round-3 results have been released — details are available in the Downloads section below &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ Tehsil-level Vaccinators' meeting on TPVIC Survey held on Saturday, 8th August at 4:00 PM in every DDHO Office under the supervision of DDHO/ASV &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ★ New EMR update released — QR Code scanning is now mandatory; all vaccinators have completed the update</div></div>
 
@@ -585,7 +585,7 @@
             
 <div class="section-title">EPI Supervisory Staff Data</div>
 <div class="emr-card" id="supCard">
-  <p style="font-size:13.5px;color:#444;margin-bottom:6px">Source: Supervisory staff apna data <strong>supervisors.html</strong> form se submit/update karte hain — data Google Sheet se live aata hai. CNIC is tab mein show nahi hota.</p>
+  <p style="font-size:13.5px;color:#444;margin-bottom:6px">Source: Supervisory staff submit and update their data through the <strong>supervisors.html</strong> form — the data loads live from the Google Sheet. CNIC is not displayed in this tab.</p>
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-number" id="supStatTotal">—</div><div class="stat-label">Total Supervisory Staff</div></div>
     <div class="stat-card"><div class="stat-number" id="supStatDistrict">—</div><div class="stat-label">District Level</div></div>
@@ -602,7 +602,7 @@
     <button type="button" class="btn btn-outline" onclick="supDownloadExcel()">⬇ Download Excel</button>
     <a class="btn" href="supervisors.html" target="_blank" rel="noopener">📝 Submit / Update Your Data</a>
   </div>
-  <div id="supStatus">Not loaded — Refresh Data dabayein.</div>
+  <div id="supStatus">Not loaded — press Refresh Data.</div>
   <div style="overflow-x:auto">
     <table class="sup-table">
       <thead><tr><th>#</th><th>Name</th><th>Designation</th><th>Tehsil</th><th>UC / Area</th><th>Place of Posting</th><th>Mobile</th><th>WhatsApp</th><th>Email</th><th>Photo</th></tr></thead>
@@ -616,7 +616,7 @@
     <span id="svSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px"></span>
 </div>
 <div class="emr-card" id="svCard">
-    <p class="emr-note"><strong>Source:</strong> HMIS &rarr; EPI &rarr; Reports &rarr; Summary By Vaccinations. Data Google Sheet <strong>&ldquo;Summary by Vaccinator Chakwal&rdquo;</strong> se live aata hai aur har raat auto-update hota hai (mahine ki 1 tareekh se aj tak ka data). Fixed Site facilities ki UC site ke HR (92 Health Facilities) data se linked hai.</p>
+    <p class="emr-note"><strong>Source:</strong> HMIS &rarr; EPI &rarr; Reports &rarr; Summary By Vaccinations. The data loads live from the Google Sheet <strong>&ldquo;Summary by Vaccinator Chakwal&rdquo;</strong> and is auto-updated every night (data from the 1st of the month to date). Each Fixed Site facility is linked to its UC through the site HR (92 Health Facilities) data.</p>
     <div class="stats-grid">
         <div class="stat-card"><div class="stat-number" id="svStatOutreach">—</div><div class="stat-label">Outreach Doses</div></div>
         <div class="stat-card"><div class="stat-number" id="svStatFixed">—</div><div class="stat-label">Fixed Site Doses</div></div>
@@ -670,7 +670,7 @@
                 <!-- ===== MODULE: OUTREACH ===== -->
                 <div id="emrModuleOutreach">
                 <p class="emr-note"><strong>Source:</strong> EMR Outreach Immunization Report. Filters and reports in PHMIS style. Each month is a separate sheet (e.g. July-2026, Aug-2026). Search covers all months; Period filters reports.</p>
-                <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ <strong>LastUpdatedDate</strong> column me proper dates nahi mil rahi (########). Late-entry report ke liye Sheet me yeh column theek karein (column widen + re-paste dates).</div>
+                <div id="emrDateWarn" class="emr-warn" style="display:none">⚠️ The <strong>LastUpdatedDate</strong> column does not contain valid dates (########). For the late-entry report, please correct this column in the Sheet (widen the column and re-paste the dates).</div>
 
                 <div class="emr-filter">
                     <label>Period
@@ -1086,7 +1086,7 @@
                     </div>
                     <div id="locSearchRow" style="display:none;margin:10px 0 0;background:#eef7f1;border:1px solid #c8e6c9;border-radius:10px;padding:10px 12px;align-items:center;gap:10px;flex-wrap:wrap">
 <span style="font-weight:700;color:#0d5c3d;font-size:13px">🔍 Search</span>
-<input type="text" id="locSearch" placeholder="Name / Username / Tehsil / UC search karein…" oninput="locApply()" style="flex:1;min-width:220px;max-width:420px;padding:8px 10px;border:1.5px solid #c8e6c9;border-radius:8px;font-size:13.5px;background:#fff">
+<input type="text" id="locSearch" placeholder="Search by Name / Username / Tehsil / UC…" oninput="locApply()" style="flex:1;min-width:220px;max-width:420px;padding:8px 10px;border:1.5px solid #c8e6c9;border-radius:8px;font-size:13.5px;background:#fff">
 <button type="button" onclick="locClearSearch()" style="background:#fff;color:#0d5c3d;border:1.5px solid #0d5c3d;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Clear</button>
 <span id="locSearchInfo" style="font-size:12.5px;color:#555"></span>
 </div>
@@ -1143,7 +1143,7 @@
                 <div class="sweep-history-bar" id="sweepHistoryBar">
                     <label for="sweepDateSelect">Select Date:</label>
                     <select id="sweepDateSelect" onchange="onHistoryDateChange()"></select>
-                    <span style="font-size:12px;color:#666" id="sweepHistoryHint">Pehle ke dinon ka data yahan dekhain</span>
+                    <span style="font-size:12px;color:#666" id="sweepHistoryHint">View data from previous days here</span>
                 </div>
                 
                 <div class="sweep-hero" id="sweepHero">
@@ -1578,8 +1578,8 @@
                     <h3>Zero-Dose Analysis</h3>
                     <p>Identification & Action Plan</p>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-disabled" disabled title="Report abhi tayyar nahi - jald add hogi">View Report</button>
-                        <button type="button" class="btn btn-outline btn-disabled" disabled title="Report abhi tayyar nahi - jald add hogi">Download Report</button>
+                        <button type="button" class="btn btn-disabled" disabled title="Report is not ready yet — will be added soon">View Report</button>
+                        <button type="button" class="btn btn-outline btn-disabled" disabled title="Report is not ready yet — will be added soon">Download Report</button>
                     </div>
                 </div>
                 <div class="download-card">
@@ -1587,7 +1587,7 @@
                     <p>Tehsil-wise Drop-out Rates (BCG→P1, P1→P3, MR1→MR2)</p>
                     <div class="btn-group">
                         <button class="btn" onclick="openDropoutModal()">View Report</button>
-                        <button type="button" class="btn btn-outline btn-disabled" disabled title="Full Excel abhi tayyar nahi - jald add hoga">Download Excel</button>
+                        <button type="button" class="btn btn-outline btn-disabled" disabled title="Full Excel is not ready yet — will be added soon">Download Excel</button>
                     </div>
                 </div>
                 <div class="download-card">
@@ -1630,8 +1630,8 @@
                                 <p>Core field guide for routine immunization sessions</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                         <div class="train-item">
@@ -1640,8 +1640,8 @@
                                 <p>Storage, temperature monitoring &amp; logistics</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                     </div>
@@ -1653,8 +1653,8 @@
                                 <p>Official policy &amp; operational guidelines</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                         <div class="train-item">
@@ -1663,8 +1663,8 @@
                                 <p>Adverse Events Following Immunization — reporting &amp; response</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                     </div>
@@ -1676,8 +1676,8 @@
                                 <p>Session plans &amp; presentation for refresher batches</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                         <div class="train-item">
@@ -1686,8 +1686,8 @@
                                 <p>Practical guide for digital reporting updates</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                     </div>
@@ -1699,8 +1699,8 @@
                                 <p>Reference handbook for supervisors &amp; trainers</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                         <div class="train-item">
@@ -1709,8 +1709,8 @@
                                 <p>One-pagers &amp; job aids for field staff</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                     </div>
@@ -1722,8 +1722,8 @@
                                 <p>Videos, SOPs &amp; miscellaneous material — links jald add hongi</p>
                             </div>
                             <div class="train-btns">
-                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">View</button>
-                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Is ka link abhi add nahi hua - jald add hoga">Download</button>
+                                <button type="button" class="btn btn-purple btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">View</button>
+                                <button type="button" class="btn btn-purple-outline btn-sm btn-disabled" disabled title="Link has not been added yet — will be added soon">Download</button>
                             </div>
                         </div>
                     </div>
@@ -2356,7 +2356,7 @@
 
         function downloadHrExcel(){
             if(typeof XLSX === 'undefined'){
-                alert('Excel library load nahi hui. Page refresh karke dobara try karein.');
+                alert('The Excel library could not be loaded. Please refresh the page and try again.');
                 return;
             }
             const wb = XLSX.utils.book_new();
@@ -2465,7 +2465,7 @@
         function getProp(row,keys){for(let p in row){let ck=p.replace(/\s+/g,'').toLowerCase();for(let k of keys)if(ck===k.replace(/\s+/g,'').toLowerCase())return row[p]}return 'N/A'}
         function performNidSearch(){
             const file=document.getElementById('fileSelect').value;const q=document.getElementById('nidSearchQuery').value.trim();const res=document.getElementById('nidSearchResult');
-            if(!q){res.innerHTML='<div style="color:red;text-align:center;margin-top:15px">CNIC ya Account Number darj karein</div>';return}
+            if(!q){res.innerHTML='<div style="color:red;text-align:center;margin-top:15px">Please enter a CNIC or Account Number</div>';return}
             res.innerHTML='<div style="text-align:center;margin-top:15px;color:#0d5c3d">Searching...</div>';
             fetch(file).then(r=>r.arrayBuffer()).then(data=>{
                 const wb=XLSX.read(data,{type:'array'});const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
@@ -2480,7 +2480,7 @@
                     <div class="result-row"><span class="result-label">Amount:</span><span class="result-value">Rs. ${getProp(found,['Amount'])}</span></div>
                     <div class="result-row"><span class="result-label">Payment Code:</span><span class="result-value">${getProp(found,['XpinDraftNo','Payment Code','Xpin'])}</span></div>
                     <div class="result-row"><span class="result-label">Status:</span><span class="status-badge-large">${getProp(found,['Status'])}</span></div>
-                </div>`}else{res.innerHTML='<div style="color:#b03030;text-align:center;margin-top:15px">Koi record nahi mila</div>'}
+                </div>`}else{res.innerHTML='<div style="color:#b03030;text-align:center;margin-top:15px">No record found</div>'}
             }).catch(e=>{res.innerHTML=`<div style="color:red;text-align:center;margin-top:15px">Error: ${e.message}</div>`});
         }
 
@@ -2646,14 +2646,14 @@
         let isAdmin = false;
 
         function tryAdminLogin(){
-            const p = prompt('Admin password darj karein:');
+            const p = prompt('Enter the admin password:');
             if(p === null) return false;
             if(sha256Hex(p) === ADMIN_PASS_HASH){
                 isAdmin = true;
                 try{ sessionStorage.setItem('epi_admin','1'); }catch(e){}
                 const bar = document.getElementById('adminBar');
                 if(bar) bar.classList.add('active');
-                alert('Admin mode ON. Ab search se detail open karke Edit kar sakte hain.');
+                alert('Admin mode ON. You can now open a record from search and edit it.');
                 return true;
             }
             alert('Galat password.');
@@ -2686,7 +2686,7 @@
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
             {type:'section', title:'EPI Supervisory Staff Data', desc:'Supervisory staff directory — naam, designation, tehsil, rabta number', action:'scroll', target:'Supervisory Staff Data'},
-            {type:'section', title:'Summary by Vaccinators', desc:'HMIS Summary By Vaccinations — UC-wise Outreach, facility-wise Fixed Site aur dono ki Compiled report (har raat auto-update)', action:'scroll', target:'Summary by Vaccinators'},
+            {type:'section', title:'Summary by Vaccinators', desc:'HMIS Summary By Vaccinations — UC-wise Outreach, facility-wise Fixed Site, and the Compiled report of both (auto-updated every night)', action:'scroll', target:'Summary by Vaccinators'},
                 {type:'section', title:'Urban Sweep-up Activity (10-15 Aug 2026)', desc:'Live reports, graphs, remaining UCs — inside EMR Outreach', action:'fn', target:'openSweepModule'},
                 {type:'section', title:'Child Immunization (EMR) Data', desc:'Outreach, Fixed Site, OR+Fixed Compile, Attendance, Location', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Fixed Site Reports', desc:'HF-wise EMR Fixed Site (inside EMR Data)', action:'scroll', target:'Child Immunization'},
@@ -2862,7 +2862,7 @@
             if(mobile === null) return;
             const uc = prompt('UC:', ov.uc || v.uc);
             if(uc === null) return;
-            const vacant = confirm('Kya yeh post Vacant hai?\nOK = Vacant, Cancel = Filled');
+            const vacant = confirm('Is this post Vacant?\nOK = Vacant, Cancel = Filled');
             const data = {name:name.trim(), mobile:mobile.trim(), uc:uc.trim(), vacant:vacant};
             // Apply live to hrData
             hrData.vaccinators[tehsil][index].name = data.name;
@@ -2871,7 +2871,7 @@
             hrData.vaccinators[tehsil][index].vacant = data.vacant;
             saveVacOverride(key, data);
             closeSearchDetail();
-            alert('Saved on this browser (Admin).\n\nNote: Yeh change is device/browser pe save hai. Permanent team-wide change ke liye GitHub HTML update ya Google Sheet HR list use karein.');
+            alert('Saved on this browser (Admin).\n\nNote: This change is saved on this device/browser only. For a permanent, team-wide change, please update the GitHub HTML or the Google Sheet HR list.');
         }
 
         function clearSearch(){
@@ -3006,7 +3006,7 @@
                 title.style.color = '#2e7d32';
                 const tehsils = Object.keys(submitted);
                 if(!tehsils.length){
-                    htmlOut = '<p style="color:#888">Is din koi report submit nahi hui.</p>';
+                    htmlOut = '<p style="color:#888">No report was submitted on this day.</p>';
                 } else {
                     tehsilOrder.concat(tehsils.filter(function(t){ return tehsilOrder.indexOf(t)<0; })).forEach(function(t){
                         if(!submitted[t]) return;
@@ -3026,7 +3026,7 @@
                 title.style.color = '#0d5c3d';
                 const tehsils = Object.keys(submitted);
                 if(!tehsils.length){
-                    htmlOut = '<p style="color:#888">Is din data nahi hai.</p>';
+                    htmlOut = '<p style="color:#888">No data is available for this day.</p>';
                 } else {
                     tehsilOrder.concat(tehsils.filter(function(t){ return tehsilOrder.indexOf(t)<0; })).forEach(function(t){
                         if(!submitted[t]) return;
@@ -3320,9 +3320,9 @@
                     status.style.display='block';
                     status.className='sweep-empty';
                     if(isLive){
-                        status.innerHTML = 'Aaj ('+formatSweepDate(ymd)+') abhi koi report submit nahi hui.<br><span style="font-size:13px;color:#888">Pehle ke din ka data <strong>Day-wise History</strong> tab se dekhain.</span>';
+                        status.innerHTML = 'No report has been submitted today ('+formatSweepDate(ymd)+') yet.<br><span style="font-size:13px;color:#888">To view a previous day, please open the <strong>Day-wise History</strong> tab.</span>';
                     } else {
-                        status.textContent = 'Is date ('+formatSweepDate(ymd)+') par koi report nahi mili.';
+                        status.textContent = 'No report was found for this date ('+formatSweepDate(ymd)+').';
                     }
                 }
                 if(wrap) wrap.style.display='none';
@@ -3471,7 +3471,7 @@
             if(title2) title2.textContent = 'Tehsil-wise Partial Children (Cumulative)';
 
             if(!allRows.length){
-                if(status){ status.style.display='block'; status.className='sweep-empty'; status.textContent = 'Abhi koi cumulative data nahi hai.'; }
+                if(status){ status.style.display='block'; status.className='sweep-empty'; status.textContent = 'No cumulative data is available yet.'; }
                 if(wrap) wrap.style.display='none';
                 if(charts) charts.style.display='none';
                 if(meta) meta.textContent = 'Cumulative · 0 reports';
@@ -5637,11 +5637,11 @@
         
         async function emrExportFullPdf(){
             if(typeof window.jspdf === 'undefined'){
-                alert('jsPDF library missing. Page refresh karein.');
+                alert('The jsPDF library is missing. Please refresh the page.');
                 return;
             }
             if(!emrRows.length){
-                alert('Pehle Refresh Data dabayein.');
+                alert('Please press Refresh Data first.');
                 return;
             }
             const btn = document.getElementById('emrPdfBtn');
@@ -6264,13 +6264,13 @@
         }
         function emrDownloadExcel(){
             if(typeof XLSX === 'undefined'){
-                alert('Excel library load nahi hui. Page refresh karein.');
+                alert('The Excel library could not be loaded. Please refresh the page.');
                 return;
             }
             const headers = emrLastExport.headers || [];
             const rows = emrLastExport.rows || [];
             if(!headers.length){
-                alert('Is tab me downloadable data nahi.');
+                alert('There is no downloadable data in this tab.');
                 return;
             }
             const aoa = [headers].concat(rows);
@@ -6396,7 +6396,7 @@
         }
         function emrOpenSearchPopup(){
             if(!emrRows.length){
-                alert('Pehle Refresh Data dabayein.');
+                alert('Please press Refresh Data first.');
                 return;
             }
             const q = ((document.getElementById('emrSearch')||{}).value || '').trim();
@@ -6426,7 +6426,7 @@
             if(!body || !modal) return;
             matched = matched || [];
             if(!matched.length){
-                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">Is filter / search pe koi child nahi mila.</div>';
+                body.innerHTML = '<div style="text-align:center;padding:24px;color:#888">No child was found for this filter / search.</div>';
                 if(status) status.textContent = '0 results · ' + (label||'') + ' · ' + emrPeriodLabel();
                 modal.classList.add('active');
                 return;
@@ -7356,20 +7356,20 @@
             }
             const NE_HEAD = ['Sr', 'Vaccinator', 'Username', 'Tehsil', 'UC', 'Check-In', 'Entries'];
             if(!neRoster && !neRosterError){
-                emrSetStats([{n: '…', l: 'Roster load ho raha hai'}]);
+                emrSetStats([{n: '…', l: 'Loading roster'}]);
                 if(extra){
                     extra.style.display = 'block';
-                    extra.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:12px 14px;color:#555">⏳ Attendance sheet se vaccinators ki list load ho rahi hai…</div>';
+                    extra.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:12px 14px;color:#555">⏳ Loading the vaccinators list from the Attendance sheet…</div>';
                 }
                 emrRenderTable(NE_HEAD, '<tr><td colspan="7" style="text-align:center;color:#888">Loading…</td></tr>', NE_HEAD, [], null);
                 neEnsureRoster();
                 return;
             }
             if(neRosterError){
-                emrSetStats([{n: 'Error', l: 'Roster load nahi hua'}]);
+                emrSetStats([{n: 'Error', l: 'Roster could not be loaded'}]);
                 if(extra){
                     extra.style.display = 'block';
-                    extra.innerHTML = '<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:12px;padding:12px 14px;color:#7a4a00">⚠️ Attendance sheet load nahi ho saki (' + neRosterError + '). Refresh Data daba kar dobara koshish karein.</div>';
+                    extra.innerHTML = '<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:12px;padding:12px 14px;color:#7a4a00">⚠️ The Attendance sheet could not be loaded (' + neRosterError + '). Please press Refresh Data and try again.</div>';
                 }
                 emrRenderTable(NE_HEAD, '<tr><td colspan="7" style="text-align:center;color:#888">No data</td></tr>', NE_HEAD, [], null);
                 return;
@@ -7402,9 +7402,9 @@
             const zeroChecked = zero.filter(function(p){ return !!p.checkins[neDateSel]; }).length;
             emrSetStats([
                 {n: rosterF.length.toLocaleString(), l: 'Total Vaccinators'},
-                {n: withEntry.toLocaleString(), l: 'Entry Bheji'},
+                {n: withEntry.toLocaleString(), l: 'Entries Submitted'},
                 {n: zero.length.toLocaleString(), l: 'Zero-Entry'},
-                {n: zeroChecked.toLocaleString(), l: 'Check-In Kiya, Entry Nahi'}
+                {n: zeroChecked.toLocaleString(), l: 'Checked In, No Entry'}
             ]);
             if(extra){
                 extra.style.display = 'block';
@@ -7412,7 +7412,7 @@
                     + '<label style="font-weight:700;color:#0d5c3d">Report Date <select id="neDate" onchange="neDateSel=this.value;emrApply();" style="padding:7px 10px;border:2px solid #0d5c3d;border-radius:8px;font-weight:600">'
                     + days.map(function(d){ return '<option value="' + d + '"' + (d === neDateSel ? ' selected' : '') + '>' + neFmtDay(d) + '</option>'; }).join('')
                     + '</select></label>'
-                    + '<span style="font-size:12.5px;color:#555">Entries EMR Outreach data se <strong>UC-wise</strong> gini jati hain (sheet mein vaccinator ka naam nahi hota) — jis UC ki us din koi entry na ho, us UC ke tamam vaccinators is list mein ate hain. Check-In ka data Vaccinators Attendance sheet se hai.</span>'
+                    + '<span style="font-size:12.5px;color:#555">Entries are counted <strong>UC-wise</strong> from the EMR Outreach data (the sheet does not contain the vaccinator name). Vaccinators of every UC with no entry on the selected date are listed here. Check-in data is taken from the Vaccinators Attendance sheet.</span>'
                     + '</div>';
             }
             const exp = [];
@@ -7872,8 +7872,8 @@
                 if(extra){
                     extra.style.display = 'block';
                     extra.innerHTML = '<div style="font-size:12.5px;color:#555;line-height:1.55;padding:8px 4px">'
-                        + '<strong>Overdue Children (Not Vaccinated):</strong> dose <em>No</em>, due se <strong>28+ din</strong> guzar gaye, aur abhi bhi <strong>max eligible age</strong> ke andar. '
-                        + 'Hep-B / OPV-0: agar <strong>Penta-1 lag chuka</strong> ho to list me nahi (ab nahi lag sakte). '
+                        + '<strong>Overdue Children (Not Vaccinated):</strong> dose <em>No</em>, <strong>28+ days</strong> past the due date, and still within the <strong>maximum eligible age</strong>. '
+                        + 'Hep-B / OPV-0: if <strong>Penta-1 has already been given</strong>, the child is not listed (these doses can no longer be given). '
                         + 'Max age: BCG ≤1 yr · Hep-B/OPV-0 ≤15 d · Rota ≤2 yr · baqi mostly &lt;5 yr. '
                         + 'Intervals: Penta/OPV/PCV/Rota series previous dose +28 d. Same Period/Tehsil/UC filters.</div>';
                 }
@@ -8400,7 +8400,7 @@
             }catch(err){
                 console.error(err);
                 status.className = 'sweep-empty';
-                status.innerHTML = 'Live data load nahi hui.<br><span style="font-size:12px;color:#999">'+err.message+'</span><br><span style="font-size:12px">Sheet share: Anyone with the link → Viewer</span>';
+                status.innerHTML = 'Live data could not be loaded.<br><span style="font-size:12px;color:#999">'+err.message+'</span><br><span style="font-size:12px">Sheet share: Anyone with the link → Viewer</span>';
                 if(meta) meta.textContent = 'Last updated: failed';
             }
         }
@@ -9605,7 +9605,7 @@
                         html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||last.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td style="font-weight:800;color:#0d5c3d">'+hits.length+'</td><td style="text-align:left;font-size:12px">'+dayWise+'</td><td>'+locFmt(last.ts)+'</td><td>'+map+'</td></tr>';
                         exp.push([i,m.name,locDispUser(m.username||last.username),m.tehsil||'',m.uc||'',hits.length,dayWise,locFmt(last.ts),last.maps||'']);
                     });
-                    if(body) body.innerHTML=html||'<tr><td colspan="9">Koi location submit nahi</td></tr>';
+                    if(body) body.innerHTML=html||'<tr><td colspan="9">No location has been submitted</td></tr>';
                     locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Times Submitted','Day-wise','Last Time','Map'], rows:exp, title:'Submitted Locations (All dates)'};
                 } else {
                     // Day mode: no Lat/Long columns (faster, cleaner report)
@@ -9621,7 +9621,7 @@
                         html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||hit.tehsil||'')+'</td><td>'+(m.uc||hit.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td>'+locFmt(hit.ts)+'</td><td style="font-weight:700;color:'+(late?'#c62828':'#2e7d32')+'">'+statusTxt+'</td><td>'+map+'</td></tr>';
                         exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||hit.tehsil||'',m.uc||hit.uc||'',hit.kitStation||'',locFmt(hit.ts),statusTxt,hit.maps||'']);
                     });
-                    if(body) body.innerHTML=html||'<tr><td colspan="9">Is date / filter me koi location submit nahi</td></tr>';
+                    if(body) body.innerHTML=html||'<tr><td colspan="9">No location has been submitted for this date / filter</td></tr>';
                     locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Status','Map'], rows:exp, title:'Submitted Locations — '+locYmdLabel(day)};
                 }
             }
@@ -9648,7 +9648,7 @@
                 if(stats) stats.innerHTML=
                     '<div class="emr-stat"><div class="n">'+multiCount+'</div><div class="l">Same-day multi submits</div></div>'+
                     '<div class="emr-stat" style="cursor:pointer" onclick="locClickStat(\'submitted\')"><div class="n">'+submitted+'</div><div class="l">Submitted</div></div>';
-                if(body) body.innerHTML=html||'<tr><td colspan="11">Kisi ne ek hi din 2+ <strong>alag</strong> locations submit nahi ki (duplicate GPS rows ignore)</td></tr>';
+                if(body) body.innerHTML=html||'<tr><td colspan="11">No one submitted 2+ <strong>different</strong> locations on the same day (duplicate GPS rows are ignored)</td></tr>';
                 locLastExport={headers:['Sr','Date','UC','Vaccinator Name','Kit Station 1','Map Location 1','Time 1','Kit Station 2','Map Location 2','Time 2','Distinct submits'], rows:exp, title:'Multiple Location Submits'+(day?' — '+locYmdLabel(day):' (distinct same-day only)')};
             }
             else if(locMode==='pending'){
@@ -9671,7 +9671,7 @@
                     '<div class="emr-stat" style="cursor:pointer;color:#1565c0" onclick="locClickStat(\'leaveToday\')"><div class="n">'+leaveOnDay+'</div><div class="l">Leave</div></div>'+
                     '<div class="emr-stat" style="cursor:pointer;color:#c62828" onclick="locClickStat(\'pending\')"><div class="n">'+truePending+'</div><div class="l">Not Submitted</div></div>';
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Status</th></tr>';
-                if(body) body.innerHTML=rowsP.join('')||'<tr><td colspan="6">Sab ne location bhej di ya leave pe hain</td></tr>';
+                if(body) body.innerHTML=rowsP.join('')||'<tr><td colspan="6">Everyone has either submitted their location or is on leave</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Status'], rows:exp, title:'Not Submitted (Pending)'+(day?' — '+locYmdLabel(day):'')};
             }
             else if(locMode==='late'){
@@ -9691,7 +9691,7 @@
                     html+='<tr><td>'+i+'</td><td>'+m.name+'</td><td>'+locDispUser(m.username||hit.username)+'</td><td>'+(m.tehsil||'')+'</td><td>'+(m.uc||'')+'</td><td>'+(hit.kitStation||'—')+'</td><td style="color:#c62828;font-weight:700">'+locFmt(hit.ts)+'</td><td style="color:#c62828;font-weight:800">'+lateTxt+'</td><td>'+map+'</td></tr>';
                     exp.push([i,m.name,locDispUser(m.username||hit.username),m.tehsil||'',m.uc||'',hit.kitStation||'',locFmt(hit.ts),lateTxt,hit.maps||'']);
                 });
-                if(body) body.innerHTML=html||'<tr><td colspan="9">Is filter me koi late submission nahi (09:30 AM ke baad)</td></tr>';
+                if(body) body.innerHTML=html||'<tr><td colspan="9">No late submission in this filter (after 09:30 AM)</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Late By','Map'], rows:exp, title:'Late Location Submit'};
             }
             else if(locMode==='suspicious'){
@@ -9727,7 +9727,7 @@
                     '<div class="emr-stat" style="color:#c62828"><div class="n">'+highN+'</div><div class="l">High risk</div></div>'+
                     '<div class="emr-stat" style="color:#e65100"><div class="n">'+medN+'</div><div class="l">Medium risk</div></div>'+
                     '<div class="emr-stat" style="font-size:11px;line-height:1.35;padding:8px;min-width:180px"><div class="l">Includes: 100–2000m weak/network GPS (not auto Fake GPS) + fake-like signals (same pin, shared spot, impossible travel). Field verify High risk.</div></div>';
-                if(body) body.innerHTML=html||'<tr><td colspan="11">Is filter me koi suspicious / low-confidence location flag nahi mila</td></tr>';
+                if(body) body.innerHTML=html||'<tr><td colspan="11">No suspicious / low-confidence location flag was found in this filter</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Kit Station','Time','Accuracy','Risk','Score','Reasons','Map'], rows:exp, title:'Suspicious Location'};
             }
             else if(locMode==='leaveToday'){
@@ -9743,7 +9743,7 @@
                 });
                 if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">On Leave</div></div><div class="emr-stat"><div class="n">'+(dayY||'All')+'</div><div class="l">Date</div></div>';
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Leave Date</th><th>Type</th><th>Reason</th><th>Application</th></tr>';
-                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">Is date pe koi leave nahi</td></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">No leave on this date</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Leave Date','Type','Reason','Application'], rows:exp, title:'On Leave — '+(dayY||'All')};
             }
             else if(locMode==='leaveBal'){
@@ -9773,7 +9773,7 @@
                 if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+(locQ?rows.length:masters.length)+'</div><div class="l">'+(locQ?'Vaccinators (filtered)':'Vaccinators')+'</div></div><div class="emr-stat"><div class="n">2</div><div class="l">Max / month</div></div><div class="emr-stat"><div class="n">24</div><div class="l">Max / year pool</div></div>';
                 const lsiBal=document.getElementById('locSearchInfo'); if(lsiBal) lsiBal.textContent = locQ ? (rows.length + ' record(s) mile') : '';
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Opening Bal</th><th>Used (Sep+)</th><th>Year Remaining</th><th>This Month</th><th>Status</th></tr>';
-                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="10">'+(locQ?'Is search mein koi record nahi mila':'No master data')+'</td></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="10">'+(locQ?'No record was found for this search':'No master data')+'</td></tr>';
                 locLastExport={headers:['Sr','Name','Username','Tehsil','UC','Opening','Used','Remaining','Month','Status'], rows:exp, title:'Leave Balance'};
             }
             else if(locMode==='leaveReg'){
@@ -9792,7 +9792,7 @@
                 if(stats) stats.innerHTML='<div class="emr-stat"><div class="n">'+listF.length+'</div><div class="l">Leave records'+(locQ?' (filtered)':'')+'</div></div>'+(locQ?'<div class="emr-stat"><div class="n">'+list.length+'</div><div class="l">Total records</div></div>':'');
                 const lsiReg=document.getElementById('locSearchInfo'); if(lsiReg) lsiReg.textContent = locQ ? (listF.length + ' record(s) mile · kul ' + list.length) : '';
                 if(head) head.innerHTML='<tr><th>Sr</th><th>Date</th><th>Name</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Type</th><th>Reason</th><th>Application</th></tr>';
-                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">'+(locQ?'Is search mein koi record nahi mila':'Abhi koi leave submit nahi')+'</td></tr>';
+                if(body) body.innerHTML=rows.join('')||'<tr><td colspan="9">'+(locQ?'No record was found for this search':'No leave has been submitted yet')+'</td></tr>';
                 locLastExport={headers:['Sr','Date','Name','Username','Tehsil','UC','Type','Reason','Application'], rows:exp, title:'Leave Register'};
             }
             else if(locMode==='dailyStatus'){
@@ -10874,7 +10874,7 @@
             }catch(e){}
             if(modal) modal.classList.add('active');
             if(!(rows||[]).length){
-                alert('Is category mein abhi koi record nahi. Pehle data load / filter check karein.');
+                alert('There is no record in this category yet. Please load the data / check the filter first.');
             }
         }
 
@@ -11025,12 +11025,12 @@
         async function explDownloadPdf(){
             if(typeof window.jspdf==='undefined'){ alert('jsPDF missing'); return; }
             const letterNo=(document.getElementById('explLetterNo')||{}).value||'';
-            if(!String(letterNo).trim()){ alert('Letter No. likhna zaroori hai.'); return; }
+            if(!String(letterNo).trim()){ alert('Letter No. is required.'); return; }
             const letterDate=(document.getElementById('explLetterDate')||{}).value||explTodayISO();
             const hearingDate=(document.getElementById('explHearingDate')||{}).value||explNextDayISO();
             const hearingTime=(document.getElementById('explHearingTime')||{}).value||'14:00';
             const rows=explState.rows||[];
-            if(!rows.length){ alert('Letter ke liye koi record nahi.'); return; }
+            if(!rows.length){ alert('There is no record available for this letter.'); return; }
             try{ localStorage.setItem('epi_expl_last_no', String(letterNo).trim()); }catch(e){}
 
             const { jsPDF } = window.jspdf;
@@ -12940,7 +12940,7 @@
                 html += '<tr style="background:#0d5c3d;color:#fff;font-weight:700"><td colspan="' + (hasSub ? 3 : 2) + '">DISTRICT TOTAL</td>' + grand.map(function(v){ return '<td>' + svNum(v) + '</td>'; }).join('') + '<td>' + svNum(grandTotal) + '</td></tr>';
                 svCurrentExport.push(['', 'DISTRICT TOTAL'].concat(hasSub ? [''] : [], grand, [grandTotal]));
             } else {
-                html = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#777">No data — filter change karke dekhein ya Refresh Data dabayein.</td></tr>';
+                html = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#777">No data — please change the filter or press Refresh Data.</td></tr>';
             }
             body.innerHTML = html;
             // note
@@ -12948,9 +12948,9 @@
             if(note){
                 const unm = svFixedRows.filter(function(r){ return !svFacUC(r); });
                 let txt = '';
-                if(svMode === 'outreach') txt = 'Note: Tehsil Lawa ka data HMIS mein Talagang tehsil ke andar ata hai (LAWA RURAL / LAWA URBAN UCs wahan shamil hain).';
+                if(svMode === 'outreach') txt = 'Note: In HMIS, Tehsil Lawa data is reported under Tehsil Talagang (the LAWA RURAL / LAWA URBAN UCs are included there).';
                 if(unm.length && svMode !== 'outreach'){
-                    txt += (txt ? ' ' : '') + '⚠ Ye facilities site ke HR (92 Health Facilities) data mein nahi mileen, is liye UC link nahi ho saka: ' + unm.map(function(r){ return svEsc(r.name) + ' — ' + svNum(r.total) + ' doses'; }).join('; ') + '. Agar in ki UC maloom hai to bata dein, mapping mein shamil kar di jayegi.';
+                    txt += (txt ? ' ' : '') + '⚠ The following facilities were not found in the site HR (92 Health Facilities) data, so their UC could not be linked: ' + unm.map(function(r){ return svEsc(r.name) + ' — ' + svNum(r.total) + ' doses'; }).join('; ') + '. If the UC of any of these facilities is known, please share it and it will be added to the mapping.';
                 }
                 note.textContent = txt;
                 note.style.display = txt ? 'block' : 'none';
@@ -12974,7 +12974,7 @@
             return svReportTitle().replace(/[\\/:*?"<>|]/g, '') + ext;
         }
         function svDownloadExcel(){
-            if(!svCurrentExport.length){ alert('Pehle data load hone dein.'); return; }
+            if(!svCurrentExport.length){ alert('Please let the data load first.'); return; }
             const ws = XLSX.utils.aoa_to_sheet(svCurrentExport);
             const ncols = svCurrentExport[0].length;
             ws['!cols'] = svCurrentExport[0].map(function(h, i){
@@ -12989,8 +12989,8 @@
             XLSX.writeFile(wb, svFileName('.xlsx'));
         }
         function svDownloadPdf(){
-            if(typeof window.jspdf === 'undefined'){ alert('jsPDF library missing. Page refresh karein.'); return; }
-            if(!svCurrentExport.length){ alert('Pehle data load hone dein.'); return; }
+            if(typeof window.jspdf === 'undefined'){ alert('The jsPDF library is missing. Please refresh the page.'); return; }
+            if(!svCurrentExport.length){ alert('Please let the data load first.'); return; }
             const headers = svCurrentExport[0].slice();
             const rows = svCurrentExport.slice(1).map(function(r){ return r.map(function(v){ return v == null ? '' : String(v); }); });
             const btn = document.getElementById('svPdfBtn');
@@ -13076,7 +13076,7 @@
         function supLoad(){
             const st = document.getElementById('supStatus');
             if(!SUP_SHEET_ID){
-                if(st) st.textContent = 'Data source (Google Sheet) abhi connect nahi hai — setup mukammal hone ke baad data yahan live ayega.';
+                if(st) st.textContent = 'The data source (Google Sheet) is not connected yet — once the setup is complete, the data will appear here live.';
                 supRowsAll = []; supRender(); return;
             }
             if(st) st.textContent = 'Loading…';
@@ -13106,7 +13106,7 @@
                 supBuildDesigOptions_();
                 supRender();
             }).catch(function(e){
-                if(st) st.textContent = 'Data load nahi hua: ' + (e.message || e);
+                if(st) st.textContent = 'Data could not be loaded: ' + (e.message || e);
             });
         }
         function supBuildDesigOptions_(){
@@ -13153,9 +13153,9 @@
                 body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">No data</td></tr>';
                 return;
             }
-            if(st) st.textContent = rows.length + ' staff member(s) dikhai de rahe hain · Kul active: ' + active.length;
+            if(st) st.textContent = rows.length + ' staff member(s) shown · Total active: ' + active.length;
             if(!rows.length){
-                body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">Is filter mein koi record nahi mila</td></tr>';
+                body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">No record was found in this filter</td></tr>';
                 return;
             }
             function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -13167,8 +13167,8 @@
         }
         function supDownloadExcel(){
             const rows = supFiltered_();
-            if(!rows.length){ alert('Download ke liye koi data nahi.'); return; }
-            if(typeof XLSX === 'undefined'){ alert('Excel library load nahi hui — page refresh karein.'); return; }
+            if(!rows.length){ alert('There is no data to download.'); return; }
+            if(typeof XLSX === 'undefined'){ alert('The Excel library could not be loaded — please refresh the page.'); return; }
             const data = rows.map(function(r, i){ return {'#': i + 1, 'Name': r.name, 'Designation': r.desig, 'Tehsil': r.tehsil, 'UC / Area': r.uc, 'Place of Posting': r.posting, 'Mobile': r.mobile, 'WhatsApp': r.whatsapp, 'Email': r.email}; });
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
@@ -14041,7 +14041,7 @@
             const data = cifCollect();
             if(typeof cifFullEpid==='function') data.epid = cifFullEpid();
             if(!data.epid || data.epid === (typeof CIF_EPID_PREFIX!=='undefined'?CIF_EPID_PREFIX:'PAK/PB/13/26/MR/00')){
-                alert('EPID No. ke last digits likhna zaroori hain.');
+                alert('The last digits of the EPID No. are required.');
                 return;
             }
             try{
@@ -14050,7 +14050,7 @@
                 localStorage.setItem('epi_cif_by_epid', JSON.stringify(cache));
             }catch(eC){}
             if(!data.name){
-                alert('Patient Name zaroori hai.');
+                alert('Patient Name is required.');
                 return;
             }
             let url = cifVal('cif_scriptUrl');
@@ -14069,8 +14069,8 @@
                     q.push(data);
                     localStorage.setItem(key, JSON.stringify(q));
                 }catch(e){}
-                if(st) st.textContent = 'Saved locally (Script URL missing). Apps Script deploy karke URL yahan paste karein, phir dubara Save.';
-                alert('Google Apps Script URL abhi set nahi.\n\n1) Sheet me Script deploy karein\n2) Web App URL is form me paste karein\n3) Phir Save dabayein\n\nAbhi data browser me local backup ho gaya.');
+                if(st) st.textContent = 'Saved locally (Script URL missing). Please deploy the Apps Script, paste its URL here, and Save again.';
+                alert('The Google Apps Script URL is not set yet.\n\n1) Deploy the Script in the Sheet\n2) Paste the Web App URL in this form\n3) Then press Save\n\nFor now, the data has been backed up locally in the browser.');
                 return;
             }
             if(st) st.textContent = 'Saving to Google Sheet…';
@@ -14123,10 +14123,10 @@
                     form.appendChild(inp);
                     document.body.appendChild(form);
                     form.submit();
-                    if(st) st.textContent = 'Submitted via form POST (EPID '+data.epid+'). Sheet → CIF_Archive check karein.';
+                    if(st) st.textContent = 'Submitted via form POST (EPID '+data.epid+'). Please check the Sheet → CIF_Archive.';
                 }catch(err2){
                     if(st) st.textContent = 'Save failed: '+(err.message||err);
-                    alert('Save failed. Web app URL / Deploy settings check karein.\n'+err);
+                    alert('Save failed. Please check the Web App URL / deployment settings.\n'+err);
                 }
             }
         }
