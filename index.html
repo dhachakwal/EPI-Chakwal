@@ -12835,7 +12835,7 @@
                 svFixedRows = await svFetchTab('Fixed');
                 svRender();
                 const asof = document.getElementById('svSectionAsOf');
-                if(asof) asof.textContent = new Date().toLocaleString('en-US', {month: 'long', year: 'numeric'}) + ' · Month to Date · Har raat auto-update';
+                if(asof) asof.textContent = new Date().toLocaleString('en-US', {month: 'long', year: 'numeric'}) + ' · Month to Date · Auto-updated every night';
                 if(st) st.style.display = 'none';
             }catch(err){
                 console.error(err);
