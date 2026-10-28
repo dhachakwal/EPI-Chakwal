@@ -26,6 +26,8 @@ select:focus,input[type="text"]:focus{outline:none;border-color:#1a8a5c;box-shad
 .result-row:last-child{border-bottom:none;margin-bottom:0}
 .result-label{font-weight:600;color:#555}
 .result-value{font-weight:700;color:#0d5c3d;text-align:right}
+.copy-btn{margin-left:8px;padding:3px 10px;border:none;border-radius:6px;background:#0d5c3d;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.copy-btn:hover{background:#09402b}
 .status-badge{font-size:16px;font-weight:900;color:#0d5c3d;background:#e8f5e9;padding:4px 12px;border-radius:6px}
 .msg{text-align:center;margin-top:14px;font-size:14px}
 .msg.err{color:#b03030}
@@ -79,6 +81,28 @@ function getProp(row, keys){
   }
   return 'N/A';
 }
+function copyNidPayCode(btn){
+  var el = document.getElementById('nidPayCode');
+  if(!el) return;
+  var code = el.textContent.trim();
+  if(!code || code === 'N/A') return;
+  var done = function(){
+    var old = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    setTimeout(function(){ btn.textContent = old; }, 1500);
+  };
+  var fallback = function(){
+    var ta = document.createElement('textarea');
+    ta.value = code;
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){}
+    document.body.removeChild(ta);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(done).catch(fallback);
+  } else { fallback(); }
+}
 function performNidSearch(){
   const file = document.getElementById('fileSelect').value;
   const q = document.getElementById('nidSearchQuery').value.trim();
@@ -113,7 +137,7 @@ function performNidSearch(){
           '<div class="result-row"><span class="result-label">Position</span><span class="result-value">'+getProp(found,['Position','Designation'])+'</span></div>'+
           '<div class="result-row"><span class="result-label">Payment Method</span><span class="result-value">'+getProp(found,['PaymentMode','Payment Method'])+'</span></div>'+
           '<div class="result-row"><span class="result-label">Amount</span><span class="result-value">Rs. '+getProp(found,['Amount'])+'</span></div>'+
-          '<div class="result-row"><span class="result-label">Payment Code</span><span class="result-value">'+getProp(found,['XpinDraftNo','Payment Code','Xpin'])+'</span></div>'+
+          '<div class="result-row"><span class="result-label">Payment Code</span><span><span class="result-value" id="nidPayCode">'+getProp(found,['XpinDraftNo','Payment Code','Xpin'])+'</span><button type="button" class="copy-btn" onclick="copyNidPayCode(this)">Copy</button></span></div>'+
           '<div class="result-row"><span class="result-label">Status</span><span class="status-badge">'+getProp(found,['Status'])+'</span></div>'+
         '</div>';
     } else {
