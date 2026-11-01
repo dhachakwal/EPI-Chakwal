@@ -675,7 +675,9 @@
                 <div class="emr-filter">
                     <label>Period
                         <select id="emrPeriod" onchange="emrOnPeriodChange()">
-                            <option value="month:2026-10" selected>October 2026</option>
+                            <option value="month:2026-12">December 2026</option>
+                            <option value="month:2026-11" selected>November 2026</option>
+                            <option value="month:2026-10">October 2026</option>
                             <option value="month:2026-09">September 2026</option>
                             <option value="month:2026-08">August 2026</option>
                             <option value="month:2026-07">July 2026</option>
@@ -4394,8 +4396,10 @@
                     return null;
                 }
 
-                // Jan–Sep 2026 (+ more as added) — all in parallel
+                // Jan–Dec 2026 — all in parallel
                 const jobs = [
+                    {key:'2026-12', label:'Dec-2026', tries:[{sheet:'Dec-2026'},{sheet:'Dec 2026'},{sheet:'December-2026'},{sheet:'December 2026'},{sheet:'Dec-26'}]},
+                    {key:'2026-11', label:'Nov-2026', tries:[{sheet:'Nov-2026'},{sheet:'Nov 2026'},{sheet:'November-2026'},{sheet:'November 2026'},{sheet:'Nov-26'}]},
                     {key:'2026-10', label:'Oct-2026', tries:[{sheet:'Oct-2026'},{sheet:'Oct 2026'},{sheet:'October-2026'},{sheet:'October 2026'},{sheet:'Oct-26'}]},
                     {key:'2026-09', label:'Sep-2026', tries:[{sheet:'Sep-2026'},{sheet:'Sep 2026'},{sheet:'September-2026'},{sheet:'September 2026'},{sheet:'Sep-26'}]},
                     {key:'2026-08', label:'Aug-2026', tries:[{sheet:'Aug-2026'},{sheet:'Aug 2026'},{sheet:'August-2026'},{gid:'0'}]},
