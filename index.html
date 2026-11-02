@@ -4398,6 +4398,7 @@
         }
 
         async function loadEmrData(){
+            window.__emrLoadState = 'loading';
             const status = document.getElementById('emrStatus');
             const meta = document.getElementById('emrMeta');
             if(status){ status.style.display='block'; status.textContent='Loading EMR sheets (parallel)…'; }
@@ -4584,7 +4585,9 @@
                 if(meta) meta.textContent = emrRows.length.toLocaleString()+' records · '+loadedNames.join(' + ')+' · '+new Date().toLocaleString();
                 if(typeof emrUpdateSectionAsOf === 'function') emrUpdateSectionAsOf();
                 if(status){ status.style.display='none'; status.textContent=''; }
+                window.__emrLoadState = 'done';
             }catch(err){
+                window.__emrLoadState = 'failed';
                 console.error(err);
                 if(status){ status.style.display='block'; status.textContent='EMR load failed: '+(err.message||err); }
                 if(meta) meta.textContent = 'Load failed';
@@ -4971,12 +4974,22 @@
             const day = vcStore()[ymd];
             return (day && day[key]) || '';
         }
+        let vcRows = [];
         async function vcInit(){
             const meta = document.getElementById('vcMeta');
-            if(!emrRows || !emrRows.length){
+            // Wait for the main EMR load to finish — never read half-loaded data.
+            let waited = 0;
+            while(window.__emrLoadState === 'loading' && waited < 90000){
+                if(meta) meta.textContent = 'Loading EMR data…';
+                await new Promise(function(r){ setTimeout(r, 700); });
+                waited += 700;
+            }
+            if(window.__emrLoadState !== 'done' && (!emrRows || !emrRows.length)){
                 if(meta) meta.textContent = 'Loading EMR data…';
                 try{ await loadEmrData(); }catch(e){}
             }
+            // Snapshot the loaded child rows so later module activity cannot disturb this list.
+            vcRows = (emrRows || []).slice();
             vcBuildDates();
             vcRender();
         }
@@ -4984,7 +4997,7 @@
             const sel = document.getElementById('vcDate');
             if(!sel) return;
             const counts = {};
-            (emrRows || []).forEach(function(r){ const y = vcRowYmd(r); if(y) counts[y] = (counts[y] || 0) + 1; });
+            (vcRows || []).forEach(function(r){ const y = vcRowYmd(r); if(y) counts[y] = (counts[y] || 0) + 1; });
             const dates = Object.keys(counts).sort().reverse();
             const prev = sel.value;
             sel.innerHTML = dates.map(function(d){ return '<option value="' + d + '">' + vcFmtYmd(d) + ' (' + counts[d] + ')</option>'; }).join('');
@@ -4997,7 +5010,7 @@
             if(!tsel || !dsel) return;
             const ymd = dsel.value;
             const set = {};
-            (emrRows || []).forEach(function(r){ if(vcRowYmd(r) === ymd){ const t = emrCell(r, EMR_COLS.tehsil); if(t) set[t] = true; } });
+            (vcRows || []).forEach(function(r){ if(vcRowYmd(r) === ymd){ const t = emrCell(r, EMR_COLS.tehsil); if(t) set[t] = true; } });
             const prev = tsel.value;
             tsel.innerHTML = '<option value="">All Tehsils</option>' + Object.keys(set).sort().map(function(t){ return '<option value="' + vcEsc(t) + '">' + vcEsc(t) + '</option>'; }).join('');
             if(prev && set[prev]) tsel.value = prev;
@@ -5006,7 +5019,7 @@
         function vcDayRowsAll(){
             const dsel = document.getElementById('vcDate');
             const ymd = dsel ? dsel.value : '';
-            return { ymd: ymd, rows: (emrRows || []).filter(function(r){ return vcRowYmd(r) === ymd; }) };
+            return { ymd: ymd, rows: (vcRows || []).filter(function(r){ return vcRowYmd(r) === ymd; }) };
         }
         function vcRenderSummary(ymd, rows){
             const sum = document.getElementById('vcSummary');
@@ -5032,6 +5045,14 @@
             const wrap = document.getElementById('vcList');
             if(!wrap) return;
             const all = vcDayRowsAll();
+            if(!all.ymd){
+                const sum0 = document.getElementById('vcSummary');
+                if(sum0) sum0.innerHTML = '';
+                wrap.innerHTML = '<p style="color:#c62828;padding:14px;font-weight:600">EMR data is not loaded yet. Please wait a few seconds and tap “🔄 Refresh Data”.</p>';
+                const meta0 = document.getElementById('vcMeta');
+                if(meta0) meta0.textContent = 'Data not ready';
+                return;
+            }
             const ymd = all.ymd;
             vcRowMap = {};
             all.rows.forEach(function(r){ vcRowMap[vcRowKey(r)] = r; });
