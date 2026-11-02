@@ -665,6 +665,7 @@
                     <button type="button" class="emr-tab" data-module="attendance" onclick="emrSwitchModule('attendance')">⏱ Vaccinators Attendance</button>
                     <button type="button" class="emr-tab" data-module="location" onclick="emrSwitchModule('location')">📍 Field Location Check-In</button>
                     <button type="button" class="emr-tab" data-module="sweep" onclick="emrSwitchModule('sweep')">🧹 Urban Sweep-up (10-15 Aug)</button>
+                    <button type="button" class="emr-tab" data-module="vCalls" onclick="emrSwitchModule('vCalls')">📞 Verification Calls</button>
                 </div>
 
                 <!-- ===== MODULE: OUTREACH ===== -->
@@ -1216,6 +1217,54 @@
             </div>
             </div><!-- /sweepExportArea -->
                 </div><!-- /emrModuleSweep -->
+                <div id="emrModuleVCalls" style="display:none">
+                <style>
+                #vcSummary .vc-stats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+                #vcSummary .vc-stat{background:#f1f8e9;border:1px solid #c8e6c9;border-radius:8px;padding:8px 12px;min-width:128px}
+                #vcSummary .vc-stat .n{font-size:20px;font-weight:800;color:#0d5c3d}
+                #vcSummary .vc-stat .l{font-size:12px;color:#555}
+                #vcSummary .vc-bar{height:10px;background:#e0e0e0;border-radius:5px;overflow:hidden;margin:6px 0 12px}
+                #vcSummary .vc-bar>i{display:block;height:100%;background:#2e7d32}
+                .vc-card{border:1px solid #cfd8dc;border-left:6px solid #90a4ae;border-radius:10px;padding:12px 14px;margin:0 0 10px;background:#fff}
+                .vc-card .vc-name{font-size:17px;font-weight:800;color:#263238}
+                .vc-card .vc-sub{font-size:13.5px;color:#455a64;margin-top:2px}
+                .vc-card .vc-meta{font-size:13px;color:#607d8b;margin-top:3px}
+                .vc-card .vc-vax{font-size:13.5px;color:#0d5c3d;margin-top:5px;font-weight:600}
+                .vc-card .vc-callrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:9px}
+                .vc-card .vc-phone{font-size:18px;font-weight:800;letter-spacing:.4px;color:#263238}
+                .vc-dial{display:inline-block;background:#2e7d32;color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:9px 22px;border-radius:24px}
+                .vc-dial.disabled{background:#b0bec5;pointer-events:none}
+                .vc-statusrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+                .vc-stbtn{border:1.5px solid #90a4ae;background:#fff;color:#37474f;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
+                .vc-stbtn.on{color:#fff}
+                .vc-chip{display:inline-block;color:#fff;font-size:12px;font-weight:700;border-radius:10px;padding:2px 9px;margin-left:8px;vertical-align:middle}
+                </style>
+                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically in this browser for every date. Download the day's Excel file (with statuses) any time with the button above the list.</p>
+                <div class="emr-filter">
+                    <label>Date
+                        <select id="vcDate" onchange="vcOnDateChange()"></select>
+                    </label>
+                    <label>Tehsil
+                        <select id="vcTehsil" onchange="vcRender()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Show
+                        <select id="vcShow" onchange="vcRender()">
+                            <option value="">All entries</option>
+                            <option value="pending">Pending only</option>
+                            <option value="called">Called only</option>
+                        </select>
+                    </label>
+                    <label>Search (Name / Phone)
+                        <input type="text" id="vcSearch" placeholder="Name / Phone…" style="min-width:150px" oninput="vcRender()">
+                    </label>
+                    <button type="button" class="btn btn-sm" onclick="vcInit(true)" style="background:#0d5c3d">🔄 Refresh Data</button>
+                    <button type="button" class="btn btn-sm" onclick="vcExport()" style="background:#1565c0">⬇ Download Excel (with Status)</button>
+                    <span class="sweep-meta" id="vcMeta">Not loaded</span>
+                </div>
+                <div id="vcSummary"></div>
+                <div id="vcList"></div>
+                </div><!-- /emrModuleVCalls -->
+
 
             </div>
 
@@ -4820,6 +4869,7 @@
             const a = document.getElementById('emrModuleAttendance');
             const l = document.getElementById('emrModuleLocation');
             const s = document.getElementById('emrModuleSweep');
+            const v = document.getElementById('emrModuleVCalls');
             if(o) o.style.display = emrModule==='outreach' ? '' : 'none';
             if(o2) o2.style.display = emrModule==='outreach2' ? '' : 'none';
             if(fx) fx.style.display = emrModule==='fixed' ? '' : 'none';
@@ -4827,6 +4877,7 @@
             if(a) a.style.display = emrModule==='attendance' ? '' : 'none';
             if(l) l.style.display = emrModule==='location' ? '' : 'none';
             if(s) s.style.display = emrModule==='sweep' ? '' : 'none';
+            if(v) v.style.display = emrModule==='vCalls' ? '' : 'none';
             // lazy load when module opened
             try{
                 if(emrModule==='outreach2' && typeof emr2Load==='function'){
@@ -4853,7 +4904,229 @@
                 if(emrModule==='sweep' && typeof loadSweepData==='function'){
                     loadSweepData();
                 }
+                if(emrModule==='vCalls' && typeof vcInit==='function'){
+                    vcInit();
+                }
             }catch(e){}
+        }
+
+
+        // ===== Verification Calls =====
+        const VC_STATUSES = ['Verified','Invalid Number','Not Responding','Not Exist','Not Vaccinated','Powered Off'];
+        const VC_COLORS = {'Verified':'#2e7d32','Invalid Number':'#c62828','Not Responding':'#ef6c00','Not Exist':'#6a1b9a','Not Vaccinated':'#ad1457','Powered Off':'#546e7a'};
+        const VC_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        let vcStoreCache = null;
+        let vcRowMap = {};
+        function vcStore(){
+            if(vcStoreCache) return vcStoreCache;
+            try{ vcStoreCache = JSON.parse(localStorage.getItem('vcStatusV1') || '{}'); }catch(e){ vcStoreCache = {}; }
+            if(!vcStoreCache || typeof vcStoreCache !== 'object') vcStoreCache = {};
+            return vcStoreCache;
+        }
+        function vcStoreSave(){ try{ localStorage.setItem('vcStatusV1', JSON.stringify(vcStore())); }catch(e){} }
+        function vcEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function vcRowKey(row){
+            const mr = emrCell(row, EMR_COLS.mr);
+            if(mr) return 'mr:' + mr;
+            return 'np:' + emrCell(row, EMR_COLS.phone) + '|' + emrCell(row, EMR_COLS.name) + '|' + emrCell(row, EMR_COLS.uc);
+        }
+        function vcRowYmd(row){
+            const u = emrUpdatedObj(row);
+            return (u && u.date) ? emrYmdFromDate(u.date) : '';
+        }
+        function vcParseDoseYmd(v){
+            if(v == null) return '';
+            const s = String(v).trim();
+            if(!s || s.toLowerCase() === 'no' || s.indexOf('#') >= 0) return '';
+            let m = s.match(/Date\((\d{4}),(\d{1,2}),(\d{1,2})/);
+            if(m) return m[1] + '-' + ('0' + (+m[2] + 1)).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+            m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+            if(m){
+                let a = +m[1], b = +m[2];
+                if(b > 12 && a <= 12){ const t = a; a = b; b = t; }
+                if(a > 31 || b > 12) return '';
+                return m[3] + '-' + ('0' + b).slice(-2) + '-' + ('0' + a).slice(-2);
+            }
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if(m) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+            return '';
+        }
+        function vcFmtYmd(ymd){
+            if(!ymd) return '';
+            const p = ymd.split('-');
+            return (+p[2]) + ' ' + VC_MONTHS[(+p[1]) - 1] + ' ' + p[0];
+        }
+        function vcDoseInfo(row, selYmd){
+            const groups = {};
+            EMR_ANTIGENS.forEach(function(pair){
+                const ymd = vcParseDoseYmd(emrCell(row, EMR_COLS[pair[0]]));
+                if(ymd){ (groups[ymd] = groups[ymd] || []).push(pair[1]); }
+            });
+            const keys = Object.keys(groups);
+            if(!keys.length) return null;
+            const use = groups[selYmd] ? selYmd : keys.sort()[keys.length - 1];
+            return { ymd: use, labels: groups[use] };
+        }
+        function vcStatusOf(ymd, key){
+            const day = vcStore()[ymd];
+            return (day && day[key]) || '';
+        }
+        async function vcInit(){
+            const meta = document.getElementById('vcMeta');
+            if(!emrRows || !emrRows.length){
+                if(meta) meta.textContent = 'Loading EMR data…';
+                try{ await loadEmrData(); }catch(e){}
+            }
+            vcBuildDates();
+            vcRender();
+        }
+        function vcBuildDates(){
+            const sel = document.getElementById('vcDate');
+            if(!sel) return;
+            const counts = {};
+            (emrRows || []).forEach(function(r){ const y = vcRowYmd(r); if(y) counts[y] = (counts[y] || 0) + 1; });
+            const dates = Object.keys(counts).sort().reverse();
+            const prev = sel.value;
+            sel.innerHTML = dates.map(function(d){ return '<option value="' + d + '">' + vcFmtYmd(d) + ' (' + counts[d] + ')</option>'; }).join('');
+            if(prev && counts[prev]) sel.value = prev;
+            vcBuildTehsils();
+        }
+        function vcBuildTehsils(){
+            const tsel = document.getElementById('vcTehsil');
+            const dsel = document.getElementById('vcDate');
+            if(!tsel || !dsel) return;
+            const ymd = dsel.value;
+            const set = {};
+            (emrRows || []).forEach(function(r){ if(vcRowYmd(r) === ymd){ const t = emrCell(r, EMR_COLS.tehsil); if(t) set[t] = true; } });
+            const prev = tsel.value;
+            tsel.innerHTML = '<option value="">All Tehsils</option>' + Object.keys(set).sort().map(function(t){ return '<option value="' + vcEsc(t) + '">' + vcEsc(t) + '</option>'; }).join('');
+            if(prev && set[prev]) tsel.value = prev;
+        }
+        function vcOnDateChange(){ vcBuildTehsils(); vcRender(); }
+        function vcDayRowsAll(){
+            const dsel = document.getElementById('vcDate');
+            const ymd = dsel ? dsel.value : '';
+            return { ymd: ymd, rows: (emrRows || []).filter(function(r){ return vcRowYmd(r) === ymd; }) };
+        }
+        function vcRenderSummary(ymd, rows){
+            const sum = document.getElementById('vcSummary');
+            if(!sum) return;
+            const counts = {}; VC_STATUSES.forEach(function(s){ counts[s] = 0; });
+            let called = 0;
+            rows.forEach(function(r){ const st = vcStatusOf(ymd, vcRowKey(r)); if(st && counts[st] != null){ counts[st]++; called++; } });
+            const pct = rows.length ? Math.round(called * 100 / rows.length) : 0;
+            let sh = '<div class="vc-stats">';
+            sh += '<div class="vc-stat"><div class="n">' + rows.length + '</div><div class="l">Total Children Vaccinated</div></div>';
+            sh += '<div class="vc-stat"><div class="n">' + called + '</div><div class="l">Total Calls For Verification</div></div>';
+            VC_STATUSES.forEach(function(s){ sh += '<div class="vc-stat"><div class="n" style="color:' + VC_COLORS[s] + '">' + counts[s] + '</div><div class="l">' + s + '</div></div>'; });
+            sh += '</div><div class="vc-bar"><i style="width:' + pct + '%"></i></div>';
+            sum.innerHTML = sh;
+        }
+        function vcBindCard(card, ymd){
+            if(!card) return;
+            card.querySelectorAll('.vc-stbtn').forEach(function(b){
+                b.addEventListener('click', function(){ vcSetStatus(ymd, decodeURIComponent(b.getAttribute('data-key')), b.getAttribute('data-status')); });
+            });
+        }
+        function vcRender(){
+            const wrap = document.getElementById('vcList');
+            if(!wrap) return;
+            const all = vcDayRowsAll();
+            const ymd = all.ymd;
+            vcRowMap = {};
+            all.rows.forEach(function(r){ vcRowMap[vcRowKey(r)] = r; });
+            vcRenderSummary(ymd, all.rows);
+            const teh = (document.getElementById('vcTehsil') || {}).value || '';
+            const show = (document.getElementById('vcShow') || {}).value || '';
+            const q = ((document.getElementById('vcSearch') || {}).value || '').trim().toLowerCase();
+            const rows = all.rows.filter(function(r){
+                if(teh && emrCell(r, EMR_COLS.tehsil) !== teh) return false;
+                const st = vcStatusOf(ymd, vcRowKey(r));
+                if(show === 'pending' && st) return false;
+                if(show === 'called' && !st) return false;
+                if(q){
+                    const hay = (emrCell(r, EMR_COLS.name) + ' ' + emrCell(r, EMR_COLS.father) + ' ' + emrCell(r, EMR_COLS.phone) + ' ' + emrCell(r, EMR_COLS.uc)).toLowerCase();
+                    if(hay.indexOf(q) < 0) return false;
+                }
+                return true;
+            });
+            if(!rows.length){
+                wrap.innerHTML = '<p style="color:#777;padding:14px">No entries match for ' + vcEsc(vcFmtYmd(ymd)) + '.</p>';
+            } else {
+                wrap.innerHTML = rows.map(function(r){ return vcCardHtml(r, ymd); }).join('');
+                wrap.querySelectorAll('.vc-card').forEach(function(c){ vcBindCard(c, ymd); });
+            }
+            const meta = document.getElementById('vcMeta');
+            if(meta) meta.textContent = 'Showing ' + rows.length + ' of ' + all.rows.length + ' entries · ' + vcFmtYmd(ymd);
+        }
+        function vcCardHtml(r, ymd){
+            const key = vcRowKey(r);
+            const st = vcStatusOf(ymd, key);
+            const name = emrCell(r, EMR_COLS.name) || '—';
+            const father = emrCell(r, EMR_COLS.father);
+            const teh = emrCell(r, EMR_COLS.tehsil);
+            const uc = emrCell(r, EMR_COLS.uc);
+            const addr = emrCell(r, EMR_COLS.address);
+            const gender = emrCell(r, EMR_COLS.gender);
+            const age = emrCell(r, EMR_COLS.age);
+            const phoneRaw = emrCell(r, EMR_COLS.phone);
+            const digits = phoneRaw.replace(/\D/g, '');
+            const dose = vcDoseInfo(r, ymd);
+            let h = '<div class="vc-card" data-vccard="' + vcEsc(encodeURIComponent(key)) + '"' + (st ? ' style="border-left-color:' + VC_COLORS[st] + '"' : '') + '>';
+            h += '<div class="vc-name">' + vcEsc(name) + (st ? '<span class="vc-chip" style="background:' + VC_COLORS[st] + '">' + vcEsc(st) + '</span>' : '') + '</div>';
+            h += '<div class="vc-sub">Father: ' + vcEsc(father || '—') + (gender ? ' · ' + vcEsc(gender) : '') + (age ? ' · Age ' + vcEsc(age) : '') + '</div>';
+            h += '<div class="vc-meta">' + vcEsc(teh) + ' · ' + vcEsc(uc) + (addr ? ' · ' + vcEsc(addr) : '') + '</div>';
+            if(dose) h += '<div class="vc-vax">💉 ' + vcEsc(dose.labels.join(', ')) + ' — ' + vcEsc(vcFmtYmd(dose.ymd)) + '</div>';
+            else h += '<div class="vc-vax" style="color:#999">💉 No dose date recorded</div>';
+            h += '<div class="vc-callrow">';
+            if(digits){
+                h += '<span class="vc-phone">' + vcEsc(phoneRaw) + '</span><a class="vc-dial" href="tel:' + digits + '">📞 Dial</a>';
+            } else {
+                h += '<span class="vc-phone" style="color:#c62828;font-size:15px">No phone number</span><a class="vc-dial disabled">📞 Dial</a>';
+            }
+            h += '</div><div class="vc-statusrow">';
+            VC_STATUSES.forEach(function(s){
+                const on = (st === s);
+                h += '<button type="button" class="vc-stbtn' + (on ? ' on' : '') + '" data-key="' + vcEsc(encodeURIComponent(key)) + '" data-status="' + s + '"' + (on ? ' style="background:' + VC_COLORS[s] + ';border-color:' + VC_COLORS[s] + '"' : '') + '>' + s + '</button>';
+            });
+            h += '</div></div>';
+            return h;
+        }
+        function vcSetStatus(ymd, key, status){
+            const store = vcStore();
+            if(!store[ymd]) store[ymd] = {};
+            if(store[ymd][key] === status) delete store[ymd][key];
+            else store[ymd][key] = status;
+            vcStoreSave();
+            const row = vcRowMap[key];
+            const card = document.querySelector('[data-vccard="' + vcEsc(encodeURIComponent(key)) + '"]');
+            if(row && card){
+                const tmp = document.createElement('div');
+                tmp.innerHTML = vcCardHtml(row, ymd);
+                const fresh = tmp.firstChild;
+                card.replaceWith(fresh);
+                vcBindCard(fresh, ymd);
+            }
+            vcRenderSummary(ymd, vcDayRowsAll().rows);
+        }
+        function vcExport(){
+            if(typeof XLSX === 'undefined'){ alert('Excel library not loaded. Please refresh the page.'); return; }
+            const all = vcDayRowsAll();
+            if(!all.rows.length){ alert('No entries for the selected date.'); return; }
+            const aoa = [['Tehsil Name','UC Name','Name','Father Name','Address','Phone Number','Status']];
+            all.rows.forEach(function(r){
+                aoa.push([
+                    emrCell(r, EMR_COLS.tehsil), emrCell(r, EMR_COLS.uc), emrCell(r, EMR_COLS.name),
+                    emrCell(r, EMR_COLS.father), emrCell(r, EMR_COLS.address), emrCell(r, EMR_COLS.phone),
+                    vcStatusOf(all.ymd, vcRowKey(r))
+                ]);
+            });
+            const wsx = XLSX.utils.aoa_to_sheet(aoa);
+            wsx['!cols'] = [{wch:16.57},{wch:21.57},{wch:31.43},{wch:23.86},{wch:24.0},{wch:14.14},{wch:15.29}];
+            const wbx = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wbx, wsx, 'Sheet1');
+            const p = all.ymd.split('-');
+            XLSX.writeFile(wbx, 'EMR_Verifications_Calls_' + p[2] + '-' + p[1] + '-' + p[0] + '.xlsx');
         }
 
         // ===== Outreach Reports 2 — OR + Fixed child data (same reports as Outreach) =====
