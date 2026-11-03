@@ -2068,11 +2068,75 @@
     </div>
 
     <div class="footer">© 2026 Expanded Programme on Immunization - District Chakwal | Punjab<br>Official Dashboard for Internal Use Only
-        <div style="margin-top:12px;opacity:.95">
-            <div style="font-size:11px;margin-bottom:6px;opacity:.85">Total Visitors</div>
-            <a href="https://free-hit-counters.net/" target="_blank" rel="noopener">Free-Hit-Counters</a>
+        <div style="margin-top:14px">
+            <style>
+            #visitorDigital{display:none;max-width:560px;margin:0 auto;background:linear-gradient(180deg,#0a1628,#0d1f3c);border:1px solid #1e4d7a;border-radius:12px;padding:12px 10px 10px;box-shadow:0 4px 18px rgba(0,0,0,.35), inset 0 0 24px rgba(0,180,255,.06)}
+            #visitorDigital .vd-title{font-size:11px;letter-spacing:3px;color:#7fd4ff;text-transform:uppercase;text-align:center;margin-bottom:9px;font-weight:700}
+            #visitorDigital .vd-row{display:flex;justify-content:space-around;gap:6px;flex-wrap:wrap}
+            #visitorDigital .vd-cell{text-align:center;min-width:104px}
+            #visitorDigital .vd-num{font-family:'Courier New',ui-monospace,monospace;font-size:27px;font-weight:700;color:#3dff8e;text-shadow:0 0 9px rgba(61,255,142,.75),0 0 22px rgba(61,255,142,.35);letter-spacing:2px;line-height:1.1}
+            #visitorDigital .vd-lab{font-size:10.5px;letter-spacing:1.6px;color:#a9c6e2;text-transform:uppercase;margin-top:3px}
+            #visitorDigital .vd-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3dff8e;box-shadow:0 0 8px #3dff8e;margin-right:5px;vertical-align:1px;animation:vdPulse 1.6s infinite}
+            @keyframes vdPulse{0%,100%{opacity:1}50%{opacity:.35}}
+            </style>
+            <div id="visitorDigital">
+                <div class="vd-title">👁 Visitor Counter</div>
+                <div class="vd-row">
+                    <div class="vd-cell"><div class="vd-num" id="vdToday">–</div><div class="vd-lab">Today</div></div>
+                    <div class="vd-cell"><div class="vd-num" id="vdYday">–</div><div class="vd-lab">Yesterday</div></div>
+                    <div class="vd-cell"><div class="vd-num" id="vdTotal">–</div><div class="vd-lab">Total Visitors</div></div>
+                    <div class="vd-cell"><div class="vd-num" id="vdOnline">–</div><div class="vd-lab"><span class="vd-dot"></span>Online</div></div>
+                </div>
+            </div>
+            <div id="visitorRaw">
+            <a href="https://free-hit-counters.net/" target="_blank" rel="noopener" style="font-size:10px;opacity:.7">Free-Hit-Counters</a>
             <script type="text/javascript" src="https://www.freevisitorcounters.com/auth.php?id=ee9857c6c141519e330c45aa1b7dcd5e10470a3d"></script>
             <script type="text/javascript" src="https://www.freevisitorcounters.com/en/home/counter/1618078/t/10"></script>
+            </div>
+            <script>
+            (function(){
+                function vdNum(s){ const d = String(s == null ? '' : s).replace(/[^0-9]/g, ''); return d === '' ? null : d; }
+                function vdTry(){
+                    const raw = document.getElementById('visitorRaw');
+                    const panel = document.getElementById('visitorDigital');
+                    if(!raw || !panel) return true;
+                    const tables = raw.querySelectorAll('table');
+                    for(let ti = 0; ti < tables.length; ti++){
+                        const txt = tables[ti].textContent || '';
+                        if(!/Yesterday/i.test(txt) || !/Online/i.test(txt)) continue;
+                        const vals = {};
+                        const rows = tables[ti].querySelectorAll('tr');
+                        rows.forEach(function(tr){
+                            const tds = tr.querySelectorAll('td, th');
+                            if(tds.length < 2) return;
+                            const lab = (tds[0].textContent || '').trim().toLowerCase();
+                            const v = vdNum(tds[1].textContent);
+                            if(v === null) return;
+                            if(lab.indexOf('today') >= 0) vals.today = v;
+                            else if(lab.indexOf('yesterday') >= 0) vals.yday = v;
+                            else if(lab.indexOf('all') >= 0 || lab.indexOf('total') >= 0) vals.total = v;
+                            else if(lab.indexOf('online') >= 0) vals.online = v;
+                        });
+                        if(vals.total != null && vals.today != null){
+                            const fmt = function(x){ return x == null ? '–' : Number(x).toLocaleString('en-US'); };
+                            document.getElementById('vdToday').textContent = fmt(vals.today);
+                            document.getElementById('vdYday').textContent = fmt(vals.yday);
+                            document.getElementById('vdTotal').textContent = fmt(vals.total);
+                            document.getElementById('vdOnline').textContent = fmt(vals.online);
+                            tables[ti].style.display = 'none';
+                            panel.style.display = 'block';
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                let vdTries = 0;
+                const vdTimer = setInterval(function(){
+                    vdTries++;
+                    if(vdTry() || vdTries > 25) clearInterval(vdTimer);
+                }, 400);
+            })();
+            </script>
         </div>
     </div>
 
