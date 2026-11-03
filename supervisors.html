@@ -7,7 +7,6 @@
 <link rel="icon" href="favicon.png.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(160deg,#e8f5e9 0%,#f0f7f4 45%,#e3f2fd 100%);min-height:100vh;color:#222}
@@ -52,7 +51,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 .progress-bar{height:12px;background:#e0e0e0;border-radius:6px;overflow:hidden}
 .progress-bar div{height:100%;width:0%;background:linear-gradient(90deg,#1a8a5c,#43a047);transition:width .3s}
 .progress-txt{font-size:12.5px;color:#555;margin-top:6px;text-align:center}
-.urdu-ok{display:none;margin-top:14px;padding:14px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;text-align:center;direction:rtl;font-family:'Noto Nastaliq Urdu',serif;font-size:17px;line-height:2;color:#1b5e20;font-weight:600}
+.urdu-ok{display:none;margin-top:14px;padding:14px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;text-align:center;font-size:15.5px;line-height:1.6;color:#1b5e20;font-weight:600}
 .pdf-link{display:none;margin-top:10px;text-align:center}
 .pdf-link a{display:inline-block;background:#1565c0;color:#fff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:10px;font-size:14.5px}
 .warn{display:none;margin-top:14px;padding:12px;border-radius:10px;font-size:13.5px;font-weight:600;background:#fff8e1;color:#8d6e00;border:1px solid #ffe082;line-height:1.6}
@@ -109,7 +108,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
     <input type="text" id="kitStation" placeholder="e.g. BHU / RHC / Kit Station name" autocomplete="off">
 
     <div class="sec-title">EPI Cards &amp; HF Monitoring</div>
-    <div class="sec-sub">Ek waqt men ek card aye ga — photo Camera ya Gallery se lagayen, phir <strong>Next</strong> dabayen.</div>
+    <div class="sec-sub">One card is shown at a time — attach its photo by Camera or Gallery, then press <strong>Next</strong>.</div>
     <div class="count-line" id="cardCount">Cards attached: 0 / 20</div>
     <div class="wiz-progress"><div id="wizFill"></div></div>
     <div class="wiz-label" id="wizLabel">EPI Card 1 of 20</div>
@@ -118,7 +117,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
       <button type="button" id="wizBack" onclick="wizMove(-1)">⬅ Back</button>
       <button type="button" id="wizNext" onclick="wizMove(1)">Next ➡</button>
     </div>
-    <button type="button" class="wiz-skip" onclick="document.getElementById('btnSubmit').scrollIntoView({behavior:'smooth', block:'center'})">Cards mukammal hon tu seedha Submit par jayen ⬇</button>
+    <button type="button" class="wiz-skip" onclick="document.getElementById('btnSubmit').scrollIntoView({behavior:'smooth', block:'center'})">If your cards are complete, go directly to Submit ⬇</button>
 
     <div class="progress-wrap" id="progWrap">
       <div class="progress-bar"><div id="progFill"></div></div>
@@ -127,7 +126,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 
     <div class="warn" id="warnBox"></div>
     <button type="button" class="btn btn-sub" id="btnSubmit" onclick="submitCards()">✅ Submit</button>
-    <div class="urdu-ok" id="urduOk">آپ کی سبمیشن کامیابی سے محفوظ ہو گئی ہے۔ شکریہ۔</div>
+    <div class="urdu-ok" id="urduOk">✅ Your submission has been saved successfully. Thank you.</div>
     <div class="pdf-link" id="pdfLink"><a href="#" target="_blank" rel="noopener">📄 View / Download PDF</a></div>
     <div class="err" id="errBox"></div>
     <a class="backlink" href="index.html">← Back to Dashboard</a>
@@ -140,10 +139,10 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 <script>
 /* ============================================================
    Daily EPI Cards Submission — supervisors.html
-   Pattern: location.html jaisa hi (Google Sheet/Drive + Apps Script)
-   SETUP: Apps Script deploy hone ke baad us ka Web App URL
-   CARDS_SCRIPT_URL men lag jayega (ya ek dafa
-   supervisors.html?script=URL kholne se bhi save ho jata hai)
+   Pattern: same as location.html (Google Sheet/Drive + Apps Script)
+   SETUP: after the Apps Script is deployed, its Web App URL is
+   set in CARDS_SCRIPT_URL below (opening the page once as
+   supervisors.html?script=URL also saves it)
    ============================================================ */
 var CARDS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-9gTtH2BO11NIRaxl1fMKB1Hl5ypZyZbcLB1ik2CMEV_fY-05iULWcyi36DZf5u9t/exec';
 try{
@@ -152,7 +151,7 @@ try{
   CARDS_SCRIPT_URL = localStorage.getItem('epi_cards_script_url') || CARDS_SCRIPT_URL;
 }catch(e){}
 
-/* Supervisory staff list — office list 2026-11-03 (naam ki spelling bilkul list jaisi) */
+/* Supervisory staff list — office list 2026-11-03 (names spelled exactly as in the list) */
 var SUPERVISORS = [
   {name: 'Wajid Maqbool Raja', tehsil: 'Chakwal', designation: 'ASV-I'},
   {name: 'Umer Shahzad', tehsil: 'Chakwal', designation: 'ASV-II'},
@@ -164,12 +163,12 @@ var SUPERVISORS = [
 ];
 var supDesigSel = '';
 
-/* Master sheet (vaccinators profile) — Tehsil → UC aur Vaccinator lists ke liye */
+/* Master sheet (vaccinators profile) — for the Tehsil → UC and Vaccinator lists */
 var MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
 var UC_MAP = {};    /* tehsil -> [uc,...] */
 var VACC_MAP = {};  /* uc -> [vaccinator names] */
 
-/* Embedded copy of the master lists (3 Nov 2026) — page in ke sath foran chalti hai; live sheet se refresh bhi ho jata hai */
+/* Embedded copy of the master lists (3 Nov 2026) — the page works with these immediately; they also refresh from the live sheet */
 var EMBED_UC_MAP = {"Chakwal": ["BAIGAL", "BALKASSAR", "BALOKASSAR", "BHEEN", "BIKHARI KALAN", "CHAK MALOOK", "CHAK UMRA", "CHAKWAL URBAN I", "CHAKWAL URBAN II", "CHAKWAL URBAN III", "CHAKWAL URBAN V", "DAB", "DHUDIAL", "DHUMAN", "DULLAH", "JABAIRPUR", "JAND", "JAND KHANZADA", "JASWAL", "KARSAL", "KHAI", "KOT CHOHDRIAN", "MAINGON", "MULHAL MUGHLAN", "MUREED", "OUDHERWAL", "PADSHAN", "SARAL", "THANIL KAMAL", "WARWAL"], "Choa Saidan Shah": ["BASHARAT", "CHOA SAIDEN SHAH", "DALWAL", "DULMIAL", "LEHAR SULTAN PUR"], "Kallar Kahar": ["BHERPUR", "BUCHAL KALAN", "BUCHAL KHURD", "KALLAR KAHAR", "KHAIRPUR", "MIANI", "MUNARA", "NURPUR"], "Talagang": ["BHILOMAR", "BHUDIAL", "BIDHAR", "DHERMOND", "DHOULAR", "DHURNAL", "JABI SHAH DILAWAR", "JASIAL", "JHATTLA", "KOT GULLAH", "KOT QAZI", "KOT SARANG", "LAWA RURAL", "LAWA URBAN", "LETTI", "MALAKWAL", "MULTAN KHURD", "NAKKA KAHUT", "NIRAGHI", "PICHNAND", "PIRA FATEHIAL", "TALAGANG URBAN I", "TALAGANG URBAN II", "TAMMAN", "TEHI", "THOA MEHRAM KHAN I"]};
 var EMBED_VACC_MAP = {"BAIGAL": ["Riaz Hussain"], "BALKASSAR": ["Khuram Shahzad"], "BALOKASSAR": ["Saad Ali"], "BHEEN": ["Masood Iqbal"], "BIKHARI KALAN": ["Tahir Abbas"], "CHAK MALOOK": ["Umar Nawab"], "CHAK UMRA": ["Umer Shahzad"], "CHAKWAL URBAN I": ["Amjad Hussain"], "CHAKWAL URBAN II": ["Adnan Roshan"], "CHAKWAL URBAN III": ["Areeba Israr"], "CHAKWAL URBAN V": ["Syed Shams Ul Abbas"], "DAB": ["Tajammal Hussain"], "DHUDIAL": ["Waleed Shehzad"], "DHUMAN": ["Waqas Ali"], "DULLAH": ["Tabassam Nazir"], "JABAIRPUR": ["Usman Farooq"], "JAND": ["Qaiser Mehmood"], "JAND KHANZADA": ["Syed Shaoib Hussain Shah"], "JASWAL": ["Asad Hanif"], "KARSAL": ["Sajjad Hussain"], "KHAI": ["Muhammad Islam Sharif"], "KOT CHOHDRIAN": ["Muhammad Rehan Ul Tayyebain"], "MAINGON": ["Shahzaib"], "MULHAL MUGHLAN": ["Muhamamd Saghir"], "MUREED": ["Yasir Ahmed Khan"], "OUDHERWAL": ["Arshad Ali Khan"], "PADSHAN": ["Anas Farooq"], "SARAL": ["Abdul Muneeb"], "THANIL KAMAL": ["Haroon Ashraf"], "WARWAL": ["Nouman Ahmad"], "BASHARAT": ["Abdul Basit"], "CHOA SAIDEN SHAH": ["Danish Firdous"], "DALWAL": ["Amir Nazeer"], "DULMIAL": ["Ijaz Hussain"], "LEHAR SULTAN PUR": ["Waqar Haider"], "BHERPUR": ["Khalil ur Rehman"], "BUCHAL KALAN": ["Prince Kashif Nouman"], "BUCHAL KHURD": ["Muhammad Tauseef Nauman"], "KALLAR KAHAR": ["Fahim Razaq"], "KHAIRPUR": ["Khawar Iftakhar"], "MIANI": ["Muhammad Sheraz"], "MUNARA": ["Azhar Javed"], "NURPUR": ["Muhammad Asif"], "BHILOMAR": ["Muhammad Abdullah"], "BIDHAR": ["Muhammad Atif"], "DHERMOND": ["Muhammad Saqib"], "DHOULAR": ["Aakash Rasheed"], "DHURNAL": ["Nafees Ahmed"], "JABI SHAH DILAWAR": ["Asif Iqbal"], "JASIAL": ["Faisal Ayub"], "JHATTLA": ["Waheed Iqbal"], "KOT GULLAH": ["Umair Khalid"], "KOT QAZI": ["Muhammad Amer Sameem"], "KOT SARANG": ["Mohsin Iqbal"], "LAWA RURAL": ["Shahid Iqbal"], "LAWA URBAN": ["Muhammad Shabbir"], "LETTI": ["Muhammad Waqas"], "MALAKWAL": ["Muhammad Saqlain"], "MULTAN KHURD": ["Muhammad Saddique"], "NAKKA KAHUT": ["Muhammad Ali"], "NIRAGHI": ["Muhammad Afzal"], "PICHNAND": ["Saeed Ur Rehman"], "PIRA FATEHIAL": ["Amjad Mehmood"], "TALAGANG URBAN I": ["Ali Zeeshan Akbar"], "TALAGANG URBAN II": ["Nouman Ali"], "TAMMAN": ["Najeed ul Zaman"], "TEHI": ["Farhan Shazad"], "THOA MEHRAM KHAN I": ["Khalid Iqbal"], "BHUDIAL": ["Waseem Ud Din"]};
 Object.keys(EMBED_UC_MAP).forEach(function(k){ UC_MAP[k] = EMBED_UC_MAP[k].slice(); });
@@ -291,24 +290,24 @@ function loadMasterLists(){
     });
     Object.keys(UC_MAP).forEach(function(k){ UC_MAP[k].sort(); });
     onTehsil();
-  }).catch(function(){ /* lists na milein to bhi form chalega */ });
+  }).catch(function(){ /* the form still works with the embedded lists */ });
 }
 
 /* ---------- Location ---------- */
 function getLocation(){
   showErr('');
   var btn = $('btnLoc');
-  if(!navigator.geolocation){ showErr('Is mobile/browser men location ki sahulat nahi hai.'); return; }
-  btn.disabled = true; btn.textContent = '📍 Location le rahe hain…';
+  if(!navigator.geolocation){ showErr('Location is not available on this mobile/browser.'); return; }
+  btn.disabled = true; btn.textContent = '📍 Getting location…';
   navigator.geolocation.getCurrentPosition(function(pos){
     geoPos = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy || 0)};
     var box = $('locBox');
     box.style.display = 'block';
-    box.innerHTML = '✅ Location mil gaya<br>Latitude: ' + geoPos.lat.toFixed(6) + ' · Longitude: ' + geoPos.lng.toFixed(6) + (geoPos.acc ? '<br>Accuracy: ±' + geoPos.acc + ' m' : '');
-    btn.disabled = false; btn.textContent = '📍 Get Location (dobara lene ke liye dabayein)';
+    box.innerHTML = '✅ Location captured<br>Latitude: ' + geoPos.lat.toFixed(6) + ' · Longitude: ' + geoPos.lng.toFixed(6) + (geoPos.acc ? '<br>Accuracy: ±' + geoPos.acc + ' m' : '');
+    btn.disabled = false; btn.textContent = '📍 Get Location (press again to re-capture)';
   }, function(err){
     btn.disabled = false; btn.textContent = '📍 Get Location';
-    showErr('Location nahi mil saka. Mobile ki Location (GPS) ON karke dobara koshish karein. (' + (err.message || '') + ')');
+    showErr('Location could not be captured. Please turn ON the mobile Location (GPS) and try again. (' + (err.message || '') + ')');
   }, {enableHighAccuracy: true, timeout: 20000, maximumAge: 60000});
 }
 
@@ -337,11 +336,11 @@ function wizShow(i){
   var lbl;
   if(wizStep < 20) lbl = 'EPI Card ' + (wizStep + 1) + ' of 20';
   else if(wizStep === 20) lbl = 'HF Monitoring Picture';
-  else lbl = 'HF Monitoring Form (aakhri step)';
+  else lbl = 'HF Monitoring Form (last step)';
   $('wizLabel').textContent = lbl;
   $('wizFill').style.width = Math.round((wizStep + 1) * 100 / ALL_SLOTS.length) + '%';
   $('wizBack').disabled = wizStep === 0;
-  $('wizNext').textContent = wizStep === ALL_SLOTS.length - 1 ? '✓ Aakhri step — Submit neeche hai' : 'Next ➡';
+  $('wizNext').textContent = wizStep === ALL_SLOTS.length - 1 ? '✓ Last Step — Submit Below' : 'Next ➡';
 }
 function wizMove(dir){
   if(dir > 0 && wizStep === ALL_SLOTS.length - 1){
@@ -370,7 +369,7 @@ function onFilePicked(input){
     $('rm_' + key).style.display = 'block';
     $('slot_' + key).classList.add('filled');
     updateCount();
-  }).catch(function(e){ showErr(e.message || 'Photo nahi parhi ja saki.'); });
+  }).catch(function(e){ showErr(e.message || 'The photo could not be read.'); });
 }
 function removePhoto(key){
   delete photoData[key];
@@ -387,7 +386,7 @@ function updateCount(){
 }
 function compressPhoto(file){
   return new Promise(function(resolve, reject){
-    if(file.type.indexOf('image/') !== 0) return reject(new Error('Sirf photo (image) file select karein.'));
+    if(file.type.indexOf('image/') !== 0) return reject(new Error('Please select an image file only.'));
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function(){
@@ -401,7 +400,7 @@ function compressPhoto(file){
         resolve(cv.toDataURL('image/jpeg', 0.85));
       }catch(e){ reject(e); }
     };
-    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Photo nahi parhi ja saki.')); };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('The photo could not be read.')); };
     img.src = url;
   });
 }
@@ -416,7 +415,7 @@ function postJson(payload){
     return res.text().then(function(txt){
       var j = null;
       try{ j = JSON.parse(txt); }catch(e){}
-      if(!j || !j.ok) throw new Error((j && j.error) || 'Server se jawab nahi mila.');
+      if(!j || !j.ok) throw new Error((j && j.error) || 'No response was received from the server.');
       return j;
     });
   });
@@ -435,25 +434,25 @@ function submitCards(){
   var uc = $('supUc').value;
   var vacc = $('vaccName').value.trim();
   var kit = $('kitStation').value.trim();
-  if(!sup) return showErr('Supervisor Name select karein.');
-  if(!teh) return showErr('Tehsil select karein.');
-  if(!uc) return showErr('Union Council select karein.');
-  if(!vacc) return showErr('Vaccinator Name likhein.');
-  if(!kit) return showErr('Kit Station Name likhein.');
+  if(!sup) return showErr('Please select the Supervisor Name.');
+  if(!teh) return showErr('Please select the Tehsil.');
+  if(!uc) return showErr('Please select the Union Council.');
+  if(!vacc) return showErr('Please enter the Vaccinator Name.');
+  if(!kit) return showErr('Please enter the Kit Station Name.');
   if(!CARDS_SCRIPT_URL) return showErr('The form is not connected yet (setup pending). Please contact the Office / DSV.');
 
   var cardCount = CARD_SLOTS.filter(function(s){ return !!photoData[s.key]; }).length;
   var warns = [];
-  if(!geoPos) warns.push('Location nahi liya gaya.');
-  if(cardCount < TARGET_CARDS) warns.push('EPI Cards sirf ' + cardCount + ' / ' + TARGET_CARDS + ' attach hain.');
-  if(!photoData.hfpic) warns.push('HF Monitoring Picture attach nahi hai.');
-  if(!photoData.hfform) warns.push('HF Monitoring Form attach nahi hai.');
+  if(!geoPos) warns.push('Location has not been captured.');
+  if(cardCount < TARGET_CARDS) warns.push('Only ' + cardCount + ' of ' + TARGET_CARDS + ' EPI Cards are attached.');
+  if(!photoData.hfpic) warns.push('The HF Monitoring Picture is not attached.');
+  if(!photoData.hfform) warns.push('The HF Monitoring Form is not attached.');
   if(warns.length && !submitArmed){
     submitArmed = true;
     var wb = $('warnBox');
     wb.innerHTML = warns.map(function(w){ return '⚠️ ' + w; }).join('<br>');
     wb.style.display = 'block';
-    $('btnSubmit').textContent = '⚠️ Phir bhi Submit karein — dobara dabayein';
+    $('btnSubmit').textContent = '⚠️ Submit Anyway — Press Again to Confirm';
     wb.scrollIntoView({behavior: 'smooth', block: 'center'});
     return;
   }
@@ -487,7 +486,7 @@ function submitCards(){
     });
   });
   chain.then(function(){
-    setProgress(queue.length, total, 'PDF tayyar ho raha hai…');
+    setProgress(queue.length, total, 'Preparing the PDF…');
     return postJson({
       type: 'card_complete', batchId: batchId, folderId: folderId,
       supervisor: meta.supervisor, designation: meta.designation, tehsil: meta.tehsil, uc: meta.uc,
@@ -509,8 +508,8 @@ function submitCards(){
   }).catch(function(e){
     setProgress(0, 1, '');
     $('progWrap').style.display = 'none';
-    showErr('Submission failed: ' + (e.message || e) + ' — internet check karke dobara koshish karein. Photos isi page par mehfooz hain, dobara select nahi karni parein gi.');
-    btn.disabled = false; btn.textContent = '✅ Submit (dobara koshish)';
+    showErr('Submission failed: ' + (e.message || e) + ' — please check the internet connection and try again. Your photos are still on this page; you do not need to select them again.');
+    btn.disabled = false; btn.textContent = '✅ Submit (Retry)';
   });
 }
 
