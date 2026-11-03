@@ -1220,7 +1220,9 @@
                 <div id="emrModuleVCalls" style="display:none">
                 <style>
                 #vcSummary .vc-stats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
-                #vcSummary .vc-stat{background:#f1f8e9;border:1px solid #c8e6c9;border-radius:8px;padding:8px 12px;min-width:128px}
+                #vcSummary .vc-stat{background:#f1f8e9;border:1px solid #c8e6c9;border-radius:8px;padding:8px 12px;min-width:128px;cursor:pointer;transition:box-shadow .15s, background .15s}
+                #vcSummary .vc-stat:hover{box-shadow:0 2px 8px rgba(13,92,61,.25)}
+                #vcSummary .vc-stat.active{background:#c8e6c9;box-shadow:0 0 0 2.5px #0d5c3d inset}
                 #vcSummary .vc-stat .n{font-size:20px;font-weight:800;color:#0d5c3d}
                 #vcSummary .vc-stat .l{font-size:12px;color:#555}
                 #vcSummary .vc-bar{height:10px;background:#e0e0e0;border-radius:5px;overflow:hidden;margin:6px 0 12px}
@@ -1247,7 +1249,7 @@
                 .vc-cmtsave{background:#1565c0;color:#fff;border:none;border-radius:14px;padding:6px 16px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px}
                 .vc-cmtcancel{background:#eceff1;color:#37474f;border:1px solid #b0bec5;border-radius:14px;padding:6px 14px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px;margin-left:6px}
                 </style>
-                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically in this browser for every date. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download.</p>
+                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically in this browser for every date. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download. <strong>Tip:</strong> click any summary box above the list (Total Children, Verified, Not Responding, …) to filter the list to just those children.</p>
                 <div class="emr-filter">
                     <label>Date
                         <select id="vcDate" onchange="vcOnDateChange()"></select>
@@ -1256,7 +1258,7 @@
                         <select id="vcTehsil" onchange="vcRender()"><option value="">All Tehsils</option></select>
                     </label>
                     <label>Show
-                        <select id="vcShow" onchange="vcRender()">
+                        <select id="vcShow" onchange="vcOnShowChange()">
                             <option value="">All entries</option>
                             <option value="pending">Pending only</option>
                             <option value="called">Called only</option>
@@ -5135,6 +5137,7 @@
             const ymd = dsel ? dsel.value : '';
             return { ymd: ymd, rows: (vcRows || []).filter(function(r){ return vcRowYmd(r) === ymd; }) };
         }
+        let vcStatusFilter = '';
         function vcRenderSummary(ymd, rows){
             const sum = document.getElementById('vcSummary');
             if(!sum) return;
@@ -5142,12 +5145,30 @@
             let called = 0;
             rows.forEach(function(r){ const st = vcStatusOf(ymd, vcRowKey(r)); if(st && counts[st] != null){ counts[st]++; called++; } });
             const pct = rows.length ? Math.round(called * 100 / rows.length) : 0;
+            const showVal = (document.getElementById('vcShow') || {}).value || '';
+            const activeKey = vcStatusFilter || (showVal === 'called' ? 'called' : (showVal === '' ? 'all' : ''));
+            const box = function(key, num, label, color){
+                return '<div class="vc-stat' + (activeKey === key ? ' active' : '') + '" data-vcf="' + key + '" title="Click to filter the list"><div class="n"' + (color ? ' style="color:' + color + '"' : '') + '>' + num + '</div><div class="l">' + label + '</div></div>';
+            };
             let sh = '<div class="vc-stats">';
-            sh += '<div class="vc-stat"><div class="n">' + rows.length + '</div><div class="l">Total Children Vaccinated</div></div>';
-            sh += '<div class="vc-stat"><div class="n">' + called + '</div><div class="l">Total Calls For Verification</div></div>';
-            VC_STATUSES.forEach(function(s){ sh += '<div class="vc-stat"><div class="n" style="color:' + VC_COLORS[s] + '">' + counts[s] + '</div><div class="l">' + s + '</div></div>'; });
+            sh += box('all', rows.length, 'Total Children Vaccinated', '');
+            sh += box('called', called, 'Total Calls For Verification', '');
+            VC_STATUSES.forEach(function(s){ sh += box(s, counts[s], s, VC_COLORS[s]); });
             sh += '</div><div class="vc-bar"><i style="width:' + pct + '%"></i></div>';
             sum.innerHTML = sh;
+            sum.querySelectorAll('.vc-stat').forEach(function(el){
+                el.addEventListener('click', function(){ vcSummaryFilter(el.getAttribute('data-vcf')); });
+            });
+        }
+        function vcSummaryFilter(key){
+            const showEl = document.getElementById('vcShow');
+            if(showEl) showEl.value = '';
+            vcStatusFilter = (key === 'all') ? '' : key;
+            vcRender();
+        }
+        function vcOnShowChange(){
+            vcStatusFilter = '';
+            vcRender();
         }
         function vcBindCard(card, ymd){
             if(!card) return;
@@ -5187,6 +5208,8 @@
             const rows = all.rows.filter(function(r){
                 if(teh && emrCell(r, EMR_COLS.tehsil) !== teh) return false;
                 const st = vcStatusOf(ymd, vcRowKey(r));
+                if(vcStatusFilter === 'called' && !st) return false;
+                if(vcStatusFilter && vcStatusFilter !== 'called' && st !== vcStatusFilter) return false;
                 if(show === 'pending' && st) return false;
                 if(show === 'called' && !st) return false;
                 if(q){
