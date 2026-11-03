@@ -152,6 +152,12 @@ var MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
 var UC_MAP = {};    /* tehsil -> [uc,...] */
 var VACC_MAP = {};  /* uc -> [vaccinator names] */
 
+/* Embedded copy of the master lists (3 Nov 2026) — page in ke sath foran chalti hai; live sheet se refresh bhi ho jata hai */
+var EMBED_UC_MAP = {"Chakwal": ["BAIGAL", "BALKASSAR", "BALOKASSAR", "BHEEN", "BIKHARI KALAN", "CHAK MALOOK", "CHAK UMRA", "CHAKWAL URBAN I", "CHAKWAL URBAN II", "CHAKWAL URBAN III", "CHAKWAL URBAN V", "DAB", "DHUDIAL", "DHUMAN", "DULLAH", "JABAIRPUR", "JAND", "JAND KHANZADA", "JASWAL", "KARSAL", "KHAI", "KOT CHOHDRIAN", "MAINGON", "MULHAL MUGHLAN", "MUREED", "OUDHERWAL", "PADSHAN", "SARAL", "THANIL KAMAL", "WARWAL"], "Choa Saidan Shah": ["BASHARAT", "CHOA SAIDEN SHAH", "DALWAL", "DULMIAL", "LEHAR SULTAN PUR"], "Kallar Kahar": ["BHERPUR", "BUCHAL KALAN", "BUCHAL KHURD", "KALLAR KAHAR", "KHAIRPUR", "MIANI", "MUNARA", "NURPUR"], "Talagang": ["BHILOMAR", "BHUDIAL", "BIDHAR", "DHERMOND", "DHOULAR", "DHURNAL", "JABI SHAH DILAWAR", "JASIAL", "JHATTLA", "KOT GULLAH", "KOT QAZI", "KOT SARANG", "LAWA RURAL", "LAWA URBAN", "LETTI", "MALAKWAL", "MULTAN KHURD", "NAKKA KAHUT", "NIRAGHI", "PICHNAND", "PIRA FATEHIAL", "TALAGANG URBAN I", "TALAGANG URBAN II", "TAMMAN", "TEHI", "THOA MEHRAM KHAN I"]};
+var EMBED_VACC_MAP = {"BAIGAL": ["Riaz Hussain"], "BALKASSAR": ["Khuram Shahzad"], "BALOKASSAR": ["Saad Ali"], "BHEEN": ["Masood Iqbal"], "BIKHARI KALAN": ["Tahir Abbas"], "CHAK MALOOK": ["Umar Nawab"], "CHAK UMRA": ["Umer Shahzad"], "CHAKWAL URBAN I": ["Amjad Hussain"], "CHAKWAL URBAN II": ["Adnan Roshan"], "CHAKWAL URBAN III": ["Areeba Israr"], "CHAKWAL URBAN V": ["Syed Shams Ul Abbas"], "DAB": ["Tajammal Hussain"], "DHUDIAL": ["Waleed Shehzad"], "DHUMAN": ["Waqas Ali"], "DULLAH": ["Tabassam Nazir"], "JABAIRPUR": ["Usman Farooq"], "JAND": ["Qaiser Mehmood"], "JAND KHANZADA": ["Syed Shaoib Hussain Shah"], "JASWAL": ["Asad Hanif"], "KARSAL": ["Sajjad Hussain"], "KHAI": ["Muhammad Islam Sharif"], "KOT CHOHDRIAN": ["Muhammad Rehan Ul Tayyebain"], "MAINGON": ["Shahzaib"], "MULHAL MUGHLAN": ["Muhamamd Saghir"], "MUREED": ["Yasir Ahmed Khan"], "OUDHERWAL": ["Arshad Ali Khan"], "PADSHAN": ["Anas Farooq"], "SARAL": ["Abdul Muneeb"], "THANIL KAMAL": ["Haroon Ashraf"], "WARWAL": ["Nouman Ahmad"], "BASHARAT": ["Abdul Basit"], "CHOA SAIDEN SHAH": ["Danish Firdous"], "DALWAL": ["Amir Nazeer"], "DULMIAL": ["Ijaz Hussain"], "LEHAR SULTAN PUR": ["Waqar Haider"], "BHERPUR": ["Khalil ur Rehman"], "BUCHAL KALAN": ["Prince Kashif Nouman"], "BUCHAL KHURD": ["Muhammad Tauseef Nauman"], "KALLAR KAHAR": ["Fahim Razaq"], "KHAIRPUR": ["Khawar Iftakhar"], "MIANI": ["Muhammad Sheraz"], "MUNARA": ["Azhar Javed"], "NURPUR": ["Muhammad Asif"], "BHILOMAR": ["Muhammad Abdullah"], "BIDHAR": ["Muhammad Atif"], "DHERMOND": ["Muhammad Saqib"], "DHOULAR": ["Aakash Rasheed"], "DHURNAL": ["Nafees Ahmed"], "JABI SHAH DILAWAR": ["Asif Iqbal"], "JASIAL": ["Faisal Ayub"], "JHATTLA": ["Waheed Iqbal"], "KOT GULLAH": ["Umair Khalid"], "KOT QAZI": ["Muhammad Amer Sameem"], "KOT SARANG": ["Mohsin Iqbal"], "LAWA RURAL": ["Shahid Iqbal"], "LAWA URBAN": ["Muhammad Shabbir"], "LETTI": ["Muhammad Waqas"], "MALAKWAL": ["Muhammad Saqlain"], "MULTAN KHURD": ["Muhammad Saddique"], "NAKKA KAHUT": ["Muhammad Ali"], "NIRAGHI": ["Muhammad Afzal"], "PICHNAND": ["Saeed Ur Rehman"], "PIRA FATEHIAL": ["Amjad Mehmood"], "TALAGANG URBAN I": ["Ali Zeeshan Akbar"], "TALAGANG URBAN II": ["Nouman Ali"], "TAMMAN": ["Najeed ul Zaman"], "TEHI": ["Farhan Shazad"], "THOA MEHRAM KHAN I": ["Khalid Iqbal"], "BHUDIAL": ["Waseem Ud Din"]};
+Object.keys(EMBED_UC_MAP).forEach(function(k){ UC_MAP[k] = EMBED_UC_MAP[k].slice(); });
+Object.keys(EMBED_VACC_MAP).forEach(function(k){ VACC_MAP[k] = EMBED_VACC_MAP[k].slice(); });
+
 var photoData = {}; /* slotKey -> {dataUrl, fileName} */
 var geoPos = null;  /* {lat, lng, acc} */
 var currentSlot = null;
@@ -244,9 +250,10 @@ function loadMasterLists(){
   fetch(url, {cache: 'no-store'}).then(function(r){ return r.text(); }).then(function(text){
     var data = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
     var cols = (data.table.cols || []).map(function(c){ return String((c && c.label) || '').trim().toLowerCase(); });
-    var iTeh = cols.indexOf('tehsil'), iUc = -1, iName = -1;
-    ['union council', 'uc'].forEach(function(n){ if(iUc < 0) iUc = cols.indexOf(n); });
-    ['vaccinator name', 'vaccinator', 'name', 'staff name'].forEach(function(n){ if(iName < 0) iName = cols.indexOf(n); });
+    function findCol(test){ for(var i = 0; i < cols.length; i++){ if(test(cols[i])) return i; } return -1; }
+    var iTeh = findCol(function(l){ return l.indexOf('tehsil') >= 0; });
+    var iUc = findCol(function(l){ return l.indexOf('union council') >= 0 || l === 'uc'; });
+    var iName = findCol(function(l){ return l.indexOf('vaccinator') >= 0 || l === 'name'; });
     if(iTeh < 0 || iUc < 0) return;
     function cell(row, i){
       if(i < 0 || !row.c || !row.c[i]) return '';
