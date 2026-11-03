@@ -583,32 +583,29 @@
 
             
             
-<div class="section-title">EPI Supervisory Staff Data</div>
-<div class="emr-card" id="supCard">
-  <p style="font-size:13.5px;color:#444;margin-bottom:6px">Source: Supervisory staff submit and update their data through the <strong>supervisors.html</strong> form — the data loads live from the Google Sheet. CNIC is not displayed in this tab.</p>
+<div class="section-title">Daily EPI Cards</div>
+<div class="emr-card" id="cardsCard">
+  <p style="font-size:13.5px;color:#444;margin-bottom:6px">Source: Supervisors submit 20 EPI Card photos, the HF Monitoring Picture and the HF Monitoring Form every day through the <strong>supervisors.html</strong> page. The photos are stored in Google Drive and a PDF of each submission is prepared automatically.</p>
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-number" id="supStatTotal">—</div><div class="stat-label">Total Supervisory Staff</div></div>
-    <div class="stat-card"><div class="stat-number" id="supStatDistrict">—</div><div class="stat-label">District Level</div></div>
-    <div class="stat-card"><div class="stat-number" id="supStatChakwal">—</div><div class="stat-label">Tehsil Chakwal</div></div>
-    <div class="stat-card"><div class="stat-number" id="supStatChoa">—</div><div class="stat-label">Choa Saidan Shah</div></div>
-    <div class="stat-card"><div class="stat-number" id="supStatKallar">—</div><div class="stat-label">Kallar Kahar</div></div>
-    <div class="stat-card"><div class="stat-number" id="supStatTalagang">—</div><div class="stat-label">Talagang</div></div>
+    <div class="stat-card"><div class="stat-number" id="cardsStatSubmitted">—</div><div class="stat-label">Supervisors Submitted</div></div>
+    <div class="stat-card"><div class="stat-number" id="cardsStatTotal">7</div><div class="stat-label">Total Supervisors</div></div>
+    <div class="stat-card"><div class="stat-number" id="cardsStatCards">—</div><div class="stat-label">EPI Cards Received</div></div>
+    <div class="stat-card"><div class="stat-number" id="cardsStatPending">—</div><div class="stat-label">Pending Supervisors</div></div>
   </div>
   <div class="sup-controls">
-    <div><label for="supTehsil">Tehsil</label><select id="supTehsil" onchange="supRender()"><option value="">All Tehsils</option><option>District Level (All Tehsils)</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option></select></div>
-    <div><label for="supDesig">Designation</label><select id="supDesig" onchange="supRender()"><option value="">All Designations</option></select></div>
-    <div><label for="supSearch">Search (Name / Mobile)</label><input type="text" id="supSearch" placeholder="Search…" oninput="supRender()"></div>
-    <button type="button" class="btn" onclick="supLoad()">🔄 Refresh Data</button>
-    <button type="button" class="btn btn-outline" onclick="supDownloadExcel()">⬇ Download Excel</button>
-    <a class="btn" href="supervisors.html" target="_blank" rel="noopener">📝 Submit / Update Your Data</a>
+    <div><label for="cardsDate">Date</label><input type="date" id="cardsDate" onchange="cardsRender()"></div>
+    <button type="button" class="btn" onclick="cardsLoad()">🔄 Refresh Data</button>
+    <button type="button" class="btn btn-outline" onclick="cardsDownloadExcel()">⬇ Download Excel</button>
+    <a class="btn" href="supervisors.html" target="_blank" rel="noopener">📸 Submit Daily EPI Cards</a>
   </div>
-  <div id="supStatus">Not loaded — press Refresh Data.</div>
+  <div id="cardsStatus">Not loaded — press Refresh Data.</div>
   <div style="overflow-x:auto">
     <table class="sup-table">
-      <thead><tr><th>#</th><th>Name</th><th>Designation</th><th>Tehsil</th><th>UC / Area</th><th>Place of Posting</th><th>Mobile</th><th>WhatsApp</th><th>Email</th><th>Photo</th></tr></thead>
-      <tbody id="supBody"><tr><td colspan="10" style="text-align:center;color:#777">No data loaded</td></tr></tbody>
+      <thead><tr><th>#</th><th>Supervisor</th><th>Tehsil</th><th>UC</th><th>Vaccinator</th><th>Kit Station</th><th>Cards</th><th>HF Picture</th><th>HF Form</th><th>Time</th><th>PDF</th><th>Photos</th></tr></thead>
+      <tbody id="cardsBody"><tr><td colspan="12" style="text-align:center;color:#777">No data loaded</td></tr></tbody>
     </table>
   </div>
+  <div id="cardsMissing" style="margin-top:10px;font-size:13.5px;line-height:1.6"></div>
 </div>
 
 <div class="section-title" id="section-sv" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
@@ -2787,7 +2784,7 @@
         function buildSearchIndex(){
             const idx = [
                 {type:'section', title:'HR Overview', desc:'Tehsils, UCs, Vaccinators, ASVs, Health Facilities', action:'scroll', target:'HR Overview'},
-            {type:'section', title:'EPI Supervisory Staff Data', desc:'Supervisory staff directory — naam, designation, tehsil, rabta number', action:'scroll', target:'Supervisory Staff Data'},
+            {type:'section', title:'Daily EPI Cards', desc:'Daily EPI card submissions by supervisors — status, photos and PDF links', action:'scroll', target:'Daily EPI Cards'},
             {type:'section', title:'Summary by Vaccinators', desc:'HMIS Summary By Vaccinations — UC-wise Outreach, facility-wise Fixed Site, and the Compiled report of both (auto-updated every night)', action:'scroll', target:'Summary by Vaccinators'},
                 {type:'section', title:'Urban Sweep-up Activity (10-15 Aug 2026)', desc:'Live reports, graphs, remaining UCs — inside EMR Outreach', action:'fn', target:'openSweepModule'},
                 {type:'section', title:'Child Immunization (EMR) Data', desc:'Outreach, Fixed Site, OR+Fixed Compile, Attendance, Location', action:'scroll', target:'Child Immunization'},
@@ -13478,11 +13475,20 @@
         if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', function(){ svLoad(); }); }
         else { svLoad(); }
 
-        // ===== EPI Supervisory Staff Data =====
-        const SUP_SHEET_ID = ''; /* SETUP: Supervisory Staff wali Google Sheet ki ID yahan lagegi (guide: SUPERVISORY_SETUP.md) */
-        const SUP_SHEET_TAB = 'Supervisors';
-        let supRowsAll = [];
-        function supColIdx_(labels, names){
+        // ===== Daily EPI Cards =====
+        const CARDS_SHEET_ID = '1oOg0mHsMWvmRAykqSKvET2K6tcxlACoYD9ZxMfv9iVo'; /* 'EPI Daily Cards' Google Sheet (pakeagle6@gmail.com) */
+        const CARDS_LOG_TAB = 'EPI Cards Log';
+        const CARDS_ROSTER = [
+            {name: 'Wajid Maqbool Raja', tehsil: 'Chakwal'},
+            {name: 'Umer Shahzad', tehsil: 'Chakwal'},
+            {name: 'Ansar Mehmood', tehsil: 'Choa Saidan Shah'},
+            {name: 'Zafar Iqbal', tehsil: 'Kallar Kahar'},
+            {name: 'Abdul Wahid', tehsil: 'Talagang'},
+            {name: 'Qazi Muhamamd Rashid', tehsil: 'Talagang'},
+            {name: 'Muhamamd Asif', tehsil: 'Talagang'}
+        ];
+        let cardsRowsAll = [];
+        function cardsColIdx_(labels, names){
             for(let i = 0; i < labels.length; i++){
                 const L = labels[i];
                 for(let j = 0; j < names.length; j++){ if(L === names[j]) return i; }
@@ -13493,109 +13499,124 @@
             }
             return -1;
         }
-        function supLoad(){
-            const st = document.getElementById('supStatus');
-            if(!SUP_SHEET_ID){
-                if(st) st.textContent = 'The data source (Google Sheet) is not connected yet — once the setup is complete, the data will appear here live.';
-                supRowsAll = []; supRender(); return;
+        function cardsTodayYmd_(){
+            try{
+                const parts = new Intl.DateTimeFormat('en-US', {timeZone: 'Asia/Karachi', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
+                let y = '', m = '', d = '';
+                parts.forEach(function(p){ if(p.type === 'year') y = p.value; else if(p.type === 'month') m = p.value; else if(p.type === 'day') d = p.value; });
+                return y + '-' + m + '-' + d;
+            }catch(e){ return ''; }
+        }
+        function cardsNormDate_(s){
+            s = String(s == null ? '' : s).trim();
+            let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if(m) return m[1] + '-' + m[2] + '-' + m[3];
+            m = s.match(/Date\((\d{4}),(\d{1,2}),(\d{1,2})/);
+            if(m) return m[1] + '-' + ('0' + (parseInt(m[2], 10) + 1)).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+            m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if(m) return m[3] + '-' + ('0' + m[1]).slice(-2) + '-' + ('0' + m[2]).slice(-2);
+            return s;
+        }
+        function cardsLoad(){
+            const st = document.getElementById('cardsStatus');
+            if(!CARDS_SHEET_ID){
+                if(st) st.textContent = 'The data source (Google Sheet) is not connected yet — once the setup is complete, the daily submissions will appear here live.';
+                cardsRowsAll = []; cardsRender(); return;
             }
             if(st) st.textContent = 'Loading…';
-            const url = 'https://docs.google.com/spreadsheets/d/' + SUP_SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SUP_SHEET_TAB) + '&_=' + Date.now();
+            const url = 'https://docs.google.com/spreadsheets/d/' + CARDS_SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(CARDS_LOG_TAB) + '&_=' + Date.now();
             fetch(url, {cache:'no-store'}).then(function(r){ return r.text(); }).then(function(text){
                 const data = parseGviz(text);
                 const labels = (data.table.cols || []).map(function(c){ return String((c && c.label) || '').trim().toLowerCase(); });
                 const ix = {
-                    name: supColIdx_(labels, ['name']),
-                    desig: supColIdx_(labels, ['designation']),
-                    tehsil: supColIdx_(labels, ['tehsil']),
-                    uc: supColIdx_(labels, ['uc / area','uc','area']),
-                    posting: supColIdx_(labels, ['place of posting','posting']),
-                    mobile: supColIdx_(labels, ['mobile']),
-                    whatsapp: supColIdx_(labels, ['whatsapp']),
-                    email: supColIdx_(labels, ['email']),
-                    photo: supColIdx_(labels, ['photo url','photo']),
-                    status: supColIdx_(labels, ['status'])
+                    ts: cardsColIdx_(labels, ['timestamp']),
+                    date: cardsColIdx_(labels, ['date']),
+                    sup: cardsColIdx_(labels, ['supervisor']),
+                    teh: cardsColIdx_(labels, ['tehsil']),
+                    uc: cardsColIdx_(labels, ['uc']),
+                    vacc: cardsColIdx_(labels, ['vaccinator']),
+                    kit: cardsColIdx_(labels, ['kit station','kit']),
+                    cards: cardsColIdx_(labels, ['cards count','cards']),
+                    hfp: cardsColIdx_(labels, ['hf picture']),
+                    hff: cardsColIdx_(labels, ['hf form']),
+                    folder: cardsColIdx_(labels, ['folder url','folder']),
+                    pdf: cardsColIdx_(labels, ['pdf url','pdf'])
                 };
-                supRowsAll = [];
+                cardsRowsAll = [];
                 (data.table.rows || []).forEach(function(r){
                     function v(i){ return i >= 0 && r.c && r.c[i] ? cellVal(r.c[i]).trim() : ''; }
-                    const name = v(ix.name);
-                    if(!name) return;
-                    supRowsAll.push({name:name, desig:v(ix.desig), tehsil:v(ix.tehsil), uc:v(ix.uc), posting:v(ix.posting), mobile:v(ix.mobile), whatsapp:v(ix.whatsapp), email:v(ix.email), photo:v(ix.photo), status:v(ix.status)});
+                    const sup = v(ix.sup);
+                    if(!sup) return;
+                    const ts = v(ix.ts);
+                    const tm = ts.match(/(\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)?)/i);
+                    cardsRowsAll.push({
+                        date: cardsNormDate_(v(ix.date)), time: tm ? tm[1] : ts,
+                        sup: sup, teh: v(ix.teh), uc: v(ix.uc), vacc: v(ix.vacc), kit: v(ix.kit),
+                        cards: parseInt(v(ix.cards), 10) || 0,
+                        hfp: v(ix.hfp), hff: v(ix.hff), folder: v(ix.folder), pdf: v(ix.pdf)
+                    });
                 });
-                supBuildDesigOptions_();
-                supRender();
+                cardsRender();
             }).catch(function(e){
                 if(st) st.textContent = 'Data could not be loaded: ' + (e.message || e);
             });
         }
-        function supBuildDesigOptions_(){
-            const sel = document.getElementById('supDesig'); if(!sel) return;
-            const cur = sel.value;
-            const seen = {};
-            supRowsAll.forEach(function(r){ if(r.desig) seen[r.desig] = 1; });
-            sel.innerHTML = '<option value="">All Designations</option>';
-            Object.keys(seen).sort().forEach(function(d){
-                const o = document.createElement('option'); o.textContent = d; sel.appendChild(o);
-            });
-            sel.value = cur;
-        }
-        function supActiveRows_(){
-            return supRowsAll.filter(function(r){
-                const s = String(r.status || '').toLowerCase();
-                return s.indexOf('retired') < 0 && s.indexOf('transferred') < 0;
-            });
-        }
-        function supFiltered_(){
-            const teh = (document.getElementById('supTehsil') || {}).value || '';
-            const des = (document.getElementById('supDesig') || {}).value || '';
-            const q = ((document.getElementById('supSearch') || {}).value || '').trim().toLowerCase();
-            return supActiveRows_().filter(function(r){
-                if(teh && r.tehsil !== teh) return false;
-                if(des && r.desig !== des) return false;
-                if(q && (r.name + ' ' + r.mobile + ' ' + r.posting).toLowerCase().indexOf(q) < 0) return false;
-                return true;
-            });
-        }
-        function supSetStat_(id, n){ const el = document.getElementById(id); if(el) el.textContent = n; }
-        function supRender(){
-            const rows = supFiltered_();
-            const active = supActiveRows_();
-            supSetStat_('supStatTotal', active.length);
-            supSetStat_('supStatDistrict', active.filter(function(r){ return r.tehsil.indexOf('District') === 0; }).length);
-            supSetStat_('supStatChakwal', active.filter(function(r){ return r.tehsil === 'Chakwal'; }).length);
-            supSetStat_('supStatChoa', active.filter(function(r){ return r.tehsil === 'Choa Saidan Shah'; }).length);
-            supSetStat_('supStatKallar', active.filter(function(r){ return r.tehsil === 'Kallar Kahar'; }).length);
-            supSetStat_('supStatTalagang', active.filter(function(r){ return r.tehsil === 'Talagang'; }).length);
-            const body = document.getElementById('supBody'); if(!body) return;
-            const st = document.getElementById('supStatus');
-            if(!supRowsAll.length){
-                body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">No data</td></tr>';
-                return;
-            }
-            if(st) st.textContent = rows.length + ' staff member(s) shown · Total active: ' + active.length;
-            if(!rows.length){
-                body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#777">No record was found in this filter</td></tr>';
-                return;
-            }
+        function cardsSetStat_(id, n){ const el = document.getElementById(id); if(el) el.textContent = n; }
+        function cardsRender(){
+            const dateEl = document.getElementById('cardsDate');
+            const sel = (dateEl && dateEl.value) || cardsTodayYmd_();
+            const rows = cardsRowsAll.filter(function(r){ return r.date === sel; });
+            const subSet = {};
+            rows.forEach(function(r){ subSet[r.sup.toLowerCase()] = 1; });
+            const submitted = CARDS_ROSTER.filter(function(p){ return subSet[p.name.toLowerCase()]; }).length;
+            const pendingList = CARDS_ROSTER.filter(function(p){ return !subSet[p.name.toLowerCase()]; });
+            cardsSetStat_('cardsStatSubmitted', CARDS_SHEET_ID ? submitted : '—');
+            cardsSetStat_('cardsStatTotal', CARDS_ROSTER.length);
+            cardsSetStat_('cardsStatCards', CARDS_SHEET_ID ? rows.reduce(function(a, r){ return a + (r.cards || 0); }, 0) : '—');
+            cardsSetStat_('cardsStatPending', CARDS_SHEET_ID ? pendingList.length : '—');
+            const body = document.getElementById('cardsBody'); if(!body) return;
+            const st = document.getElementById('cardsStatus');
             function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-            body.innerHTML = rows.map(function(r, i){
-                const photo = r.photo ? '<a href="' + esc(r.photo) + '" target="_blank" rel="noopener">View</a>' : '—';
-                const wa = r.whatsapp ? '<a href="https://wa.me/92' + esc(r.whatsapp.replace(/\D/g,'').replace(/^0/,'')) + '" target="_blank" rel="noopener">' + esc(r.whatsapp) + '</a>' : '—';
-                return '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.name) + '</strong></td><td>' + esc(r.desig) + '</td><td>' + esc(r.tehsil) + '</td><td>' + esc(r.uc) + '</td><td>' + esc(r.posting) + '</td><td>' + esc(r.mobile) + '</td><td>' + wa + '</td><td>' + esc(r.email || '—') + '</td><td>' + photo + '</td></tr>';
-            }).join('');
+            if(!CARDS_SHEET_ID){
+                body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#777">Setup pending</td></tr>';
+            } else if(!rows.length){
+                body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#777">No submission received for this date yet</td></tr>';
+                if(st) st.textContent = '0 submissions · ' + sel;
+            } else {
+                if(st) st.textContent = rows.length + ' submission(s) · ' + sel;
+                body.innerHTML = rows.map(function(r, i){
+                    const pdf = r.pdf ? '<a href="' + esc(r.pdf) + '" target="_blank" rel="noopener">📄 PDF</a>' : '—';
+                    const fol = r.folder ? '<a href="' + esc(r.folder) + '" target="_blank" rel="noopener">🖼 Photos</a>' : '—';
+                    return '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.sup) + '</strong></td><td>' + esc(r.teh) + '</td><td>' + esc(r.uc) + '</td><td>' + esc(r.vacc) + '</td><td>' + esc(r.kit) + '</td><td>' + r.cards + ' / 20</td><td>' + esc(r.hfp || '—') + '</td><td>' + esc(r.hff || '—') + '</td><td>' + esc(r.time || '—') + '</td><td>' + pdf + '</td><td>' + fol + '</td></tr>';
+                }).join('');
+            }
+            const miss = document.getElementById('cardsMissing');
+            if(miss){
+                if(!CARDS_SHEET_ID){ miss.innerHTML = ''; }
+                else if(pendingList.length){
+                    miss.innerHTML = '<strong style="color:#b71c1c">Pending (' + pendingList.length + '):</strong> ' + pendingList.map(function(p){ return esc(p.name) + ' (' + esc(p.tehsil) + ')'; }).join(' · ');
+                } else {
+                    miss.innerHTML = '<strong style="color:#1a8a5c">✓ All supervisors have submitted for this date.</strong>';
+                }
+            }
         }
-        function supDownloadExcel(){
-            const rows = supFiltered_();
-            if(!rows.length){ alert('There is no data to download.'); return; }
+        function cardsDownloadExcel(){
+            const dateEl = document.getElementById('cardsDate');
+            const sel = (dateEl && dateEl.value) || cardsTodayYmd_();
+            const rows = cardsRowsAll.filter(function(r){ return r.date === sel; });
+            if(!rows.length){ alert('There is no data to download for this date.'); return; }
             if(typeof XLSX === 'undefined'){ alert('The Excel library could not be loaded — please refresh the page.'); return; }
-            const data = rows.map(function(r, i){ return {'#': i + 1, 'Name': r.name, 'Designation': r.desig, 'Tehsil': r.tehsil, 'UC / Area': r.uc, 'Place of Posting': r.posting, 'Mobile': r.mobile, 'WhatsApp': r.whatsapp, 'Email': r.email}; });
+            const data = rows.map(function(r, i){ return {'#': i + 1, 'Supervisor': r.sup, 'Tehsil': r.teh, 'UC': r.uc, 'Vaccinator': r.vacc, 'Kit Station': r.kit, 'Cards': r.cards, 'HF Picture': r.hfp, 'HF Form': r.hff, 'Time': r.time, 'PDF': r.pdf, 'Photos Folder': r.folder}; });
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Supervisory Staff');
-            XLSX.writeFile(wb, 'EPI_Supervisory_Staff_Chakwal.xlsx');
+            XLSX.utils.book_append_sheet(wb, ws, 'EPI Cards Log');
+            XLSX.writeFile(wb, 'EPI_Cards_Log_' + sel + '.xlsx');
         }
-        document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ supLoad(); }catch(e){} }, 1200); });
+        document.addEventListener('DOMContentLoaded', function(){
+            const di = document.getElementById('cardsDate');
+            if(di && !di.value) di.value = cardsTodayYmd_();
+            setTimeout(function(){ try{ cardsLoad(); }catch(e){} }, 1400);
+        });
 
 // ===== MR CIF Form =====
         const CIF_STORAGE_KEY = 'epi_cif_script_url';

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>EPI Supervisory Staff Data | EPI Chakwal</title>
+<title>Daily EPI Cards Submission | EPI Chakwal</title>
 <link rel="icon" href="favicon.png.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,331 +11,462 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(160deg,#e8f5e9 0%,#f0f7f4 45%,#e3f2fd 100%);min-height:100vh;color:#222}
-.wrap{max-width:440px;margin:0 auto;padding:16px 14px 32px}
+.wrap{max-width:520px;margin:0 auto;padding:16px 14px 40px}
 .card{background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(13,92,61,.12);padding:20px 18px;margin-top:10px}
 .brand{text-align:center;padding:6px 0 2px}
 .brand img{height:72px;width:72px;object-fit:contain;border-radius:10px}
-.brand h1{font-size:18px;color:#0d5c3d;margin:8px 0 2px;font-weight:800}
+.brand h1{font-size:19px;color:#0d5c3d;margin:8px 0 2px;font-weight:800}
 .brand p{font-size:12px;color:#666;line-height:1.35}
-label{display:block;font-size:13px;font-weight:600;color:#0d5c3d;margin:12px 0 5px}
-select,input[type="text"],input[type="date"],textarea{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
-textarea{min-height:72px;resize:vertical}
-select:focus,input:focus,textarea:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
+label{display:block;font-size:13px;font-weight:600;color:#0d5c3d;margin:14px 0 5px}
+select,input[type="text"]{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
+select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
 .btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
-.btn-loc{background:linear-gradient(135deg,#0d5c3d,#1a8a5c);color:#fff}
-.btn-loc:disabled,.btn-sub:disabled{opacity:.55;cursor:not-allowed}
-.btn-sub{background:#1565c0;color:#fff}
-.btn-leave{background:#c62828;color:#fff}
-.btn-done{background:#2e7d32;color:#fff;cursor:default}
-.btn-sec{background:#eceff1;color:#37474f;font-size:14px;padding:10px}
+.btn-loc{background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff}
+.btn-sub{background:linear-gradient(135deg,#0d5c3d,#1a8a5c);color:#fff}
+.btn:disabled{opacity:.55;cursor:not-allowed}
 .note{font-size:12px;color:#555;margin-top:10px;line-height:1.5;background:#f7faf8;border-radius:8px;padding:10px 12px;border:1px solid #e0eee4}
-.mode-row{display:flex;gap:8px;margin-top:12px}
-.mode-btn{flex:1;padding:12px;border-radius:10px;border:2px solid #c8e6c9;background:#fafffe;font-weight:700;font-size:14px;cursor:pointer;color:#0d5c3d}
-.mode-btn.active-duty{border-color:#0d5c3d;background:#e8f5e9}
-.mode-btn.active-leave{border-color:#c62828;background:#ffebee;color:#b71c1c}
-.loc-box{margin-top:12px;padding:12px;background:#f1f8e9;border-radius:10px;border:1px dashed #81c784;font-size:13px;display:none}
+.loc-box{margin-top:10px;padding:10px 12px;background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;font-size:13px;color:#0d47a1;display:none;line-height:1.5}
+.sec-title{font-size:15px;font-weight:800;color:#0d5c3d;margin:22px 0 4px;padding-top:14px;border-top:2px solid #e8f5e9}
+.sec-sub{font-size:12px;color:#666;margin-bottom:6px}
+.count-line{font-size:13.5px;font-weight:700;color:#0d5c3d;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:9px 12px;margin-top:10px;text-align:center}
+.slot{border:1.5px solid #c8e6c9;border-radius:12px;padding:10px;margin-top:10px;background:#fafffe}
+.slot.filled{border-color:#1a8a5c;background:#f1f8e9}
+.slot-head{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:700;color:#0d5c3d}
+.slot-head .ok{color:#1a8a5c;font-size:15px}
+.slot img{width:100%;max-height:190px;object-fit:cover;border-radius:8px;margin-top:8px;display:none}
+.slot-btns{display:flex;gap:8px;margin-top:8px}
+.slot-btns button{flex:1;padding:10px 4px;border-radius:9px;border:1.5px solid #1a8a5c;background:#fff;color:#0d5c3d;font-size:13.5px;font-weight:700;cursor:pointer}
+.slot-btns button.rm{border-color:#ef9a9a;color:#b71c1c;display:none}
+.progress-wrap{display:none;margin-top:14px}
+.progress-bar{height:12px;background:#e0e0e0;border-radius:6px;overflow:hidden}
+.progress-bar div{height:100%;width:0%;background:linear-gradient(90deg,#1a8a5c,#43a047);transition:width .3s}
+.progress-txt{font-size:12.5px;color:#555;margin-top:6px;text-align:center}
 .urdu-ok{display:none;margin-top:14px;padding:14px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;text-align:center;direction:rtl;font-family:'Noto Nastaliq Urdu',serif;font-size:17px;line-height:2;color:#1b5e20;font-weight:600}
-.err{display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:13px;background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a}
-.bal{display:none;margin-top:10px;padding:10px;background:#e3f2fd;border-radius:8px;font-size:12.5px;color:#0d47a1;line-height:1.45}
+.pdf-link{display:none;margin-top:10px;text-align:center}
+.pdf-link a{display:inline-block;background:#1565c0;color:#fff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:10px;font-size:14.5px}
+.err{display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:13px;background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a;line-height:1.5}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.thank{display:block;font-size:13px;font-weight:600;opacity:.95;margin-top:2px}
-#leaveBlock{display:none}
-#dutyBlock{display:block}
-.file-hint{font-size:11px;color:#666;margin-top:4px}
 .req{color:#c62828;font-weight:700}
-.backlink{display:block;text-align:center;margin-top:14px;font-size:13px;color:#0d5c3d;text-decoration:none;font-weight:600}
-select:disabled{background:#f4f4f4;color:#888}
-input[type="checkbox"]{width:auto;margin-right:6px}
-.checkline{font-size:13px;font-weight:600;color:#444;margin:2px 0 6px}
+.backlink{display:block;text-align:center;margin-top:16px;font-size:13px;color:#0d5c3d;text-decoration:none;font-weight:600}
+.date-line{text-align:center;font-size:13px;font-weight:700;color:#1565c0;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="brand">
     <img src="favicon.png.png" alt="EPI" onerror="this.style.display='none'">
-    <h1>EPI Supervisory Staff Data</h1>
-    <p>EPI District Chakwal · Supervisory Staff Information Form</p>
+    <h1>Daily EPI Cards Submission</h1>
+    <p>EPI District Chakwal · Supervisory Visit — EPI Cards &amp; HF Monitoring</p>
   </div>
+  <div class="date-line" id="dateLine"></div>
   <div class="card">
     <div class="note">
       <strong>Instructions</strong><br>
-      1) Please select your correct Name, Designation and Tehsil<br>
-      2) Please enter your correct Place of Posting and Mobile No.<br>
-      3) If your record already exists, entering the <strong>same Mobile No.</strong> will <strong>UPDATE</strong> your record — no duplicate will be created
+      1) Select your name and press <strong>Get Location</strong> at the health facility / kit station<br>
+      2) Attach photos of all <strong>20 EPI Cards</strong> (Camera or Gallery)<br>
+      3) Attach the <strong>HF Monitoring Picture</strong> and the <strong>HF Monitoring Form</strong> photo, then press <strong>Submit</strong><br>
+      4) A PDF of your submission will be prepared automatically
     </div>
 
-    <label for="supName">Full Name <span class="req">*</span></label>
-    <input type="text" id="supName" placeholder="e.g. Muhammad Ahmad" autocomplete="name">
-
-    <label for="supDesig">Designation <span class="req">*</span></label>
-    <select id="supDesig">
-      <option value="">Select Designation</option>
-      <option>Chief Executive Officer (CEO)</option>
-      <option>District Health Officer (Preventive Services)</option>
-      <option>Deputy District Health Officer (DDHO)</option>
-      <option>District Superintendent Vaccination (DSV)</option>
-      <option>Assistant Superintendent Vaccination (ASV)</option>
-      <option>Area Incharge</option>
-      <option>Cold Chain Assistant</option>
-      <option>Data Entry Operator</option>
-      <option>Store Keeper</option>
-      <option>Other</option>
-    </select>
+    <label for="supSelect">Supervisor Name <span class="req">*</span></label>
+    <select id="supSelect" onchange="onSupervisor()"></select>
+    <input type="text" id="supNameText" placeholder="Supervisor name" style="display:none;margin-top:8px" autocomplete="name">
 
     <label for="supTehsil">Tehsil <span class="req">*</span></label>
-    <select id="supTehsil" onchange="supOnTehsil()">
+    <select id="supTehsil" onchange="onTehsil()">
       <option value="">Select Tehsil</option>
-      <option>District Level (All Tehsils)</option>
       <option>Chakwal</option>
       <option>Choa Saidan Shah</option>
       <option>Kallar Kahar</option>
       <option>Talagang</option>
     </select>
 
-    <label for="supUc">Union Council / Area of Supervision</label>
-    <select id="supUc">
-      <option>All UCs / Tehsil-wide</option>
-      <option>District Office</option>
-    </select>
+    <label>Location <span class="req">*</span></label>
+    <button type="button" class="btn btn-loc" id="btnLoc" onclick="getLocation()">📍 Get Location</button>
+    <div class="loc-box" id="locBox"></div>
 
-    <label for="supPosting">Place of Posting / Office <span class="req">*</span></label>
-    <input type="text" id="supPosting" placeholder="e.g. DDHO Office Talagang / CEO Office DHA Chakwal" autocomplete="off">
+    <label for="supUc">Union Council <span class="req">*</span></label>
+    <select id="supUc" onchange="onUc()"><option value="">Select UC</option></select>
 
-    <label for="supMobile">Mobile No. <span class="req">*</span></label>
-    <input type="tel" id="supMobile" placeholder="03XX-XXXXXXX" autocomplete="tel" inputmode="numeric">
+    <label for="vaccName">Vaccinator Name <span class="req">*</span></label>
+    <input type="text" id="vaccName" list="vaccList" placeholder="Select or type vaccinator name" autocomplete="off">
+    <datalist id="vaccList"></datalist>
 
-    <label for="supWhatsapp">WhatsApp No.</label>
-    <input type="tel" id="supWhatsapp" placeholder="03XX-XXXXXXX" autocomplete="tel" inputmode="numeric">
-    <div class="checkline"><input type="checkbox" id="supWaSame" onchange="supWaSameToggle()">WhatsApp number = Mobile number</div>
+    <label for="kitStation">Kit Station Name <span class="req">*</span></label>
+    <input type="text" id="kitStation" placeholder="e.g. BHU / RHC / Kit Station name" autocomplete="off">
 
-    <label for="supEmail">Email (optional)</label>
-    <input type="email" id="supEmail" placeholder="name@example.com" autocomplete="email">
+    <div class="sec-title">EPI Cards (20)</div>
+    <div class="sec-sub">Har card ki photo Camera ya Gallery se attach karein.</div>
+    <div class="count-line" id="cardCount">Cards attached: 0 / 20</div>
+    <div id="cardsGrid"></div>
 
-    <label for="supCnic">CNIC (optional — for office record only; it will not be shown on the website)</label>
-    <input type="text" id="supCnic" placeholder="35202-XXXXXXX-X" autocomplete="off" inputmode="numeric">
+    <div class="sec-title">HF Monitoring</div>
+    <div id="hfSlots"></div>
 
-    <label for="supBps">BPS / Scale</label>
-    <select id="supBps"><option value="">Select BPS</option></select>
+    <div class="progress-wrap" id="progWrap">
+      <div class="progress-bar"><div id="progFill"></div></div>
+      <div class="progress-txt" id="progTxt"></div>
+    </div>
 
-    <label for="supEmp">Employment Type</label>
-    <select id="supEmp">
-      <option value="">Select Type</option>
-      <option>Regular</option>
-      <option>Contract</option>
-      <option>Contingent Paid</option>
-      <option>Other</option>
-    </select>
-
-    <label for="supPostingDate">Date of Posting (current place)</label>
-    <input type="date" id="supPostingDate">
-
-    <label for="supQual">Qualification (optional)</label>
-    <input type="text" id="supQual" placeholder="e.g. MBBS / BSc / FA" autocomplete="off">
-
-    <label for="supPhoto">Profile Photo (optional)</label>
-    <input type="file" id="supPhoto" accept="image/*" style="padding:8px;border:1.5px solid #c8e6c9;border-radius:10px;width:100%;background:#fafffe">
-    <div class="file-hint">Photo only (JPG/PNG). The photo will be compressed automatically before upload.</div>
-
-    <button type="button" class="btn btn-sub" id="btnSupSubmit" onclick="submitSupervisor()">✅ Submit Data</button>
-    <button type="button" class="btn btn-sec" id="btnSupReset" onclick="resetSupForm()" style="margin-top:8px">↺ Reset</button>
-    <div class="urdu-ok" id="urduOk">آپ نے کامیابی کے ساتھ سبمٹ کر دیا ہے۔</div>
+    <button type="button" class="btn btn-sub" id="btnSubmit" onclick="submitCards()">✅ Submit</button>
+    <div class="urdu-ok" id="urduOk">آپ کی سبمیشن کامیابی سے محفوظ ہو گئی ہے۔ شکریہ۔</div>
+    <div class="pdf-link" id="pdfLink"><a href="#" target="_blank" rel="noopener">📄 View / Download PDF</a></div>
     <div class="err" id="errBox"></div>
     <a class="backlink" href="index.html">← Back to Dashboard</a>
   </div>
 </div>
 
+<input type="file" id="fileCam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fileGal" accept="image/*" style="display:none">
+
 <script>
 /* ============================================================
-   EPI Supervisory Staff Data — submission form
-   Pattern: location.html jaisa hi (Google Sheet + Apps Script)
-   SETUP: Apps Script deploy karne ke baad us ka Web App URL
-   yahan paste karein — ya page ko ek dafa is tarah khol lein:
-   supervisors.html?script=APPS_SCRIPT_URL  (URL save ho jayega)
+   Daily EPI Cards Submission — supervisors.html
+   Pattern: location.html jaisa hi (Google Sheet/Drive + Apps Script)
+   SETUP: Apps Script deploy hone ke baad us ka Web App URL
+   CARDS_SCRIPT_URL men lag jayega (ya ek dafa
+   supervisors.html?script=URL kholne se bhi save ho jata hai)
    ============================================================ */
-var SUP_SCRIPT_URL = '';
+var CARDS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-9gTtH2BO11NIRaxl1fMKB1Hl5ypZyZbcLB1ik2CMEV_fY-05iULWcyi36DZf5u9t/exec';
 try{
   var q = new URLSearchParams(location.search);
-  if(q.get('script')) localStorage.setItem('epi_sup_script_url', q.get('script'));
-  SUP_SCRIPT_URL = localStorage.getItem('epi_sup_script_url') || '';
+  if(q.get('script')) localStorage.setItem('epi_cards_script_url', q.get('script'));
+  CARDS_SCRIPT_URL = localStorage.getItem('epi_cards_script_url') || CARDS_SCRIPT_URL;
 }catch(e){}
 
-/* Master sheet (vaccinators profile) — sirf Tehsil → UC list ke liye, location.html wala hi sheet */
-var MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
-var SUP_UC_MAP = {}; /* tehsil -> [uc,...] */
+/* Supervisory staff list — office list 2026-11-03 (naam ki spelling bilkul list jaisi) */
+var SUPERVISORS = [
+  {name: 'Wajid Maqbool Raja', tehsil: 'Chakwal', designation: 'ASV-I'},
+  {name: 'Umer Shahzad', tehsil: 'Chakwal', designation: 'ASV-II'},
+  {name: 'Ansar Mehmood', tehsil: 'Choa Saidan Shah', designation: 'ASV'},
+  {name: 'Zafar Iqbal', tehsil: 'Kallar Kahar', designation: 'ASV'},
+  {name: 'Abdul Wahid', tehsil: 'Talagang', designation: 'ASV-I'},
+  {name: 'Qazi Muhamamd Rashid', tehsil: 'Talagang', designation: 'ASV-II'},
+  {name: 'Muhamamd Asif', tehsil: 'Talagang', designation: 'ASV-III'}
+];
+var supDesigSel = '';
 
+/* Master sheet (vaccinators profile) — Tehsil → UC aur Vaccinator lists ke liye */
+var MASTER_SHEET_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
+var UC_MAP = {};    /* tehsil -> [uc,...] */
+var VACC_MAP = {};  /* uc -> [vaccinator names] */
+
+var photoData = {}; /* slotKey -> {dataUrl, fileName} */
+var geoPos = null;  /* {lat, lng, acc} */
+var currentSlot = null;
+var TARGET_CARDS = 20;
+
+var CARD_SLOTS = [];
+for(var ci = 1; ci <= 20; ci++) CARD_SLOTS.push({key: 'card' + ci, label: 'EPI Card ' + ci, file: 'Card_' + (ci < 10 ? '0' + ci : ci) + '.jpg'});
+var HF_SLOTS = [
+  {key: 'hfpic',  label: 'HF Monitoring Picture', file: 'HF_Monitoring_Picture.jpg'},
+  {key: 'hfform', label: 'HF Monitoring Form',    file: 'HF_Monitoring_Form.jpg'}
+];
+
+function $(id){ return document.getElementById(id); }
 function showErr(msg){
-  var b = document.getElementById('errBox');
+  var b = $('errBox');
   if(b){ b.textContent = msg || ''; b.style.display = msg ? 'block' : 'none'; }
 }
-function normDigits(v){ return String(v||'').replace(/\D/g,''); }
-function normMobile(v){
-  var d = normDigits(v);
-  if(d.length === 12 && d.indexOf('92') === 0) d = '0' + d.slice(2);
-  if(d.length === 10 && d.charAt(0) === '3') d = '0' + d;
-  return d;
-}
-
-function fillBps(){
-  var sel = document.getElementById('supBps');
-  for(var i = 1; i <= 20; i++){
-    var o = document.createElement('option');
-    o.textContent = 'BPS-' + (i < 10 ? '0' + i : i);
-    sel.appendChild(o);
+function pktToday(){
+  try{
+    var parts = new Intl.DateTimeFormat('en-US', {timeZone: 'Asia/Karachi', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
+    var y = '', m = '', d = '';
+    parts.forEach(function(p){ if(p.type === 'year') y = p.value; else if(p.type === 'month') m = p.value; else if(p.type === 'day') d = p.value; });
+    return {ymd: y + '-' + m + '-' + d, dmy: d + '-' + m + '-' + y};
+  }catch(e){
+    var t = new Date();
+    return {ymd: t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate(), dmy: t.toDateString()};
   }
-  var na = document.createElement('option');
-  na.textContent = 'Not Applicable';
-  sel.appendChild(na);
 }
 
-/* ---- Tehsil -> UC list (master sheet se, location.html pattern) ---- */
-function supOnTehsil(){
-  var teh = document.getElementById('supTehsil').value;
-  var ucSel = document.getElementById('supUc');
-  ucSel.innerHTML = '';
-  ['All UCs / Tehsil-wide','District Office'].forEach(function(x){
-    var o = document.createElement('option'); o.textContent = x; ucSel.appendChild(o);
+/* ---------- Supervisor / Tehsil / UC ---------- */
+function fillSupervisors(){
+  var sel = $('supSelect');
+  sel.innerHTML = '';
+  var first = document.createElement('option');
+  first.value = ''; first.textContent = 'Select Supervisor';
+  sel.appendChild(first);
+  var byTeh = {};
+  SUPERVISORS.forEach(function(s){ (byTeh[s.tehsil] = byTeh[s.tehsil] || []).push(s); });
+  Object.keys(byTeh).sort().forEach(function(teh){
+    var g = document.createElement('optgroup'); g.label = teh;
+    byTeh[teh].sort(function(a, b){ return a.name < b.name ? -1 : 1; }).forEach(function(s){
+      var o = document.createElement('option'); o.value = s.name; o.textContent = s.name; o.setAttribute('data-tehsil', teh); o.setAttribute('data-desig', s.designation || '');
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
   });
-  var ucs = SUP_UC_MAP[teh] || [];
-  ucs.forEach(function(u){
+  if(!SUPERVISORS.length){
+    sel.style.display = 'none';
+    $('supNameText').style.display = 'block';
+  }
+  try{
+    var saved = localStorage.getItem('epi_cards_supervisor') || '';
+    if(saved && SUPERVISORS.some(function(s){ return s.name === saved; })){
+      sel.value = saved; onSupervisor(true);
+    }
+  }catch(e){}
+}
+function supervisorName(){
+  if(SUPERVISORS.length) return $('supSelect').value.trim();
+  return $('supNameText').value.trim();
+}
+function onSupervisor(fromLoad){
+  var sel = $('supSelect');
+  var opt = sel.options[sel.selectedIndex];
+  var teh = opt ? opt.getAttribute('data-tehsil') : '';
+  supDesigSel = opt ? (opt.getAttribute('data-desig') || '') : '';
+  if(teh) $('supTehsil').value = teh;
+  try{ localStorage.setItem('epi_cards_supervisor', sel.value || ''); }catch(e){}
+  onTehsil();
+}
+function onTehsil(){
+  var teh = $('supTehsil').value;
+  var ucSel = $('supUc');
+  ucSel.innerHTML = '<option value="">Select UC</option>';
+  (UC_MAP[teh] || []).forEach(function(u){
     var o = document.createElement('option'); o.textContent = u; ucSel.appendChild(o);
   });
+  onUc();
 }
-function supLoadUcMap(){
+function onUc(){
+  var uc = $('supUc').value;
+  var dl = $('vaccList');
+  dl.innerHTML = '';
+  (VACC_MAP[uc] || []).forEach(function(n){
+    var o = document.createElement('option'); o.value = n; dl.appendChild(o);
+  });
+}
+function loadMasterLists(){
   var url = 'https://docs.google.com/spreadsheets/d/' + MASTER_SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent('All Vaccinators Profile') + '&_=' + Date.now();
-  fetch(url, {cache:'no-store'}).then(function(r){ return r.text(); }).then(function(text){
-    var start = text.indexOf('{'), end = text.lastIndexOf('}') + 1;
-    var data = JSON.parse(text.slice(start, end));
+  fetch(url, {cache: 'no-store'}).then(function(r){ return r.text(); }).then(function(text){
+    var data = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
     var cols = (data.table.cols || []).map(function(c){ return String((c && c.label) || '').trim().toLowerCase(); });
-    var iTeh = cols.indexOf('tehsil');
-    var iUc = -1;
-    ['union council','uc'].forEach(function(n){ if(iUc < 0) iUc = cols.indexOf(n); });
+    var iTeh = cols.indexOf('tehsil'), iUc = -1, iName = -1;
+    ['union council', 'uc'].forEach(function(n){ if(iUc < 0) iUc = cols.indexOf(n); });
+    ['vaccinator name', 'vaccinator', 'name', 'staff name'].forEach(function(n){ if(iName < 0) iName = cols.indexOf(n); });
     if(iTeh < 0 || iUc < 0) return;
+    function cell(row, i){
+      if(i < 0 || !row.c || !row.c[i]) return '';
+      var c = row.c[i];
+      return String(c.f != null ? c.f : (c.v || '')).trim();
+    }
     (data.table.rows || []).forEach(function(row){
-      var teh = row.c && row.c[iTeh] ? String(row.c[iTeh].f != null ? row.c[iTeh].f : (row.c[iTeh].v || '')).trim() : '';
-      var uc = row.c && row.c[iUc] ? String(row.c[iUc].f != null ? row.c[iUc].f : (row.c[iUc].v || '')).trim() : '';
-      if(!teh || !uc) return;
-      if(!SUP_UC_MAP[teh]) SUP_UC_MAP[teh] = [];
-      if(SUP_UC_MAP[teh].indexOf(uc) < 0) SUP_UC_MAP[teh].push(uc);
+      var teh = cell(row, iTeh), uc = cell(row, iUc), nm = cell(row, iName);
+      if(teh && uc){
+        if(!UC_MAP[teh]) UC_MAP[teh] = [];
+        if(UC_MAP[teh].indexOf(uc) < 0) UC_MAP[teh].push(uc);
+      }
+      if(uc && nm){
+        if(!VACC_MAP[uc]) VACC_MAP[uc] = [];
+        if(VACC_MAP[uc].indexOf(nm) < 0) VACC_MAP[uc].push(nm);
+      }
     });
-    Object.keys(SUP_UC_MAP).forEach(function(k){ SUP_UC_MAP[k].sort(); });
-    supOnTehsil();
-  }).catch(function(){ /* UC list na mile to bhi form chalega — tehsil-wide options mojood hain */ });
+    Object.keys(UC_MAP).forEach(function(k){ UC_MAP[k].sort(); });
+    onTehsil();
+  }).catch(function(){ /* lists na milein to bhi form chalega */ });
 }
 
-function supWaSameToggle(){
-  var same = document.getElementById('supWaSame').checked;
-  var wa = document.getElementById('supWhatsapp');
-  if(same){
-    wa.value = document.getElementById('supMobile').value;
-    wa.disabled = true;
-  } else {
-    wa.disabled = false;
-  }
+/* ---------- Location ---------- */
+function getLocation(){
+  showErr('');
+  var btn = $('btnLoc');
+  if(!navigator.geolocation){ showErr('Is mobile/browser men location ki sahulat nahi hai.'); return; }
+  btn.disabled = true; btn.textContent = '📍 Location le rahe hain…';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    geoPos = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy || 0)};
+    var box = $('locBox');
+    box.style.display = 'block';
+    box.innerHTML = '✅ Location mil gaya<br>Latitude: ' + geoPos.lat.toFixed(6) + ' · Longitude: ' + geoPos.lng.toFixed(6) + (geoPos.acc ? '<br>Accuracy: ±' + geoPos.acc + ' m' : '');
+    btn.disabled = false; btn.textContent = '📍 Get Location (dobara lene ke liye dabayein)';
+  }, function(err){
+    btn.disabled = false; btn.textContent = '📍 Get Location';
+    showErr('Location nahi mil saka. Mobile ki Location (GPS) ON karke dobara koshish karein. (' + (err.message || '') + ')');
+  }, {enableHighAccuracy: true, timeout: 20000, maximumAge: 60000});
 }
 
-/* ---- Photo ko chhota karke base64 banana (location.html pattern) ---- */
-function supPhotoToBase64(file){
+/* ---------- Photo slots ---------- */
+function buildSlots(){
+  var html = '';
+  CARD_SLOTS.concat(HF_SLOTS).forEach(function(s){
+    html += '<div class="slot" id="slot_' + s.key + '">'
+      + '<div class="slot-head"><span>' + s.label + '</span><span class="ok" id="ok_' + s.key + '"></span></div>'
+      + '<img id="img_' + s.key + '" alt="">'
+      + '<div class="slot-btns">'
+      + '<button type="button" onclick="pickPhoto(\'' + s.key + '\', true)">📷 Camera</button>'
+      + '<button type="button" onclick="pickPhoto(\'' + s.key + '\', false)">🖼 Gallery</button>'
+      + '<button type="button" class="rm" id="rm_' + s.key + '" onclick="removePhoto(\'' + s.key + '\')">✕ Remove</button>'
+      + '</div></div>';
+  });
+  /* cards grid men pehle 20, HF slots apni jagah */
+  var grid = $('cardsGrid'), hf = $('hfSlots');
+  var tmp = document.createElement('div'); tmp.innerHTML = html;
+  var nodes = Array.prototype.slice.call(tmp.children);
+  nodes.forEach(function(n, i){ (i < 20 ? grid : hf).appendChild(n); });
+}
+function pickPhoto(slotKey, useCamera){
+  currentSlot = slotKey;
+  var inp = useCamera ? $('fileCam') : $('fileGal');
+  inp.value = '';
+  inp.click();
+}
+function onFilePicked(input){
+  var file = input.files && input.files[0];
+  if(!file || !currentSlot) return;
+  var key = currentSlot;
+  compressPhoto(file).then(function(dataUrl){
+    var def = CARD_SLOTS.concat(HF_SLOTS).filter(function(s){ return s.key === key; })[0];
+    photoData[key] = {dataUrl: dataUrl, fileName: def ? def.file : (key + '.jpg')};
+    var img = $('img_' + key);
+    img.src = dataUrl; img.style.display = 'block';
+    $('ok_' + key).textContent = '✓';
+    $('rm_' + key).style.display = 'block';
+    $('slot_' + key).classList.add('filled');
+    updateCount();
+  }).catch(function(e){ showErr(e.message || 'Photo nahi parhi ja saki.'); });
+}
+function removePhoto(key){
+  delete photoData[key];
+  var img = $('img_' + key);
+  img.src = ''; img.style.display = 'none';
+  $('ok_' + key).textContent = '';
+  $('rm_' + key).style.display = 'none';
+  $('slot_' + key).classList.remove('filled');
+  updateCount();
+}
+function updateCount(){
+  var n = CARD_SLOTS.filter(function(s){ return !!photoData[s.key]; }).length;
+  $('cardCount').textContent = 'Cards attached: ' + n + ' / ' + TARGET_CARDS;
+}
+function compressPhoto(file){
   return new Promise(function(resolve, reject){
-    if(!file) return resolve('');
-    if(file.type.indexOf('image/') !== 0) return reject(new Error('Photo sirf image file ho (JPG/PNG).'));
+    if(file.type.indexOf('image/') !== 0) return reject(new Error('Sirf photo (image) file select karein.'));
     var img = new Image();
     var url = URL.createObjectURL(file);
     img.onload = function(){
       try{
-        var maxSide = 900;
-        var w = img.width, h = img.height;
-        var scale = Math.min(1, maxSide / Math.max(w, h));
-        var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+        var maxSide = 1600;
+        var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        var cw = Math.max(1, Math.round(img.width * scale)), ch = Math.max(1, Math.round(img.height * scale));
         var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
         cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
         URL.revokeObjectURL(url);
-        resolve(cv.toDataURL('image/jpeg', 0.82));
+        resolve(cv.toDataURL('image/jpeg', 0.85));
       }catch(e){ reject(e); }
     };
-    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('The photo could not be read.')); };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Photo nahi parhi ja saki.')); };
     img.src = url;
   });
 }
 
-function submitSupervisor(){
-  showErr('');
-  var ok = document.getElementById('urduOk'); if(ok) ok.style.display = 'none';
-  var name = document.getElementById('supName').value.trim();
-  var desig = document.getElementById('supDesig').value;
-  var teh = document.getElementById('supTehsil').value;
-  var uc = document.getElementById('supUc').value;
-  var posting = document.getElementById('supPosting').value.trim();
-  var mobile = normMobile(document.getElementById('supMobile').value);
-  var waSame = document.getElementById('supWaSame').checked;
-  var whatsapp = waSame ? mobile : normMobile(document.getElementById('supWhatsapp').value);
-  var email = document.getElementById('supEmail').value.trim();
-  var cnic = document.getElementById('supCnic').value.trim();
-  var bps = document.getElementById('supBps').value;
-  var emp = document.getElementById('supEmp').value;
-  var pdate = document.getElementById('supPostingDate').value;
-  var qual = document.getElementById('supQual').value.trim();
-  var photoFile = document.getElementById('supPhoto').files[0] || null;
-
-  if(!name) return showErr('Full Name likhein.');
-  if(!desig) return showErr('Please select a Designation.');
-  if(!teh) return showErr('Please select a Tehsil.');
-  if(!posting) return showErr('Place of Posting likhein.');
-  if(!/^03\d{9}$/.test(mobile)) return showErr('Please enter a valid Mobile No. (03XX-XXXXXXX, 11 digits).');
-  if(whatsapp && !/^03\d{9}$/.test(whatsapp)) return showErr('Please enter a valid WhatsApp No. (11 digits).');
-  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Please enter a valid email, or leave it blank.');
-  if(!SUP_SCRIPT_URL) return showErr('The form is not connected to the data source yet (Apps Script URL pending). Please contact the Office / DSV.');
-
-  var btn = document.getElementById('btnSupSubmit');
-  btn.disabled = true; btn.textContent = 'Submitting…';
-
-  supPhotoToBase64(photoFile).then(function(photoB64){
-    var payload = {
-      type: 'supervisor',
-      timestamp: new Date().toISOString(),
-      name: name, designation: desig, tehsil: teh, uc: uc, posting: posting,
-      mobile: mobile, whatsapp: whatsapp, email: email, cnic: cnic,
-      bps: bps, empType: emp, postingDate: pdate, qualification: qual,
-      photoBase64: photoB64, photoName: photoFile ? photoFile.name : ''
-    };
-    return fetch(SUP_SCRIPT_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload)
-    });
+/* ---------- Submit ---------- */
+function postJson(payload){
+  return fetch(CARDS_SCRIPT_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
   }).then(function(res){
     return res.text().then(function(txt){
-      var done = false;
-      try{ var j = JSON.parse(txt); done = !!j.ok; }catch(e){ done = res.ok; }
-      if(!done) throw new Error('The server did not save the data.');
-      if(ok) ok.style.display = 'block';
-      resetSupForm(true);
+      var j = null;
+      try{ j = JSON.parse(txt); }catch(e){}
+      if(!j || !j.ok) throw new Error((j && j.error) || 'Server se jawab nahi mila.');
+      return j;
     });
-  }).catch(function(e){
-    showErr('Submission failed: ' + (e.message || e) + ' — please check your internet connection and try again.');
-  }).finally(function(){
-    btn.disabled = false; btn.textContent = '✅ Submit Data';
   });
 }
-
-function resetSupForm(keepOk){
-  ['supName','supPosting','supMobile','supWhatsapp','supEmail','supCnic','supQual','supPostingDate'].forEach(function(id){
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('supDesig').value = '';
-  document.getElementById('supTehsil').value = '';
-  document.getElementById('supBps').value = '';
-  document.getElementById('supEmp').value = '';
-  document.getElementById('supPhoto').value = '';
-  document.getElementById('supWaSame').checked = false;
-  document.getElementById('supWhatsapp').disabled = false;
-  supOnTehsil();
+function setProgress(done, total, label){
+  $('progWrap').style.display = 'block';
+  $('progFill').style.width = (total ? Math.round(done * 100 / total) : 0) + '%';
+  $('progTxt').textContent = label || '';
+}
+function submitCards(){
   showErr('');
-  if(!keepOk){ var ok = document.getElementById('urduOk'); if(ok) ok.style.display = 'none'; }
+  $('urduOk').style.display = 'none';
+  $('pdfLink').style.display = 'none';
+  var sup = supervisorName();
+  var teh = $('supTehsil').value;
+  var uc = $('supUc').value;
+  var vacc = $('vaccName').value.trim();
+  var kit = $('kitStation').value.trim();
+  if(!sup) return showErr('Supervisor Name select karein.');
+  if(!teh) return showErr('Tehsil select karein.');
+  if(!uc) return showErr('Union Council select karein.');
+  if(!vacc) return showErr('Vaccinator Name likhein.');
+  if(!kit) return showErr('Kit Station Name likhein.');
+  if(!CARDS_SCRIPT_URL) return showErr('The form is not connected yet (setup pending). Please contact the Office / DSV.');
+
+  var cardCount = CARD_SLOTS.filter(function(s){ return !!photoData[s.key]; }).length;
+  var warns = [];
+  if(!geoPos) warns.push('Location nahi liya gaya.');
+  if(cardCount < TARGET_CARDS) warns.push('EPI Cards sirf ' + cardCount + ' / ' + TARGET_CARDS + ' attach hain.');
+  if(!photoData.hfpic) warns.push('HF Monitoring Picture attach nahi hai.');
+  if(!photoData.hfform) warns.push('HF Monitoring Form attach nahi hai.');
+  if(warns.length && !window.confirm(warns.join('\n') + '\n\nPhir bhi Submit karein?')) return;
+
+  var btn = $('btnSubmit');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Submitting…';
+
+  var today = pktToday();
+  var batchId = 'B' + Date.now();
+  var meta = {
+    supervisor: sup, designation: supDesigSel || '', tehsil: teh, uc: uc, vaccinator: vacc, kitStation: kit,
+    date: today.ymd, dateDisplay: today.dmy,
+    lat: geoPos ? geoPos.lat : '', lng: geoPos ? geoPos.lng : '', acc: geoPos ? geoPos.acc : ''
+  };
+  var queue = CARD_SLOTS.concat(HF_SLOTS).filter(function(s){ return !!photoData[s.key]; });
+  var total = queue.length + 1; /* +1 = PDF step */
+  var folderId = '';
+  var chain = Promise.resolve();
+  queue.forEach(function(s, idx){
+    chain = chain.then(function(){
+      setProgress(idx, total, 'Uploading ' + s.label + ' (' + (idx + 1) + ' / ' + queue.length + ')…');
+      var d = photoData[s.key];
+      return postJson({
+        type: 'card_photo', batchId: batchId, folderId: folderId,
+        slot: s.key, label: s.label, fileName: d.fileName, mimeType: 'image/jpeg',
+        photoBase64: d.dataUrl.split(',')[1] || '',
+        supervisor: meta.supervisor, tehsil: meta.tehsil, uc: meta.uc, date: meta.date
+      }).then(function(j){ if(j.folderId) folderId = j.folderId; });
+    });
+  });
+  chain.then(function(){
+    setProgress(queue.length, total, 'PDF tayyar ho raha hai…');
+    return postJson({
+      type: 'card_complete', batchId: batchId, folderId: folderId,
+      supervisor: meta.supervisor, designation: meta.designation, tehsil: meta.tehsil, uc: meta.uc,
+      vaccinator: meta.vaccinator, kitStation: meta.kitStation,
+      date: meta.date, dateDisplay: meta.dateDisplay,
+      lat: meta.lat, lng: meta.lng, acc: meta.acc,
+      cardsCount: cardCount,
+      hfPicture: !!photoData.hfpic, hfForm: !!photoData.hfform
+    });
+  }).then(function(j){
+    setProgress(total, total, 'Complete ✓');
+    $('urduOk').style.display = 'block';
+    if(j.pdfUrl){
+      var a = $('pdfLink').querySelector('a');
+      a.href = j.pdfUrl;
+      $('pdfLink').style.display = 'block';
+    }
+    btn.textContent = '✅ Submitted';
+  }).catch(function(e){
+    setProgress(0, 1, '');
+    $('progWrap').style.display = 'none';
+    showErr('Submission failed: ' + (e.message || e) + ' — internet check karke dobara koshish karein. Photos isi page par mehfooz hain, dobara select nahi karni parein gi.');
+    btn.disabled = false; btn.textContent = '✅ Submit (dobara koshish)';
+  });
 }
 
-fillBps();
-supLoadUcMap();
+/* ---------- Init ---------- */
+$('fileCam').addEventListener('change', function(){ onFilePicked(this); });
+$('fileGal').addEventListener('change', function(){ onFilePicked(this); });
+$('dateLine').textContent = '📅 ' + pktToday().dmy;
+buildSlots();
+fillSupervisors();
+loadMasterLists();
+updateCount();
 </script>
 </body>
 </html>
