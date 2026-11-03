@@ -44,6 +44,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 .urdu-ok{display:none;margin-top:14px;padding:14px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;text-align:center;direction:rtl;font-family:'Noto Nastaliq Urdu',serif;font-size:17px;line-height:2;color:#1b5e20;font-weight:600}
 .pdf-link{display:none;margin-top:10px;text-align:center}
 .pdf-link a{display:inline-block;background:#1565c0;color:#fff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:10px;font-size:14.5px}
+.warn{display:none;margin-top:14px;padding:12px;border-radius:10px;font-size:13.5px;font-weight:600;background:#fff8e1;color:#8d6e00;border:1px solid #ffe082;line-height:1.6}
 .err{display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:13px;background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a;line-height:1.5}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -109,6 +110,7 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
       <div class="progress-txt" id="progTxt"></div>
     </div>
 
+    <div class="warn" id="warnBox"></div>
     <button type="button" class="btn btn-sub" id="btnSubmit" onclick="submitCards()">✅ Submit</button>
     <div class="urdu-ok" id="urduOk">آپ کی سبمیشن کامیابی سے محفوظ ہو گئی ہے۔ شکریہ۔</div>
     <div class="pdf-link" id="pdfLink"><a href="#" target="_blank" rel="noopener">📄 View / Download PDF</a></div>
@@ -162,6 +164,7 @@ var photoData = {}; /* slotKey -> {dataUrl, fileName} */
 var geoPos = null;  /* {lat, lng, acc} */
 var currentSlot = null;
 var TARGET_CARDS = 20;
+var submitArmed = false;
 
 var CARD_SLOTS = [];
 for(var ci = 1; ci <= 20; ci++) CARD_SLOTS.push({key: 'card' + ci, label: 'EPI Card ' + ci, file: 'Card_' + (ci < 10 ? '0' + ci : ci) + '.jpg'});
@@ -410,7 +413,17 @@ function submitCards(){
   if(cardCount < TARGET_CARDS) warns.push('EPI Cards sirf ' + cardCount + ' / ' + TARGET_CARDS + ' attach hain.');
   if(!photoData.hfpic) warns.push('HF Monitoring Picture attach nahi hai.');
   if(!photoData.hfform) warns.push('HF Monitoring Form attach nahi hai.');
-  if(warns.length && !window.confirm(warns.join('\n') + '\n\nPhir bhi Submit karein?')) return;
+  if(warns.length && !submitArmed){
+    submitArmed = true;
+    var wb = $('warnBox');
+    wb.innerHTML = warns.map(function(w){ return '⚠️ ' + w; }).join('<br>');
+    wb.style.display = 'block';
+    $('btnSubmit').textContent = '⚠️ Phir bhi Submit karein — dobara dabayein';
+    wb.scrollIntoView({behavior: 'smooth', block: 'center'});
+    return;
+  }
+  submitArmed = false;
+  var wbHide = $('warnBox'); if(wbHide) wbHide.style.display = 'none';
 
   var btn = $('btnSubmit');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Submitting…';
