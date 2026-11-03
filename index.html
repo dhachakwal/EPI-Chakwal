@@ -1227,9 +1227,9 @@
                 #vcSummary .vc-bar>i{display:block;height:100%;background:#2e7d32}
                 .vc-card{border:1px solid #cfd8dc;border-left:6px solid #90a4ae;border-radius:10px;padding:12px 14px;margin:0 0 10px;background:#fff}
                 .vc-card .vc-name{font-size:17px;font-weight:800;color:#263238}
-                .vc-card .vc-sub{font-size:13.5px;color:#455a64;margin-top:2px}
-                .vc-card .vc-meta{font-size:13px;color:#607d8b;margin-top:3px}
-                .vc-card .vc-vax{font-size:13.5px;color:#0d5c3d;margin-top:5px;font-weight:600}
+                .vc-card .vc-sub{font-size:15px;color:#455a64;margin-top:2px}
+                .vc-card .vc-meta{font-size:14.5px;color:#607d8b;margin-top:3px}
+                .vc-card .vc-vax{font-size:16.5px;color:#0d5c3d;margin-top:6px;font-weight:700}
                 .vc-card .vc-callrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:9px}
                 .vc-card .vc-phone{font-size:18px;font-weight:800;letter-spacing:.4px;color:#263238}
                 .vc-dial{display:inline-block;background:#2e7d32;color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:9px 22px;border-radius:24px}
@@ -1238,8 +1238,16 @@
                 .vc-stbtn{border:1.5px solid #90a4ae;background:#fff;color:#37474f;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
                 .vc-stbtn.on{color:#fff}
                 .vc-chip{display:inline-block;color:#fff;font-size:12px;font-weight:700;border-radius:10px;padding:2px 9px;margin-left:8px;vertical-align:middle}
+                .vc-cmtrow{margin-top:8px}
+                .vc-cmtbtn{border:1.5px dashed #1565c0;background:#e3f2fd;color:#1565c0;border-radius:16px;padding:6px 14px;font-size:13.5px;font-weight:700;cursor:pointer}
+                .vc-cmtbtn.has{background:#1565c0;color:#fff;border-style:solid}
+                .vc-cmttext{font-size:14.5px;color:#37474f;background:#fffde7;border:1px solid #f0e68c;border-radius:8px;padding:7px 10px;margin-top:8px}
+                .vc-cmteditor{margin-top:8px}
+                .vc-cmtarea{width:100%;box-sizing:border-box;font-size:14.5px;padding:8px;border:1.5px solid #90caf9;border-radius:8px;font-family:inherit}
+                .vc-cmtsave{background:#1565c0;color:#fff;border:none;border-radius:14px;padding:6px 16px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px}
+                .vc-cmtcancel{background:#eceff1;color:#37474f;border:1px solid #b0bec5;border-radius:14px;padding:6px 14px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px;margin-left:6px}
                 </style>
-                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically in this browser for every date. Download the day's Excel file (with statuses) any time with the button above the list.</p>
+                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically in this browser for every date. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download.</p>
                 <div class="emr-filter">
                     <label>Date
                         <select id="vcDate" onchange="vcOnDateChange()"></select>
@@ -4959,9 +4967,10 @@
             const p = ymd.split('-');
             return (+p[2]) + ' ' + VC_MONTHS[(+p[1]) - 1] + ' ' + p[0];
         }
+        const VC_KEY_ANTIGENS = [['bcg','BCG'],['pentaI','Penta-I'],['pentaII','Penta-II'],['pentaIII','Penta-III'],['measlesI','MR-1'],['measlesII','MR-II'],['dpt','DTP']];
         function vcDoseInfo(row, selYmd){
             const groups = {};
-            EMR_ANTIGENS.forEach(function(pair){
+            VC_KEY_ANTIGENS.forEach(function(pair){
                 const ymd = vcParseDoseYmd(emrCell(row, EMR_COLS[pair[0]]));
                 if(ymd){ (groups[ymd] = groups[ymd] || []).push(pair[1]); }
             });
@@ -4973,6 +4982,37 @@
         function vcStatusOf(ymd, key){
             const day = vcStore()[ymd];
             return (day && day[key]) || '';
+        }
+        let vcCmtCache = null;
+        function vcCmtStore(){
+            if(vcCmtCache) return vcCmtCache;
+            try{ vcCmtCache = JSON.parse(localStorage.getItem('vcCommentV1') || '{}'); }catch(e){ vcCmtCache = {}; }
+            if(!vcCmtCache || typeof vcCmtCache !== 'object') vcCmtCache = {};
+            return vcCmtCache;
+        }
+        function vcCmtSave(){ try{ localStorage.setItem('vcCommentV1', JSON.stringify(vcCmtStore())); }catch(e){} }
+        function vcCommentOf(ymd, key){
+            const day = vcCmtStore()[ymd];
+            return (day && day[key]) || '';
+        }
+        function vcReplaceCard(ymd, key){
+            const row = vcRowMap[key];
+            const card = document.querySelector('[data-vccard="' + vcEsc(encodeURIComponent(key)) + '"]');
+            if(row && card){
+                const tmp = document.createElement('div');
+                tmp.innerHTML = vcCardHtml(row, ymd);
+                const fresh = tmp.firstChild;
+                card.replaceWith(fresh);
+                vcBindCard(fresh, ymd);
+            }
+        }
+        function vcSaveComment(ymd, key, text){
+            const store = vcCmtStore();
+            if(!store[ymd]) store[ymd] = {};
+            const t = String(text || '').trim();
+            if(t) store[ymd][key] = t; else delete store[ymd][key];
+            vcCmtSave();
+            vcReplaceCard(ymd, key);
         }
         let vcRows = [];
         async function vcInit(){
@@ -5040,6 +5080,16 @@
             card.querySelectorAll('.vc-stbtn').forEach(function(b){
                 b.addEventListener('click', function(){ vcSetStatus(ymd, decodeURIComponent(b.getAttribute('data-key')), b.getAttribute('data-status')); });
             });
+            const cbtn = card.querySelector('.vc-cmtbtn');
+            const editor = card.querySelector('.vc-cmteditor');
+            if(cbtn && editor){
+                cbtn.addEventListener('click', function(){ editor.style.display = (editor.style.display === 'none' || !editor.style.display) ? 'block' : 'none'; });
+                const save = card.querySelector('.vc-cmtsave');
+                const cancel = card.querySelector('.vc-cmtcancel');
+                const area = card.querySelector('.vc-cmtarea');
+                if(save && area) save.addEventListener('click', function(){ vcSaveComment(ymd, decodeURIComponent(cbtn.getAttribute('data-key')), area.value); });
+                if(cancel) cancel.addEventListener('click', function(){ editor.style.display = 'none'; });
+            }
         }
         function vcRender(){
             const wrap = document.getElementById('vcList');
@@ -5094,11 +5144,12 @@
             const digits = phoneRaw.replace(/\D/g, '');
             const dose = vcDoseInfo(r, ymd);
             let h = '<div class="vc-card" data-vccard="' + vcEsc(encodeURIComponent(key)) + '"' + (st ? ' style="border-left-color:' + VC_COLORS[st] + '"' : '') + '>';
-            h += '<div class="vc-name">' + vcEsc(name) + (st ? '<span class="vc-chip" style="background:' + VC_COLORS[st] + '">' + vcEsc(st) + '</span>' : '') + '</div>';
-            h += '<div class="vc-sub">Father: ' + vcEsc(father || '—') + (gender ? ' · ' + vcEsc(gender) : '') + (age ? ' · Age ' + vcEsc(age) : '') + '</div>';
+            const rel = (gender && gender.toLowerCase().indexOf('f') === 0) ? 'D/O' : 'S/O';
+            h += '<div class="vc-name">' + vcEsc(name) + (father ? ' ' + rel + ' ' + vcEsc(father) : '') + (st ? '<span class="vc-chip" style="background:' + VC_COLORS[st] + '">' + vcEsc(st) + '</span>' : '') + '</div>';
+            if(gender || age) h += '<div class="vc-sub">' + vcEsc(gender) + (gender && age ? ' · ' : '') + (age ? 'Age ' + vcEsc(age) : '') + '</div>';
             h += '<div class="vc-meta">' + vcEsc(teh) + ' · ' + vcEsc(uc) + (addr ? ' · ' + vcEsc(addr) : '') + '</div>';
             if(dose) h += '<div class="vc-vax">💉 ' + vcEsc(dose.labels.join(', ')) + ' — ' + vcEsc(vcFmtYmd(dose.ymd)) + '</div>';
-            else h += '<div class="vc-vax" style="color:#999">💉 No dose date recorded</div>';
+            else h += '<div class="vc-vax" style="color:#999">💉 No BCG / Penta / MR / DTP dose recorded</div>';
             h += '<div class="vc-callrow">';
             if(digits){
                 h += '<span class="vc-phone">' + vcEsc(phoneRaw) + '</span><a class="vc-dial" href="tel:' + digits + '">📞 Dial</a>';
@@ -5110,7 +5161,12 @@
                 const on = (st === s);
                 h += '<button type="button" class="vc-stbtn' + (on ? ' on' : '') + '" data-key="' + vcEsc(encodeURIComponent(key)) + '" data-status="' + s + '"' + (on ? ' style="background:' + VC_COLORS[s] + ';border-color:' + VC_COLORS[s] + '"' : '') + '>' + s + '</button>';
             });
-            h += '</div></div>';
+            h += '</div>';
+            const cmt = vcCommentOf(ymd, key);
+            h += '<div class="vc-cmtrow"><button type="button" class="vc-cmtbtn' + (cmt ? ' has' : '') + '" data-key="' + vcEsc(encodeURIComponent(key)) + '">📝 Additional Comment' + (cmt ? ' ✓' : '') + '</button></div>';
+            if(cmt) h += '<div class="vc-cmttext">💬 ' + vcEsc(cmt) + '</div>';
+            h += '<div class="vc-cmteditor" style="display:none"><textarea class="vc-cmtarea" rows="2" placeholder="Write additional comment…">' + vcEsc(cmt) + '</textarea><button type="button" class="vc-cmtsave">Save Comment</button><button type="button" class="vc-cmtcancel">Cancel</button></div>';
+            h += '</div>';
             return h;
         }
         function vcSetStatus(ymd, key, status){
@@ -5119,31 +5175,23 @@
             if(store[ymd][key] === status) delete store[ymd][key];
             else store[ymd][key] = status;
             vcStoreSave();
-            const row = vcRowMap[key];
-            const card = document.querySelector('[data-vccard="' + vcEsc(encodeURIComponent(key)) + '"]');
-            if(row && card){
-                const tmp = document.createElement('div');
-                tmp.innerHTML = vcCardHtml(row, ymd);
-                const fresh = tmp.firstChild;
-                card.replaceWith(fresh);
-                vcBindCard(fresh, ymd);
-            }
+            vcReplaceCard(ymd, key);
             vcRenderSummary(ymd, vcDayRowsAll().rows);
         }
         function vcExport(){
             if(typeof XLSX === 'undefined'){ alert('Excel library not loaded. Please refresh the page.'); return; }
             const all = vcDayRowsAll();
             if(!all.rows.length){ alert('No entries for the selected date.'); return; }
-            const aoa = [['Tehsil Name','UC Name','Name','Father Name','Address','Phone Number','Status']];
+            const aoa = [['Tehsil Name','UC Name','Name','Father Name','Address','Phone Number','Status','Additional Comment']];
             all.rows.forEach(function(r){
                 aoa.push([
                     emrCell(r, EMR_COLS.tehsil), emrCell(r, EMR_COLS.uc), emrCell(r, EMR_COLS.name),
                     emrCell(r, EMR_COLS.father), emrCell(r, EMR_COLS.address), emrCell(r, EMR_COLS.phone),
-                    vcStatusOf(all.ymd, vcRowKey(r))
+                    vcStatusOf(all.ymd, vcRowKey(r)), vcCommentOf(all.ymd, vcRowKey(r))
                 ]);
             });
             const wsx = XLSX.utils.aoa_to_sheet(aoa);
-            wsx['!cols'] = [{wch:16.57},{wch:21.57},{wch:31.43},{wch:23.86},{wch:24.0},{wch:14.14},{wch:15.29}];
+            wsx['!cols'] = [{wch:16.57},{wch:21.57},{wch:31.43},{wch:23.86},{wch:24.0},{wch:14.14},{wch:15.29},{wch:30}];
             const wbx = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wbx, wsx, 'Sheet1');
             const p = all.ymd.split('-');
