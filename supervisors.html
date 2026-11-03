@@ -29,6 +29,17 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
 .sec-title{font-size:15px;font-weight:800;color:#0d5c3d;margin:22px 0 4px;padding-top:14px;border-top:2px solid #e8f5e9}
 .sec-sub{font-size:12px;color:#666;margin-bottom:6px}
 .count-line{font-size:13.5px;font-weight:700;color:#0d5c3d;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:9px 12px;margin-top:10px;text-align:center}
+.slot{display:none}
+.slot.active{display:block}
+.wiz-progress{height:10px;background:#e0e0e0;border-radius:5px;overflow:hidden;margin-top:12px}
+.wiz-progress div{height:100%;width:0%;background:linear-gradient(90deg,#1565c0,#1a8a5c);transition:width .3s}
+.wiz-label{text-align:center;font-size:15px;font-weight:800;color:#0d5c3d;margin-top:10px}
+.wiz-nav{display:flex;gap:10px;margin-top:12px}
+.wiz-nav button{flex:1;padding:14px;border-radius:12px;border:none;font-size:15.5px;font-weight:700;cursor:pointer}
+#wizBack{background:#eceff1;color:#37474f}
+#wizNext{background:linear-gradient(135deg,#1565c0,#1e88e5);color:#fff}
+.wiz-nav button:disabled{opacity:.45;cursor:not-allowed}
+.wiz-skip{display:block;margin:10px auto 0;background:none;border:none;color:#1565c0;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:underline}
 .slot{border:1.5px solid #c8e6c9;border-radius:12px;padding:10px;margin-top:10px;background:#fafffe}
 .slot.filled{border-color:#1a8a5c;background:#f1f8e9}
 .slot-head{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:700;color:#0d5c3d}
@@ -97,13 +108,17 @@ select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px 
     <label for="kitStation">Kit Station Name <span class="req">*</span></label>
     <input type="text" id="kitStation" placeholder="e.g. BHU / RHC / Kit Station name" autocomplete="off">
 
-    <div class="sec-title">EPI Cards (20)</div>
-    <div class="sec-sub">Har card ki photo Camera ya Gallery se attach karein.</div>
+    <div class="sec-title">EPI Cards &amp; HF Monitoring</div>
+    <div class="sec-sub">Ek waqt men ek card aye ga — photo Camera ya Gallery se lagayen, phir <strong>Next</strong> dabayen.</div>
     <div class="count-line" id="cardCount">Cards attached: 0 / 20</div>
-    <div id="cardsGrid"></div>
-
-    <div class="sec-title">HF Monitoring</div>
-    <div id="hfSlots"></div>
+    <div class="wiz-progress"><div id="wizFill"></div></div>
+    <div class="wiz-label" id="wizLabel">EPI Card 1 of 20</div>
+    <div id="wizardSlots"></div>
+    <div class="wiz-nav">
+      <button type="button" id="wizBack" onclick="wizMove(-1)">⬅ Back</button>
+      <button type="button" id="wizNext" onclick="wizMove(1)">Next ➡</button>
+    </div>
+    <button type="button" class="wiz-skip" onclick="document.getElementById('btnSubmit').scrollIntoView({behavior:'smooth', block:'center'})">Cards mukammal hon tu seedha Submit par jayen ⬇</button>
 
     <div class="progress-wrap" id="progWrap">
       <div class="progress-bar"><div id="progFill"></div></div>
@@ -298,9 +313,11 @@ function getLocation(){
 }
 
 /* ---------- Photo slots ---------- */
+var ALL_SLOTS = CARD_SLOTS.concat(HF_SLOTS);
+var wizStep = 0;
 function buildSlots(){
   var html = '';
-  CARD_SLOTS.concat(HF_SLOTS).forEach(function(s){
+  ALL_SLOTS.forEach(function(s){
     html += '<div class="slot" id="slot_' + s.key + '">'
       + '<div class="slot-head"><span>' + s.label + '</span><span class="ok" id="ok_' + s.key + '"></span></div>'
       + '<img id="img_' + s.key + '" alt="">'
@@ -310,11 +327,29 @@ function buildSlots(){
       + '<button type="button" class="rm" id="rm_' + s.key + '" onclick="removePhoto(\'' + s.key + '\')">✕ Remove</button>'
       + '</div></div>';
   });
-  /* cards grid men pehle 20, HF slots apni jagah */
-  var grid = $('cardsGrid'), hf = $('hfSlots');
-  var tmp = document.createElement('div'); tmp.innerHTML = html;
-  var nodes = Array.prototype.slice.call(tmp.children);
-  nodes.forEach(function(n, i){ (i < 20 ? grid : hf).appendChild(n); });
+  $('wizardSlots').innerHTML = html;
+}
+function wizShow(i){
+  wizStep = Math.max(0, Math.min(ALL_SLOTS.length - 1, i));
+  ALL_SLOTS.forEach(function(s, idx){
+    $('slot_' + s.key).classList.toggle('active', idx === wizStep);
+  });
+  var lbl;
+  if(wizStep < 20) lbl = 'EPI Card ' + (wizStep + 1) + ' of 20';
+  else if(wizStep === 20) lbl = 'HF Monitoring Picture';
+  else lbl = 'HF Monitoring Form (aakhri step)';
+  $('wizLabel').textContent = lbl;
+  $('wizFill').style.width = Math.round((wizStep + 1) * 100 / ALL_SLOTS.length) + '%';
+  $('wizBack').disabled = wizStep === 0;
+  $('wizNext').textContent = wizStep === ALL_SLOTS.length - 1 ? '✓ Aakhri step — Submit neeche hai' : 'Next ➡';
+}
+function wizMove(dir){
+  if(dir > 0 && wizStep === ALL_SLOTS.length - 1){
+    document.getElementById('btnSubmit').scrollIntoView({behavior: 'smooth', block: 'center'});
+    return;
+  }
+  wizShow(wizStep + dir);
+  $('wizLabel').scrollIntoView({behavior: 'smooth', block: 'center'});
 }
 function pickPhoto(slotKey, useCamera){
   currentSlot = slotKey;
@@ -484,6 +519,7 @@ $('fileCam').addEventListener('change', function(){ onFilePicked(this); });
 $('fileGal').addEventListener('change', function(){ onFilePicked(this); });
 $('dateLine').textContent = '📅 ' + pktToday().dmy;
 buildSlots();
+wizShow(0);
 fillSupervisors();
 loadMasterLists();
 updateCount();
