@@ -36,9 +36,13 @@ select:focus,input[type="text"]:focus{outline:none;border-color:#1a8a5c;box-shad
 .back:hover{text-decoration:underline}
 .vid-title{font-size:16px;color:#0d5c3d;font-weight:800}
 .vid-sub{font-size:12.5px;color:#666;margin-top:4px;line-height:1.45}
-.vid-item{margin-top:16px}
-.vid-name{font-size:14px;font-weight:700;color:#14532d;margin-bottom:8px;line-height:1.4}
-.vid-item video{width:100%;border-radius:10px;background:#000;max-height:72vh}
+.vid-item{margin-top:12px}
+.vid-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f1f8e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:13px 14px;font-size:14px;font-weight:700;color:#14532d;cursor:pointer;line-height:1.4}
+.vid-row:hover{background:#e8f5e9}
+.vid-row .tri{font-size:12px;color:#0d5c3d}
+.vid-player{display:none;margin-top:10px}
+.vid-player.open{display:block}
+.vid-player video{width:100%;border-radius:10px;background:#000;max-height:72vh}
 </style>
 </head>
 <body>
@@ -72,10 +76,14 @@ select:focus,input[type="text"]:focus{outline:none;border-color:#1a8a5c;box-shad
 
   <div class="card">
     <div class="vid-title">🎬 eDDM Guideline / Tutorial Videos</div>
-    <p class="vid-sub">Official guideline videos for campaign staff. Press play to watch online — no download is required.</p>
+    <p class="vid-sub">Official guideline videos for campaign staff. Tap a title to watch — each video loads only when you open it, so this page stays light and fast.</p>
     <div class="vid-item">
-      <div class="vid-name">eDDM Planning &amp; Implementation Phase — Complete Guideline Tutorial</div>
-      <video controls preload="metadata" playsinline src="videos/eddm-planning-implementation-tutorial.mp4"></video>
+      <button type="button" class="vid-row" onclick="toggleVideo(this, 'videos/eddm-planning-implementation-tutorial.mp4')"><span class="tri">▶</span><span>eDDM Planning &amp; Implementation Phase — Complete Guideline Tutorial</span></button>
+      <div class="vid-player"></div>
+    </div>
+    <div class="vid-item">
+      <button type="button" class="vid-row" onclick="toggleVideo(this, 'videos/eddm-attendance-marking-tutorial.mp4')"><span class="tri">▶</span><span>eDDM Attendance Marking — Complete Guideline Tutorial</span></button>
+      <div class="vid-player"></div>
     </div>
   </div>
 
@@ -116,6 +124,25 @@ function copyNidPayCode(btn){
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(code).then(done).catch(fallback);
   } else { fallback(); }
+}
+function toggleVideo(btn, src){
+  var wrap = btn.nextElementSibling;
+  if(wrap.classList.contains('open')){
+    var old = wrap.querySelector('video');
+    if(old){ old.pause(); old.removeAttribute('src'); old.load(); }
+    wrap.innerHTML = '';
+    wrap.classList.remove('open');
+    return;
+  }
+  var v = document.createElement('video');
+  v.controls = true;
+  v.playsInline = true;
+  v.src = src;
+  wrap.innerHTML = '';
+  wrap.appendChild(v);
+  wrap.classList.add('open');
+  var p = v.play();
+  if(p && p.catch) p.catch(function(){});
 }
 function performNidSearch(){
   const file = document.getElementById('fileSelect').value;
