@@ -1246,7 +1246,7 @@
                 .vc-cmtsave{background:#1565c0;color:#fff;border:none;border-radius:14px;padding:6px 16px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px}
                 .vc-cmtcancel{background:#eceff1;color:#37474f;border:1px solid #b0bec5;border-radius:14px;padding:6px 14px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px;margin-left:6px}
                 </style>
-                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically in this browser for every date. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download. <strong>Tip:</strong> click any summary box above the list (Total Children, Verified, Not Responding, …) to filter the list to just those children.</p>
+                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically and sync to all your devices through the cloud — a status set on one laptop or mobile appears on every other device. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download. <strong>Tip:</strong> click any summary box above the list (Total Children, Verified, Not Responding, …) to filter the list to just those children.</p>
                 <div class="emr-filter">
                     <label>Date
                         <select id="vcDate" onchange="vcOnDateChange()"></select>
@@ -1266,7 +1266,9 @@
                     </label>
                     <button type="button" class="btn btn-sm" onclick="vcInit(true)" style="background:#0d5c3d">🔄 Refresh Data</button>
                     <button type="button" class="btn btn-sm" onclick="vcExport()" style="background:#1565c0">⬇ Download Excel (with Status)</button>
+                    <button type="button" class="btn btn-sm" onclick="vcSyncCurrent()" style="background:#6a1b9a">☁ Sync Now</button>
                     <span class="sweep-meta" id="vcMeta">Not loaded</span>
+                    <span class="sweep-meta" id="vcSyncLine">☁ Cloud sync: ready</span>
                 </div>
                 <div id="vcSummary"></div>
                 <div id="vcList"></div>
@@ -5037,6 +5039,113 @@
             return vcCmtCache;
         }
         function vcCmtSave(){ try{ localStorage.setItem('vcCommentV1', JSON.stringify(vcCmtStore())); }catch(e){} }
+        // ===== Verification Calls — Cloud sync (v14) =====
+        // Statuses/comments also live in a shared Google Sheet (Apps Script web app),
+        // so a status set on any device appears on all the others. The browser's
+        // localStorage remains the working copy; the cloud copy wins by timestamp.
+        const VC_SYNC_URL = 'https://script.google.com/macros/s/AKfycbzTOpZnw-TWDyHwdkUW6Hlg9zAbMbG3zBzx0qZUBWmYV63vWHqsvXZbTDdwyY9PnOBP/exec';
+        let vcTsCache = null;
+        function vcTsStore(){
+            if(vcTsCache) return vcTsCache;
+            try{ vcTsCache = JSON.parse(localStorage.getItem('vcSyncTsV1') || '{}'); }catch(e){ vcTsCache = {}; }
+            if(!vcTsCache || typeof vcTsCache !== 'object') vcTsCache = {};
+            return vcTsCache;
+        }
+        function vcTsSave(){ try{ localStorage.setItem('vcSyncTsV1', JSON.stringify(vcTsStore())); }catch(e){} }
+        function vcLocalRec(ymd, key){
+            const sd = vcStore()[ymd], cd = vcCmtStore()[ymd];
+            const hasS = !!(sd && Object.prototype.hasOwnProperty.call(sd, key));
+            const hasC = !!(cd && Object.prototype.hasOwnProperty.call(cd, key));
+            if(!hasS && !hasC) return null;
+            const td = vcTsStore()[ymd];
+            return { status: hasS ? (sd[key] || '') : '', comment: hasC ? (cd[key] || '') : '', ts: (td && td[key]) || 0 };
+        }
+        function vcApplyRec(ymd, key, status, comment, ts){
+            const s = vcStore(); if(!s[ymd]) s[ymd] = {};
+            s[ymd][key] = status || '';
+            const c = vcCmtStore(); if(!c[ymd]) c[ymd] = {};
+            if(comment) c[ymd][key] = comment;
+            else if(VC_BAKED_CMT[ymd] && VC_BAKED_CMT[ymd][key]) c[ymd][key] = '';
+            else delete c[ymd][key];
+            const t = vcTsStore(); if(!t[ymd]) t[ymd] = {};
+            t[ymd][key] = ts || 0;
+            vcStoreSave(); vcCmtSave(); vcTsSave();
+        }
+        function vcTouchTs(ymd, key){
+            const t = vcTsStore(); if(!t[ymd]) t[ymd] = {};
+            t[ymd][key] = Date.now();
+            vcTsSave();
+        }
+        function vcSyncLine(txt){
+            const el = document.getElementById('vcSyncLine');
+            if(el) el.textContent = txt;
+        }
+        function vcPushRec(ymd, key){
+            if(!VC_SYNC_URL) return;
+            const rec = vcLocalRec(ymd, key);
+            if(!rec) return;
+            vcSyncLine('\u2601 Syncing\u2026');
+            fetch(VC_SYNC_URL, { method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                body: JSON.stringify({ type: 'vc_set', date: ymd, mr: key, status: rec.status, comment: rec.comment, updatedAt: rec.ts || Date.now() })
+            }).then(function(r){ return r.json(); }).then(function(j){
+                if(j && j.ok) vcSyncLine('\u2601 Cloud sync: ON \u2014 all devices up to date');
+                else vcSyncLine('\u2601 Cloud sync: will retry on next Sync');
+            }).catch(function(){ vcSyncLine('\u2601 Offline \u2014 saved on this device, will sync later'); });
+        }
+        function vcSyncDate(ymd){
+            if(!VC_SYNC_URL || !ymd) return;
+            vcSyncLine('\u2601 Syncing\u2026');
+            fetch(VC_SYNC_URL + '?date=' + encodeURIComponent(ymd), { cache: 'no-store' })
+            .then(function(r){ return r.json(); })
+            .then(function(j){
+                if(!j || !j.ok) throw new Error('sync');
+                const remote = {};
+                (j.rows || []).forEach(function(row){ remote[row.mr] = row; });
+                let changed = false;
+                Object.keys(remote).forEach(function(key){
+                    const r = remote[key];
+                    const loc = vcLocalRec(ymd, key);
+                    if(!loc || (r.updatedAt || 0) >= (loc.ts || 0)){
+                        if(!loc || loc.status !== (r.status || '') || loc.comment !== (r.comment || '')){
+                            vcApplyRec(ymd, key, r.status || '', r.comment || '', r.updatedAt || 0);
+                            changed = true;
+                        } else if((loc.ts || 0) !== (r.updatedAt || 0)){
+                            const t = vcTsStore(); if(!t[ymd]) t[ymd] = {}; t[ymd][key] = r.updatedAt || 0; vcTsSave();
+                        }
+                    }
+                });
+                const push = [];
+                const keys = {};
+                Object.keys(vcStore()[ymd] || {}).forEach(function(k){ keys[k] = 1; });
+                Object.keys(vcCmtStore()[ymd] || {}).forEach(function(k){ keys[k] = 1; });
+                Object.keys(keys).forEach(function(key){
+                    const loc = vcLocalRec(ymd, key);
+                    if(!loc) return;
+                    const r = remote[key];
+                    if(!r || (loc.ts || 0) > (r.updatedAt || 0)){
+                        push.push({ date: ymd, mr: key, status: loc.status, comment: loc.comment, updatedAt: loc.ts || 0 });
+                    }
+                });
+                const sel = document.getElementById('vcDate');
+                const done = function(){
+                    vcSyncLine('\u2601 Cloud sync: ON \u2014 all devices up to date');
+                    if(sel && sel.value === ymd) vcRender();
+                };
+                if(push.length){
+                    fetch(VC_SYNC_URL, { method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                        body: JSON.stringify({ type: 'vc_batch', items: push })
+                    }).then(function(){ done(); }).catch(function(){
+                        vcSyncLine('\u2601 Offline \u2014 saved on this device, will sync later');
+                        if(changed && sel && sel.value === ymd) vcRender();
+                    });
+                } else done();
+            })
+            .catch(function(){ vcSyncLine('\u2601 Offline \u2014 saved on this device, will sync later'); });
+        }
+        function vcSyncCurrent(){
+            const sel = document.getElementById('vcDate');
+            if(sel && sel.value) vcSyncDate(sel.value);
+        }
         function vcCommentOf(ymd, key){
             const day = vcCmtStore()[ymd];
             if(day && Object.prototype.hasOwnProperty.call(day, key)) return day[key] || '';
@@ -5062,6 +5171,8 @@
             else if(VC_BAKED_CMT[ymd] && VC_BAKED_CMT[ymd][key]) store[ymd][key] = '';
             else delete store[ymd][key];
             vcCmtSave();
+            vcTouchTs(ymd, key);
+            vcPushRec(ymd, key);
             vcReplaceCard(ymd, key);
         }
         let vcRows = [];
@@ -5082,6 +5193,7 @@
             vcRows = (emrRows || []).slice();
             vcBuildDates();
             vcRender();
+            vcSyncDate((document.getElementById('vcDate') || {}).value || '');
         }
         function vcBuildDates(){
             const sel = document.getElementById('vcDate');
@@ -5105,7 +5217,7 @@
             tsel.innerHTML = '<option value="">All Tehsils</option>' + Object.keys(set).sort().map(function(t){ return '<option value="' + vcEsc(t) + '">' + vcEsc(t) + '</option>'; }).join('');
             if(prev && set[prev]) tsel.value = prev;
         }
-        function vcOnDateChange(){ vcBuildTehsils(); vcRender(); }
+        function vcOnDateChange(){ vcBuildTehsils(); vcRender(); vcSyncDate((document.getElementById('vcDate') || {}).value || ''); }
         function vcDayRowsAll(){
             const dsel = document.getElementById('vcDate');
             const ymd = dsel ? dsel.value : '';
@@ -5246,6 +5358,8 @@
             if(vcStatusOf(ymd, key) === status) store[ymd][key] = '';
             else store[ymd][key] = status;
             vcStoreSave();
+            vcTouchTs(ymd, key);
+            vcPushRec(ymd, key);
             vcReplaceCard(ymd, key);
             vcRenderSummary(ymd, vcDayRowsAll().rows);
         }
