@@ -1246,13 +1246,19 @@
                 .vc-cmtsave{background:#1565c0;color:#fff;border:none;border-radius:14px;padding:6px 16px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px}
                 .vc-cmtcancel{background:#eceff1;color:#37474f;border:1px solid #b0bec5;border-radius:14px;padding:6px 14px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px;margin-left:6px}
                 </style>
-                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically and sync to all your devices through the cloud — a status set on one laptop or mobile appears on every other device. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download. <strong>Tip:</strong> click any summary box above the list (Total Children, Verified, Not Responding, …) to filter the list to just those children.</p>
+                <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list — narrow it with the Tehsil and UC filters to view one UC's children only. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically and sync to all your devices through the cloud — a status set on one laptop or mobile appears on every other device. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download. <strong>Tip:</strong> click any summary box above the list (Total Children, Verified, Not Responding, …) to filter the list to just those children.</p>
                 <div class="emr-filter">
                     <label>Date
                         <select id="vcDate" onchange="vcOnDateChange()"></select>
                     </label>
                     <label>Tehsil
-                        <select id="vcTehsil" onchange="vcRender()"><option value="">All Tehsils</option></select>
+                        <select id="vcTehsil" onchange="vcOnTehsilChange()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>UC
+                        <select id="vcUc" onchange="vcRender()"><option value="">All UCs</option></select>
+                    </label>
+                    <label>Search (Name / Phone)
+                        <input type="text" id="vcSearch" placeholder="Name / Phone…" style="min-width:150px" oninput="vcRender()">
                     </label>
                     <label>Show
                         <select id="vcShow" onchange="vcOnShowChange()">
@@ -1260,9 +1266,6 @@
                             <option value="pending">Pending only</option>
                             <option value="called">Called only</option>
                         </select>
-                    </label>
-                    <label>Search (Name / Phone)
-                        <input type="text" id="vcSearch" placeholder="Name / Phone…" style="min-width:150px" oninput="vcRender()">
                     </label>
                     <button type="button" class="btn btn-sm" onclick="vcInit(true)" style="background:#0d5c3d">🔄 Refresh Data</button>
                     <button type="button" class="btn btn-sm" onclick="vcExport()" style="background:#1565c0">⬇ Download Excel (with Status)</button>
@@ -5223,7 +5226,27 @@
             const prev = tsel.value;
             tsel.innerHTML = '<option value="">All Tehsils</option>' + Object.keys(set).sort().map(function(t){ return '<option value="' + vcEsc(t) + '">' + vcEsc(t) + '</option>'; }).join('');
             if(prev && set[prev]) tsel.value = prev;
+            vcBuildUcs();
         }
+        function vcBuildUcs(){
+            const usel = document.getElementById('vcUc');
+            const dsel = document.getElementById('vcDate');
+            const tsel = document.getElementById('vcTehsil');
+            if(!usel || !dsel) return;
+            const ymd = dsel.value;
+            const teh = tsel ? tsel.value : '';
+            const set = {};
+            (vcRows || []).forEach(function(r){
+                if(vcRowYmd(r) !== ymd) return;
+                if(teh && emrCell(r, EMR_COLS.tehsil) !== teh) return;
+                const u = emrCell(r, EMR_COLS.uc);
+                if(u) set[u] = true;
+            });
+            const prev = usel.value;
+            usel.innerHTML = '<option value="">All UCs</option>' + Object.keys(set).sort().map(function(u){ return '<option value="' + vcEsc(u) + '">' + vcEsc(u) + '</option>'; }).join('');
+            if(prev && set[prev]) usel.value = prev;
+        }
+        function vcOnTehsilChange(){ vcBuildUcs(); vcRender(); }
         function vcOnDateChange(){ vcBuildTehsils(); vcRender(); vcSyncDate((document.getElementById('vcDate') || {}).value || ''); }
         function vcDayRowsAll(){
             const dsel = document.getElementById('vcDate');
@@ -5296,10 +5319,12 @@
             all.rows.forEach(function(r){ vcRowMap[vcRowKey(r)] = r; });
             vcRenderSummary(ymd, all.rows);
             const teh = (document.getElementById('vcTehsil') || {}).value || '';
+            const ucf = (document.getElementById('vcUc') || {}).value || '';
             const show = (document.getElementById('vcShow') || {}).value || '';
             const q = ((document.getElementById('vcSearch') || {}).value || '').trim().toLowerCase();
             const rows = all.rows.filter(function(r){
                 if(teh && emrCell(r, EMR_COLS.tehsil) !== teh) return false;
+                if(ucf && emrCell(r, EMR_COLS.uc) !== ucf) return false;
                 const st = vcStatusOf(ymd, vcRowKey(r));
                 if(vcStatusFilter === 'called' && !st) return false;
                 if(vcStatusFilter && vcStatusFilter !== 'called' && st !== vcStatusFilter) return false;
