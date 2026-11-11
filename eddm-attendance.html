@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>eDDM Attendance Sheet — District Chakwal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Calibri, Arial, sans-serif; margin: 0; background: #eef1f5; color: #111; }
@@ -46,11 +48,27 @@
   td.tick:hover { background: #e8eefb; }
   .sheetTools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #eef3ec; border: 1px solid #b9cfb4; border-radius: 6px; padding: 8px 10px; margin: 8px 0 2px 0; font-size: 13px; }
   .sheetNote { font-size: 12.5px; color: #444; margin-top: 6px; }
+  .btn:disabled { opacity: .65; cursor: wait; }
+  /* ---------- Off-screen stage that renders sheets for direct PDF download (mirrors the @media print sizes, in px) ---------- */
+  #pdfStage { position: absolute; left: -10000px; top: 0; width: 1077px; background: #fff; }
+  #pdfStage .no-print { display: none !important; }
+  #pdfStage .sheet { margin: 0; padding: 0; border: none; box-shadow: none; max-width: none; width: 100%; page-break-after: auto; }
+  #pdfStage .s-title { font-size: 25px; padding: 7px; }
+  #pdfStage .s-head td { font-size: 14px; padding: 5px 8px; }
+  #pdfStage .band { font-size: 15px; padding: 5px; }
+  #pdfStage table.data th { font-size: 11px; padding: 3px 2px; }
+  #pdfStage table.data td { font-size: 14px; padding: 3px; height: 23px; }
+  #pdfStage .sheet.dense .s-title { font-size: 22px; padding: 5px; }
+  #pdfStage .sheet.dense .s-head td { font-size: 13px; padding: 3px 7px; }
+  #pdfStage .sheet.dense .band { font-size: 13px; padding: 3px; }
+  #pdfStage .sheet.dense table.data th { font-size: 10px; padding: 2px 1px; }
+  #pdfStage .sheet.dense table.data td { font-size: 13px; padding: 2px; height: 19px; }
   @page { size: A4 landscape; margin: 6mm; }
   @media print {
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { background: #fff; }
     .no-print { display: none !important; }
+    #pdfStage { display: none !important; }
     .panel { display: none !important; }
     #sheetsWrap { margin: 0; padding: 0; }
     .sheet { box-shadow: none; border: none; margin: 0; padding: 0; max-width: none; width: 100%; page-break-after: always; }
@@ -91,7 +109,7 @@
     <li>Select your Union Council below.</li>
     <li>On each Area In-charge sheet, add that Area In-charge's team members using the &ldquo;Add Team Member&rdquo; box. Every detail fills in automatically; only the signature space stays blank.</li>
     <li>Mark attendance on each sheet: click the DAY 1&ndash;4 cells to tick them and the Training cell to choose Yes or No, or use the &ldquo;All Attendance OK&rdquo; button. The ticks print on the sheet and are saved in the Excel file.</li>
-    <li>When all team members are assigned, download the Excel file or print / save the PDF, take a printout, and submit it as before. A single Area In-charge sheet can also be downloaded or printed on its own.</li>
+    <li>When all team members are assigned, download the Excel file or the PDF, take a printout, and submit it as before. A single Area In-charge sheet can also be downloaded on its own.</li>
   </ol>
 </div>
 
@@ -107,7 +125,7 @@
     <div class="statgrid" id="ucStats"></div>
     <div id="ucCheck"></div>
     <div class="rowflex">
-      <button class="btn" id="btnPrint" type="button">Print / Save PDF</button>
+      <button class="btn" id="btnPrint" type="button">Download PDF</button>
       <button class="btn" id="btnExcel" type="button">Download Excel</button>
       <button class="btn secondary" id="btnAllAtt" type="button">All Attendance OK — All Sheets</button>
       <button class="btn danger" id="btnClear" type="button">Clear Assignments for This UC</button>
@@ -127,6 +145,8 @@ let ticks = {};
 try { ticks = JSON.parse(localStorage.getItem("eddmTicksV1") || "{}"); } catch (e) { ticks = {}; }
 
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+/* Workers with no account on record show "Not Available" in both the Bank Name and Account No cells. Returns [bankText, accountText]. */
+function acctDisp(account, bank) { if (account == null || String(account).trim() === "") return ["Not Available", "Not Available"]; return [bank, account]; }
 function saveAssign() { try { localStorage.setItem("eddmAssignV1", JSON.stringify(assign)); } catch (e) {} }
 function saveTicks() { try { localStorage.setItem("eddmTicksV1", JSON.stringify(ticks)); } catch (e) {} }
 function getTick(i, aicCnic, cnic) { const a = ticks[ucKey(i)]; const b = a && a[aicCnic]; return (b && b[cnic]) || {}; }
@@ -172,7 +192,8 @@ function memberByCnic(uc, cnic) { return uc.m.find(function (m) { return m[1] ==
 function ucDisplayName(u) { return u.u.replace(/\s*\([0-9]+\)\s*$/, ""); }
 
 function workerRow(w, pos, sno, i, aicCnic) {
-  return "<tr><td class='c'>" + sno + "</td><td>" + esc(w[0]) + "</td><td class='c'>" + esc(w[1]) + "</td><td class='c'>" + esc(pos) + "</td><td class='c'>" + esc(w[2]) + "</td><td>" + esc(w[4]) + "</td><td class='c'>" + esc(w[3]) + "</td>" + tickCellsHTML(i, aicCnic, w[1]) + "<td></td></tr>";
+  const ac = acctDisp(w[3], w[4]);
+  return "<tr><td class='c'>" + sno + "</td><td>" + esc(w[0]) + "</td><td class='c'>" + esc(w[1]) + "</td><td class='c'>" + esc(pos) + "</td><td class='c'>" + esc(w[2]) + "</td><td>" + esc(ac[0]) + "</td><td class='c'>" + esc(ac[1]) + "</td>" + tickCellsHTML(i, aicCnic, w[1]) + "<td></td></tr>";
 }
 const COLGROUP = "<colgroup><col style='width:4%'><col style='width:15%'><col style='width:10%'><col style='width:8%'><col style='width:9%'><col style='width:11%'><col style='width:16%'><col style='width:3.5%'><col style='width:3.5%'><col style='width:3.5%'><col style='width:3.5%'><col style='width:5%'><col style='width:8%'></colgroup>";
 const THEAD = "<thead><tr><th>S.NO</th><th>Name Of Beneficiary</th><th>CNIC NO</th><th>Position/Designation</th><th>CELL NO</th><th>BANK NAME</th><th>IBAN (24 Digits)/Mobile Wallet Number</th><th>DAY 1</th><th>DAY 2</th><th>DAY 3</th><th>DAY 4</th><th>Training Yes/No</th><th>Beneficiary Signature</th></tr></thead>";
@@ -185,8 +206,9 @@ function sheetHTML(i, j) {
   let rows = "";
   list.forEach(function (cnic, idx) {
     const m = memberByCnic(uc, cnic); if (!m) return;
+    const ac = acctDisp(m[4], m[5]);
     rows += "<tr><td class='c'>" + (idx + 1) + "<button type='button' class='rmBtn no-print' title='Remove this member' onclick='removeMember(" + i + ",\"" + aic[1] + "\",\"" + cnic + "\")'>x</button></td>" +
-      "<td>" + esc(m[0]) + "</td><td class='c'>" + esc(m[1]) + "</td><td class='c'>" + esc(ROLES[m[2]]) + "</td><td class='c'>" + esc(m[3]) + "</td><td>" + esc(m[5]) + "</td><td class='c'>" + esc(m[4]) + "</td>" + tickCellsHTML(i, aic[1], cnic) + "<td></td></tr>";
+      "<td>" + esc(m[0]) + "</td><td class='c'>" + esc(m[1]) + "</td><td class='c'>" + esc(ROLES[m[2]]) + "</td><td class='c'>" + esc(m[3]) + "</td><td>" + esc(ac[0]) + "</td><td class='c'>" + esc(ac[1]) + "</td>" + tickCellsHTML(i, aic[1], cnic) + "<td></td></tr>";
   });
   const totalRows = Math.max(14, list.length);
   for (let r = list.length; r < totalRows; r++) { rows += "<tr><td class='c'>" + (r + 1) + "</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>"; }
@@ -199,7 +221,7 @@ function sheetHTML(i, j) {
     "<button type='button' class='btn' onclick='allAttSheet(" + i + "," + j + ")'>All Attendance OK</button>" +
     "<button type='button' class='btn secondary' onclick='clearAttSheet(" + i + "," + j + ")'>Clear Attendance</button>" +
     "<button type='button' class='btn secondary' onclick='downloadExcelSheet(" + j + ")'>Download Excel (This Sheet)</button>" +
-    "<button type='button' class='btn secondary' onclick='printSheet(" + j + ")'>Print / PDF (This Sheet)</button>" +
+    "<button type='button' class='btn secondary' onclick='downloadPdfSheet(" + j + ", this)'>Download PDF (This Sheet)</button>" +
     "<span>Tip: click DAY 1&ndash;4 cells to tick attendance, and the Training cell for Yes / No.</span></div>";
   return "<div class='sheet" + (totalRows > 16 ? " dense" : "") + "' data-sheet='" + j + "'>" +
     "<div class='s-title'>DDM ATTENDANCE SHEET</div>" +
@@ -330,7 +352,7 @@ async function buildWorkbookFor(indices) {
       const m = memberByCnic(uc, cnic); if (!m) return;
       const r = 7 + idx;
       ws.getCell(r, 1).value = idx + 1; ws.getCell(r, 2).value = m[0]; ws.getCell(r, 3).value = m[1];
-      ws.getCell(r, 4).value = ROLES[m[2]]; ws.getCell(r, 5).value = m[3]; ws.getCell(r, 6).value = m[5]; ws.getCell(r, 7).value = m[4];
+      ws.getCell(r, 4).value = ROLES[m[2]]; ws.getCell(r, 5).value = m[3]; const ac1 = acctDisp(m[4], m[5]); ws.getCell(r, 6).value = ac1[0]; ws.getCell(r, 7).value = ac1[1];
       const trk = getTick(curUc, aic[1], cnic);
       for (let d = 1; d <= 4; d++) if (trk[d]) ws.getCell(r, 7 + d).value = "✓";
       if (trk.t) ws.getCell(r, 12).value = trk.t;
@@ -342,7 +364,7 @@ async function buildWorkbookFor(indices) {
     HDRS.forEach(function (h, ci) { ws.getCell(band2 + 1, ci + 1).value = h; });
     function s2row(r, w, pos, sno) {
       ws.getCell(r, 1).value = sno; ws.getCell(r, 2).value = w[0]; ws.getCell(r, 3).value = w[1];
-      ws.getCell(r, 4).value = pos; ws.getCell(r, 5).value = w[2]; ws.getCell(r, 6).value = w[4]; ws.getCell(r, 7).value = w[3];
+      ws.getCell(r, 4).value = pos; ws.getCell(r, 5).value = w[2]; const ac2 = acctDisp(w[3], w[4]); ws.getCell(r, 6).value = ac2[0]; ws.getCell(r, 7).value = ac2[1];
       const trk = getTick(curUc, aic[1], w[1]);
       for (let d = 1; d <= 4; d++) if (trk[d]) ws.getCell(r, 7 + d).value = "✓";
       if (trk.t) ws.getCell(r, 12).value = trk.t;
@@ -385,9 +407,10 @@ async function downloadExcelSheet(j) {
   await saveWorkbook(r.wb, "eDDM Attendance Sheet UC " + ucDisplayName(uc) + " - " + aicName + ".xlsx");
 }
 
+/* Fallback only (used when the PDF library cannot load, e.g. no internet): the callers
+   (downloadPdfSheet / downloadPdfAll) have already run warnIfIncomplete. */
 function printSheet(j) {
   if (curUc < 0) return;
-  if (!warnIfIncomplete("print")) return;
   const sheets = document.querySelectorAll("#sheetsWrap .sheet");
   const target = sheets[j]; if (!target) return;
   const old = document.title;
@@ -398,6 +421,98 @@ function printSheet(j) {
   window.onafterprint = cleanup;
   window.print();
   setTimeout(cleanup, 1000);
+}
+
+function fallbackPrintAll() {
+  if (curUc < 0) return;
+  const old = document.title;
+  document.title = "eDDM Attendance Sheet UC " + ucDisplayName(DATA.u[curUc]);
+  window.onafterprint = function () { document.title = old; };
+  window.print();
+  setTimeout(function () { document.title = old; }, 1000);
+}
+
+/* ---------- Direct PDF download (html2canvas + jsPDF, via the html2pdf.js bundle) ---------- */
+function pdfLibReady() {
+  return typeof html2canvas === "function" && typeof window.jspdf !== "undefined" && typeof window.jspdf.jsPDF === "function";
+}
+
+function setBtnBusy(btn, busy) {
+  if (!btn) return;
+  if (busy) { btn.setAttribute("data-label", btn.textContent); btn.textContent = "Preparing PDF\u2026"; btn.disabled = true; }
+  else { const l = btn.getAttribute("data-label"); if (l) btn.textContent = l; btn.disabled = false; }
+}
+
+/* Render one live .sheet element through the off-screen #pdfStage (which carries the print
+   design sizes) and return its canvas. */
+async function renderSheetCanvas(sheetEl) {
+  let stage = document.getElementById("pdfStage");
+  if (!stage) { stage = document.createElement("div"); stage.id = "pdfStage"; document.body.appendChild(stage); }
+  stage.innerHTML = "";
+  const clone = sheetEl.cloneNode(true);
+  clone.removeAttribute("id");
+  stage.appendChild(clone);
+  await new Promise(function (r) { setTimeout(r, 40); });
+  try {
+    return await html2canvas(clone, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+  } finally {
+    stage.innerHTML = "";
+  }
+}
+
+/* Flatten a rendered sheet canvas onto white and encode as JPEG (keeps the PDF small;
+   a raw PNG page would be ~10 MB). */
+function canvasToJpeg(canvas) {
+  const flat = document.createElement("canvas");
+  flat.width = canvas.width; flat.height = canvas.height;
+  const ctx = flat.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, flat.width, flat.height);
+  ctx.drawImage(canvas, 0, 0);
+  return flat.toDataURL("image/jpeg", 0.92);
+}
+
+async function buildPdfForSheets(sheetEls, filename) {
+  const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  const pageW = 297, margin = 6;
+  const maxW = pageW - margin * 2, maxH = 210 - margin * 2;
+  for (let k = 0; k < sheetEls.length; k++) {
+    const canvas = await renderSheetCanvas(sheetEls[k]);
+    let w = maxW, h = canvas.height * maxW / canvas.width;
+    if (h > maxH) { h = maxH; w = canvas.width * maxH / canvas.height; }
+    if (k > 0) pdf.addPage("a4", "landscape");
+    pdf.addImage(canvasToJpeg(canvas), "JPEG", (pageW - w) / 2, margin, w, h);
+  }
+  pdf.save(filename);
+}
+
+function cleanName(s) { return String(s).replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim(); }
+
+async function downloadPdfSheet(j, btn) {
+  if (curUc < 0) return;
+  if (!warnIfIncomplete("download the PDF")) return;
+  if (!pdfLibReady()) { printSheet(j); return; }
+  const sheets = document.querySelectorAll("#sheetsWrap .sheet");
+  const target = sheets[j]; if (!target) return;
+  setBtnBusy(btn, true);
+  try {
+    const uc = DATA.u[curUc];
+    await buildPdfForSheets([target], "eDDM Attendance Sheet UC " + ucDisplayName(uc) + " - " + cleanName(uc.a[j][0]) + ".pdf");
+  } catch (e) { printSheet(j); }
+  setBtnBusy(btn, false);
+}
+
+async function downloadPdfAll(btn) {
+  if (curUc < 0) return;
+  if (!warnIfIncomplete("download the PDF")) return;
+  if (!pdfLibReady()) { fallbackPrintAll(); return; }
+  const sheets = Array.prototype.slice.call(document.querySelectorAll("#sheetsWrap .sheet"));
+  if (!sheets.length) return;
+  setBtnBusy(btn, true);
+  try {
+    await buildPdfForSheets(sheets, "eDDM Attendance Sheet UC " + ucDisplayName(DATA.u[curUc]) + ".pdf");
+  } catch (e) { fallbackPrintAll(); }
+  setBtnBusy(btn, false);
 }
 
 /* ---------- init ---------- */
@@ -423,15 +538,7 @@ function printSheet(j) {
   tehSel.addEventListener("change", applyFilters);
   ucSel.addEventListener("change", function () { curUc = ucSel.value === "" ? -1 : parseInt(ucSel.value, 10); renderUC(); });
   /* Campaign Name and Month are fixed for this campaign (SNID / Nov 2026) — the inputs are read-only. */
-  document.getElementById("btnPrint").addEventListener("click", function () {
-    if (curUc < 0) return;
-    if (!warnIfIncomplete("print")) return;
-    const old = document.title;
-    document.title = "eDDM Attendance Sheet UC " + ucDisplayName(DATA.u[curUc]);
-    window.onafterprint = function () { document.title = old; };
-    window.print();
-    setTimeout(function () { document.title = old; }, 1000);
-  });
+  document.getElementById("btnPrint").addEventListener("click", function () { downloadPdfAll(this); });
   document.getElementById("btnExcel").addEventListener("click", downloadExcel);
   document.getElementById("btnAllAtt").addEventListener("click", function () { allAttAllSheets(); });
   document.getElementById("btnClear").addEventListener("click", function () {
