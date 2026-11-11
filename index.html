@@ -5181,18 +5181,33 @@
             const sel = document.getElementById('vcDate');
             if(sel && sel.value) vcSyncDate(sel.value);
         }
-        // Once per module open: quietly sync the 7 most recent earlier dates too, so
-        // this device holds their cloud statuses and the carry-forward above can see
-        // verifications made on other devices — not just the ones made here.
+        // Once per module open: quietly sync earlier dates too — the recent ones in
+        // the date list, plus the 10 calendar days before the selected date (those
+        // reach back into the previous month, whose dates are no longer listed) —
+        // so this device holds their cloud statuses and the carry-forward above can
+        // see verifications made on other devices, not just the ones made here.
+        // Syncing a date that has no cloud rows is a harmless no-op.
         let vcWarmed = false;
         function vcWarmCarry(){
             if(vcWarmed) return; vcWarmed = true;
             const sel = document.getElementById('vcDate');
             if(!sel) return;
             const cur = sel.value || '';
-            const dates = Array.prototype.map.call(sel.options, function(o){ return o.value; }).filter(function(d){ return d && d < cur; }).sort().slice(-7);
-            dates.forEach(function(d, i){ setTimeout(function(){ vcSyncDate(d); }, 600 * (i + 1)); });
-            if(dates.length) setTimeout(function(){ vcRender(); }, 600 * dates.length + 2500);
+            if(!cur) return;
+            const seen = {};
+            const dates = [];
+            Array.prototype.forEach.call(sel.options, function(o){ if(o.value && o.value < cur) seen[o.value] = 1; });
+            Object.keys(seen).sort().slice(-7).forEach(function(d){ dates.push(d); });
+            const p = cur.split('-');
+            const base = new Date(+p[0], (+p[1]) - 1, +p[2]);
+            for(let i = 1; i <= 10; i++){
+                const dt = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i);
+                const ymd = dt.getFullYear() + '-' + ('0' + (dt.getMonth() + 1)).slice(-2) + '-' + ('0' + dt.getDate()).slice(-2);
+                if(!seen[ymd]){ seen[ymd] = 1; dates.push(ymd); }
+            }
+            const queue = dates.slice(-12);
+            queue.forEach(function(d, i){ setTimeout(function(){ vcSyncDate(d); }, 600 * (i + 1)); });
+            if(queue.length) setTimeout(function(){ vcRender(); }, 600 * queue.length + 2500);
         }
         function vcCommentOf(ymd, key){
             const day = vcCmtStore()[ymd];
