@@ -2099,10 +2099,13 @@
             </div>
             <script>
             (function(){
-                var VD_NS = 'epi-chakwal-dha-2026';
-                var VD_BASE_TOTAL = 2372; // total carried over from the previous counter on 3 Nov 2026
-                var VD_SWITCH_DATE = '2026-11-03';
-                var VD_BASE_YDAY = 10; // previous counter's Yesterday figure on the switch day
+                // Visitor Counter backend (own, since 11 Nov 2026): Apps Script
+                // "EPI Visitor Counter" on the pakeagle6 account + Sheet
+                // "EPI Site Visitor Counter" (days + BaseTotal 2372; the abacus
+                // counts of 3-11 Nov 2026 were carried into that sheet, total
+                // 2430 at the switch). One call per page load registers the
+                // visit and returns Today / Yesterday / Total all together.
+                var VD_URL = 'https://script.google.com/macros/s/AKfycbxkyow_33Kx7aDg_9A2p9ppmPKay7zZleXflH33P-PtPwfczr-jiK_tSqJP79c6njWyvw/exec';
                 function vdPktYmd(daysAgo){
                     try{
                         var t = new Date(Date.now() - (daysAgo || 0) * 86400000);
@@ -2112,16 +2115,20 @@
                         return y + '-' + m + '-' + d;
                     }catch(e){ return ''; }
                 }
-                function vdApi(path){
-                    return fetch('https://abacus.jasoncameron.dev/' + path).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
-                }
                 function vdFmt(n){ return n == null ? '–' : Number(n).toLocaleString('en-US'); }
                 function vdSet(id, n){ var el = document.getElementById(id); if(el) el.textContent = vdFmt(n); }
-                var vdToday = vdPktYmd(0), vdYday = vdPktYmd(1);
-                vdApi('hit/' + VD_NS + '/total').then(function(j){ if(j && typeof j.value === 'number') vdSet('vdTotal', VD_BASE_TOTAL + j.value); });
-                if(vdToday) vdApi('hit/' + VD_NS + '/d-' + vdToday).then(function(j){ if(j && typeof j.value === 'number') vdSet('vdToday', j.value); });
-                if(vdToday === VD_SWITCH_DATE){ vdSet('vdYday', VD_BASE_YDAY); }
-                else if(vdYday) vdApi('get/' + VD_NS + '/d-' + vdYday).then(function(j){ vdSet('vdYday', (j && typeof j.value === 'number') ? j.value : 0); });
+                var vdToday = vdPktYmd(0);
+                if(vdToday){
+                    fetch(VD_URL + '?date=' + encodeURIComponent(vdToday) + '&hit=1&cb=' + Date.now(), { cache: 'no-store' })
+                    .then(function(r){ return r.ok ? r.json() : null; })
+                    .then(function(j){
+                        if(j && j.ok){
+                            vdSet('vdToday', j.today);
+                            vdSet('vdYday', j.yesterday);
+                            vdSet('vdTotal', j.total);
+                        }
+                    }).catch(function(){});
+                }
             })();
             </script>
         </div>
