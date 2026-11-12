@@ -9664,12 +9664,30 @@
         }
         // Google Drive share link -> direct thumbnail URL for <img>.
         // Accepts both /file/d/<ID>/view and /open?id=<ID> formats.
+        // NOTE: the thumbnail only loads if the Drive file is shared
+        // "Anyone with the link" — private files return 401 and the <img>
+        // removes itself, leaving the initials circle behind it.
         function locDriveThumb(u){
             if(!u) return '';
             const s = String(u);
             let m = s.match(/\/d\/([A-Za-z0-9_-]{10,})/);
             if(!m) m = s.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
             return m ? 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w200' : '';
+        }
+        // Initials for the photo placeholder circle (e.g. "Muhammad Afzal" -> "MA").
+        function locInitials(name){
+            const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
+            if(!parts.length) return '?';
+            return (parts[0].charAt(0) + (parts.length > 1 ? parts[1].charAt(0) : '')).toUpperCase();
+        }
+        // Pakistani mobile normalizer: the sheet stores some numbers as plain
+        // digits without the leading 0 (e.g. 3012115441). Display and dial
+        // always with the 0 (03012115441). Numbers already starting with 0
+        // (with or without dashes) are kept as-is.
+        function locPhoneNorm(ph){
+            const d = String(ph||'').replace(/[^0-9]/g,'');
+            if(d.length === 10 && d.charAt(0) === '3') return '0' + d;
+            return d;
         }
         function locRenderMap(){
             const el = document.getElementById('locMapEl');
@@ -9790,19 +9808,27 @@
                 const maps = r.maps || ('https://www.google.com/maps?q='+p.lat+','+p.lng);
                 const prof = profByUser[locNormUser(r.username) || String(r.name||'').trim().toLowerCase()] || null;
                 const thumb = prof ? locDriveThumb(prof.picture) : '';
-                const tel = prof && prof.phone ? String(prof.phone).replace(/[^0-9+]/g,'') : '';
+                const tel = prof && prof.phone ? locPhoneNorm(prof.phone) : '';
+                const telDisp = prof && prof.phone ? (String(prof.phone).trim().charAt(0) === '0' ? String(prof.phone).trim() : tel) : '';
+                const initials = locInitials(r.name);
+                const photoHtml = thumb
+                    ? '<span style="position:relative;display:inline-block;width:64px;height:64px;float:left;margin:0 10px 6px 0">'
+                        + '<span style="position:absolute;inset:0;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:22px;line-height:64px;text-align:center">'+initials+'</span>'
+                        + '<img src="'+thumb+'" alt="" style="position:absolute;inset:0;width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid #0d5c3d" onerror="this.remove()">'
+                        + '</span>'
+                    : '<span style="display:inline-block;width:64px;height:64px;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:22px;line-height:64px;text-align:center;float:left;margin:0 10px 6px 0">'+initials+'</span>';
                 let leaveBadge = '';
                 if(r.ymd && (locLeaveRows||[]).some(function(lv){ return lv.ymd===r.ymd && (locNormUser(lv.username) || String(lv.name||'').trim().toLowerCase()) === (locNormUser(r.username) || String(r.name||'').trim().toLowerCase()); })){
                     leaveBadge = ' <span style="color:#c62828;font-weight:700">· On Leave</span>';
                 }
                 const html = '<div style="min-width:220px;font-size:13px;line-height:1.45">'
-                    + (thumb ? '<img src="'+thumb+'" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid #0d5c3d;float:left;margin:0 10px 6px 0" onerror="this.style.display=\'none\'">' : '')
+                    + photoHtml
                     + '<strong style="color:#0d5c3d">'+String(r.name||'')+'</strong><br>'
                     + (r.username ? ('User: '+locDispUser(r.username)+'<br>') : '')
                     + (r.tehsil ? (r.tehsil+(r.uc?' · '+r.uc:'')+'<br>') : '')
                     + (r.kitStation ? ('Kit: '+r.kitStation+'<br>') : '')
                     + 'Time: '+locFmt(r.ts)+(late?' <span style="color:#c62828;font-weight:700">Late</span>':'')+leaveBadge+'<br>'
-                    + (prof && prof.phone ? ('📞 <a href="tel:'+tel+'">'+prof.phone+'</a><br>') : '')
+                    + (tel ? ('📞 <a href="tel:'+tel+'">'+telDisp+'</a><br>') : '')
                     + (prof && prof.doj ? ('Joined: '+prof.doj+'<br>') : '')
                     + (prof && typeof prof.openingRemaining === 'number' && !isNaN(prof.openingRemaining) ? ('Leaves left: '+prof.openingRemaining+'<br>') : '')
                     + '<a href="'+maps+'" target="_blank" rel="noopener">Open in Google Maps</a>'
