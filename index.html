@@ -9835,11 +9835,24 @@
                     + '<div style="clear:both"></div>'
                     + '</div>';
                 marker.bindPopup(html);
-                // Hover opens the popup on desktop; tap/click still works on mobile.
+                // Hover opens the popup on desktop; click/tap opens it too.
                 // No mouseout close: the popup must stay open while the mouse moves
                 // onto it, so the phone number can be tapped to call.
                 // It closes on map click, another marker, or the popup X button.
                 marker.on('mouseover', function(){ this.openPopup(); });
+                // Explicit click handler: Leaflet toggles the popup on marker click,
+                // so a click on an already-open (hovered) popup would close it.
+                // Forcing open here keeps click working as an open action.
+                marker.on('click', function(){ this.openPopup(); });
+                // Clicks inside the popup (e.g. the phone number) must not close it:
+                // stop them reaching the map, so the number can be tapped to call.
+                marker.on('popupopen', function(e){
+                    var el = e.popup && e.popup.getElement ? e.popup.getElement() : null;
+                    if(el && !el._locClickGuard){
+                        el._locClickGuard = true;
+                        el.addEventListener('click', function(ev){ ev.stopPropagation(); });
+                    }
+                });
                 marker.addTo(locLeafletLayer);
                 bounds.push([p.lat, p.lng]);
             });
