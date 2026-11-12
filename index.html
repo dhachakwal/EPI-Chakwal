@@ -9725,6 +9725,13 @@
 
             if(!locLeafletMap){
                 locLeafletMap = L.map(el, { scrollWheelZoom: true, zoomControl: true });
+                // Empty-map click closes any open popup. Guard: a marker click also
+                // reaches the map (propagated, with propagatedFrom set), so skip those
+                // — otherwise clicking a marker would close the popup it just opened.
+                locLeafletMap.on('click', function(e){
+                    if(e && e.propagatedFrom) return;
+                    locLeafletMap.closePopup();
+                });
                 // Base layers
                 const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
