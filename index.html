@@ -2633,6 +2633,17 @@
         // Consonant skeleton of a name: vowels + spaces removed, so spelling
         // variants like Nazir/Nazeer and Shaoib/Shoaib still match.
         function locNameKey(s){ return String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/[aeiou]/g, ''); }
+        // True when every token of the query name appears (in order) in the
+        // stored name, compared by consonant skeleton — so "Islam Sharif"
+        // matches "Muhammad Islam Sharif" and "Nazir" matches "Nazeer".
+        function locNameTokensMatch(stored, query){
+            const tk = function(s){ return String(s || '').toLowerCase().split(/[^a-z]+/).filter(Boolean).map(locNameKey).filter(Boolean); };
+            const st = tk(stored), q = tk(query);
+            if(!q.length) return false;
+            let j = 0;
+            for(let i = 0; i < st.length && j < q.length; i++){ if(st[i] === q[j]) j++; }
+            return j === q.length;
+        }
         function locFindProf(name, uc){
             const nk = String(name || '').trim().toLowerCase();
             if(!nk) return null;
@@ -2640,8 +2651,8 @@
             if(byUC && uc){ const m = byUC[nk + '|' + String(uc).trim().toLowerCase()]; if(m) return m; }
             if(byName && byName[nk]) return byName[nk];
             if(byUser && byUser[nk]) return byUser[nk];
-            // Fuzzy fallback on the consonant skeleton (Nazir ~ Nazeer).
-            if(byName){ const ck = locNameKey(nk); if(ck){ for(const k2 in byName){ if(locNameKey(k2) === ck) return byName[k2]; } } }
+            // Fuzzy fallback: token-subsequence match (extra first name or vowel variant).
+            if(byName){ for(const k2 in byName){ if(locNameTokensMatch(k2, nk)) return byName[k2]; } }
             return null;
         }
         function locProfPhotoHtml(prof, size){
@@ -2689,7 +2700,7 @@
                 if(uname && locNormUser(r.username) === uname) return true;
                 if(prof && r.name && r.name.trim().toLowerCase() === prof.name.toLowerCase()) return true;
                 if(!prof && r.name && r.name.trim().toLowerCase() === k.toLowerCase()) return true;
-                if(!prof && r.name && locNameKey(k) && locNameKey(r.name) === locNameKey(k)) return true;
+                if(!prof && r.name && locNameTokensMatch(r.name, k)) return true;
                 return false;
             });
             mine.sort(function(a, b){ return String(b.date).localeCompare(String(a.date)); });
