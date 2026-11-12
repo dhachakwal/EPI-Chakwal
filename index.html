@@ -9836,8 +9836,10 @@
                     + '</div>';
                 marker.bindPopup(html);
                 // Hover opens the popup on desktop; tap/click still works on mobile.
+                // No mouseout close: the popup must stay open while the mouse moves
+                // onto it, so the phone number can be tapped to call.
+                // It closes on map click, another marker, or the popup X button.
                 marker.on('mouseover', function(){ this.openPopup(); });
-                marker.on('mouseout', function(){ this.closePopup(); });
                 marker.addTo(locLeafletLayer);
                 bounds.push([p.lat, p.lng]);
             });
