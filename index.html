@@ -613,7 +613,7 @@
     <span id="svSectionAsOf" style="flex:1;text-align:center;font-size:15px;font-weight:700;color:#0d5c3d;letter-spacing:.2px"></span>
 </div>
 <div class="emr-card" id="svCard">
-    <p class="emr-note"><strong>Source:</strong> HMIS &rarr; EPI &rarr; Reports &rarr; Summary By Vaccinations. The data loads live from the Google Sheet <strong>&ldquo;Summary by Vaccinator Chakwal&rdquo;</strong> and is auto-updated every night (data from the 1st of the month to date). Each Fixed Site facility is linked to its UC through the site HR (92 Health Facilities) data.</p>
+    <p class="emr-note"><strong>Source:</strong> HMIS &rarr; EPI &rarr; Reports &rarr; Summary By Vaccinations. The data loads live from the Google Sheet <strong>&ldquo;Summary by Vaccinator Chakwal&rdquo;</strong> and is auto-updated every night. Use the Month selector to view archived full months (September and October 2026 are stored on the backend and stay available). Each Fixed Site facility is linked to its UC through the site HR (92 Health Facilities) data.</p>
     <div class="stats-grid">
         <div class="stat-card"><div class="stat-number" id="svStatOutreach">—</div><div class="stat-label">Outreach Doses</div></div>
         <div class="stat-card"><div class="stat-number" id="svStatFixed">—</div><div class="stat-label">Fixed Site Doses</div></div>
@@ -626,6 +626,13 @@
         <button type="button" class="emr-tab" data-sv="compiled" onclick="svSwitch('compiled')">📊 Compiled</button>
     </div>
     <div class="emr-filter">
+        <label>Month
+            <select id="svMonth" onchange="svLoad()">
+                <option value="2026-09">September 2026</option>
+                <option value="2026-10">October 2026</option>
+                <option value="2026-11" selected>November 2026</option>
+            </select>
+        </label>
         <label>Tehsil
             <select id="svTehsil" onchange="svRender()">
                 <option value="">All Tehsils</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option><option>Lawa</option>
@@ -2528,7 +2535,7 @@
             XLSX.writeFile(wb, 'EPI_Chakwal_HR_Data.xlsx');
         }
 
-        function openStatModal(type){
+        async function openStatModal(type){
             const title=document.getElementById('stat-modal-title');
             const body=document.getElementById('stat-modal-body');
             let html='';
@@ -2542,7 +2549,15 @@
                     html+=`<div class="tehsil-block"><div class="tehsil-block-header" id="th-u${i}" onclick="toggleTehsil('u${i}')"><span>${t} (${ucs.length})</span><span class="arrow">&#9656;</span></div><div class="tehsil-block-content" id="tc-u${i}">${rows}</div></div>`});
             }else if(type==='vaccinators'){
                 title.textContent='Vaccinators (78)';
-                TEHSILS.forEach((t,i)=>{const list=hrData.vaccinators[t]||[];let rows=list.map(v=>{const nameHtml=v.vacant?'<span class="vacant-badge">Vacant</span>':v.name;const sub=v.uc?`<div class="tehsil-entry-sub">UC: ${v.uc}</div>`:'';return `<div class="tehsil-entry-row"><span><span class="tehsil-entry-name">${nameHtml}</span>${sub}</span><span class="tehsil-entry-value">${v.mobile}</span></div>`}).join('');
+                // Photos come from the All Vaccinators Profile master; load it first
+                // if the Field Location section has not done so yet.
+                try{ await locEnsureProf(); }catch(e){}
+                TEHSILS.forEach((t,i)=>{const list=hrData.vaccinators[t]||[];let rows=list.map(v=>{
+                    const prof=v.vacant?null:locFindProf(v.name,v.uc);
+                    const photo=prof?locProfPhotoHtml(prof,36):'<span style="display:inline-block;width:36px;height:36px;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:13px;line-height:36px;text-align:center;flex:0 0 auto">'+locInitials(v.name)+'</span>';
+                    const key=prof?(prof.username||prof.name):v.name;
+                    const nameHtml=v.vacant?'<span class="vacant-badge">Vacant</span>':'<a href="javascript:void(0)" onclick="openVaccinatorProfile(\''+String(key).replace(/\'/g,'')+'\')" style="color:#0d5c3d;font-weight:600;text-decoration:none" title="Open profile">'+v.name+'</a>';
+                    const sub=v.uc?`<div class="tehsil-entry-sub">UC: ${v.uc}</div>`:'';return `<div class="tehsil-entry-row"><span style="display:flex;gap:10px;align-items:center">${photo}<span><span class="tehsil-entry-name">${nameHtml}</span>${sub}</span></span><span class="tehsil-entry-value">${v.mobile}</span></div>`}).join('');
                     html+=`<div class="tehsil-block"><div class="tehsil-block-header" id="th-v${i}" onclick="toggleTehsil('v${i}')"><span>${t} (${list.length})</span><span class="arrow">&#9656;</span></div><div class="tehsil-block-content" id="tc-v${i}">${rows||'<div style="padding:8px;color:#888">No data</div>'}</div></div>`});
             }else if(type==='asvs'){
                 title.textContent='ASVs (7)';
@@ -2568,6 +2583,144 @@
             body.innerHTML=html;document.getElementById('statModal').classList.add('active');
         }
         function closeStatModal(){document.getElementById('statModal').classList.remove('active')}
+
+        // ---- Vaccinator profile + service record (HR Overview) ----
+        // Records live in the "Vaccinator Records" sheet (Pak Eagle), tab "Records":
+        // Date | Username | Name | Type | Ref No. | Subject | Details | Status | Issued By.
+        // One row per vaccinator named in a letter — a letter naming 10 vaccinators
+        // becomes 10 rows, one in each vaccinator's profile.
+        const REC_SHEET_ID = '11GHoNbiXzpLhQb6qb9Hyki1Z8bd-pCMMZRt-UFyG764';
+        let _locProfPromise = null;
+        // Load the All Vaccinators Profile master (photo/phone/DOJ/leaves) if the
+        // Field Location section has not loaded it yet. Header-based column lookup,
+        // so the sheet's column order does not matter.
+        async function locEnsureProf(){
+            if(window._locProfByName && Object.keys(window._locProfByName).length) return true;
+            if(_locProfPromise) return _locProfPromise;
+            _locProfPromise = (async function(){
+                try{
+                    const url = 'https://docs.google.com/spreadsheets/d/1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4/gviz/tq?tqx=out:json&headers=1&sheet=' + encodeURIComponent('All Vaccinators Profile');
+                    const res = await fetch(url);
+                    const text = await res.text();
+                    const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+                    const labels = (data.table.cols || []).map(function(c){ return String(c.label || '').toLowerCase(); });
+                    const ix = function(names){ for(let i = 0; i < labels.length; i++){ for(let j = 0; j < names.length; j++){ if(labels[i].indexOf(names[j]) >= 0) return i; } } return -1; };
+                    const iN = ix(['vaccinator name', 'name']), iU = ix(['username']), iT = ix(['tehsil']), iUc = ix(['union council', 'uc']);
+                    const iPic = ix(['vaccinator picture', 'picture', 'photo']), iPh = ix(['official mobile', 'mobile']), iDoj = ix(['date of joining', 'doj', 'joining']), iRem = ix(['remaining leave', 'remaining']);
+                    const byUser = {}, byName = {}, byNameUC = {};
+                    (data.table.rows || []).forEach(function(r){
+                        const c = r.c || [];
+                        const v = function(i){ const cell = c[i]; if(i < 0 || !cell || cell.v == null) return ''; return cell.f != null ? String(cell.f).trim() : String(cell.v).trim(); };
+                        const name = v(iN);
+                        if(!name || /^vacant$/i.test(name)) return;
+                        let rem = parseFloat(v(iRem).replace(/,/g, ''));
+                        if(isNaN(rem)) rem = 24;
+                        const m = { name: name, username: v(iU).replace(/\.0$/, ''), tehsil: v(iT), uc: v(iUc), picture: v(iPic), phone: v(iPh), doj: v(iDoj), openingRemaining: rem };
+                        const k = locNormUser(m.username) || name.toLowerCase();
+                        if(k && !byUser[k]) byUser[k] = m;
+                        const nk = name.toLowerCase();
+                        if(!byName[nk]) byName[nk] = m;
+                        const nkuc = nk + '|' + m.uc.toLowerCase();
+                        if(!byNameUC[nkuc]) byNameUC[nkuc] = m;
+                    });
+                    window._locProfByUser = byUser; window._locProfByName = byName; window._locProfByNameUC = byNameUC;
+                    return true;
+                }catch(e){ console.error(e); return false; }
+            })();
+            return _locProfPromise;
+        }
+        function locFindProf(name, uc){
+            const nk = String(name || '').trim().toLowerCase();
+            if(!nk) return null;
+            const byUC = window._locProfByNameUC, byName = window._locProfByName, byUser = window._locProfByUser;
+            if(byUC && uc){ const m = byUC[nk + '|' + String(uc).trim().toLowerCase()]; if(m) return m; }
+            if(byName && byName[nk]) return byName[nk];
+            if(byUser && byUser[nk]) return byUser[nk];
+            return null;
+        }
+        function locProfPhotoHtml(prof, size){
+            const s = size || 64;
+            const thumb = prof ? locDriveThumb(prof.picture) : '';
+            const initials = locInitials(prof ? prof.name : '');
+            const big = thumb ? thumb.replace('sz=w200', 'sz=w800') : '';
+            if(thumb){
+                return '<span style="position:relative;display:inline-block;width:' + s + 'px;height:' + s + 'px;flex:0 0 auto">'
+                    + '<span style="position:absolute;inset:0;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:' + Math.round(s * 0.34) + 'px;line-height:' + s + 'px;text-align:center">' + initials + '</span>'
+                    + '<img src="' + thumb + '" alt="" title="Tap to enlarge" style="position:absolute;inset:0;width:' + s + 'px;height:' + s + 'px;object-fit:cover;border-radius:50%;border:2px solid #0d5c3d;cursor:zoom-in" onclick="openImgModal(\'' + big + '\')" onerror="this.remove()">'
+                    + '</span>';
+            }
+            return '<span style="display:inline-block;width:' + s + 'px;height:' + s + 'px;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:' + Math.round(s * 0.34) + 'px;line-height:' + s + 'px;text-align:center;flex:0 0 auto">' + initials + '</span>';
+        }
+        // Full vaccinator profile: photo, HR details and the service record
+        // (explanations / show-cause notices / warnings) from the Records sheet.
+        async function openVaccinatorProfile(key){
+            const title = document.getElementById('stat-modal-title');
+            const body = document.getElementById('stat-modal-body');
+            const k = String(key || '').trim();
+            await locEnsureProf();
+            let prof = null;
+            if(k){
+                const byUser = window._locProfByUser || {};
+                prof = byUser[locNormUser(k)] || byUser[k.toLowerCase()] || (window._locProfByName && window._locProfByName[k.toLowerCase()]) || null;
+            }
+            title.textContent = prof ? prof.name : (k || 'Vaccinator Profile');
+            body.innerHTML = '<div style="padding:10px;color:#777">Loading profile…</div>';
+            document.getElementById('statModal').classList.add('active');
+            let recs = [];
+            try{
+                const url = 'https://docs.google.com/spreadsheets/d/' + REC_SHEET_ID + '/gviz/tq?tqx=out:json&headers=1&sheet=' + encodeURIComponent('Records');
+                const res = await fetch(url);
+                const text = await res.text();
+                const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+                (data.table.rows || []).forEach(function(r){
+                    const c = r.c || [];
+                    const v = function(i){ const cell = c[i]; if(!cell || cell.v == null) return ''; return cell.f != null ? String(cell.f).trim() : String(cell.v).trim(); };
+                    recs.push({date: v(0), username: v(1), name: v(2), type: v(3), ref: v(4), subject: v(5), details: v(6), status: v(7), by: v(8)});
+                });
+            }catch(e){ console.error(e); }
+            const uname = prof ? locNormUser(prof.username) : '';
+            const mine = recs.filter(function(r){
+                if(uname && locNormUser(r.username) === uname) return true;
+                if(prof && r.name && r.name.trim().toLowerCase() === prof.name.toLowerCase()) return true;
+                if(!prof && r.name && r.name.trim().toLowerCase() === k.toLowerCase()) return true;
+                return false;
+            });
+            mine.sort(function(a, b){ return String(b.date).localeCompare(String(a.date)); });
+            const typeColor = {'Show Cause': '#c62828', 'Explanation': '#e65100', 'Warning': '#ef6c00', 'Notice': '#1565c0', 'Appreciation': '#2e7d32'};
+            let html = '<div style="margin-bottom:10px"><a href="javascript:void(0)" onclick="openStatModal(\'vaccinators\')" style="color:#0d5c3d;font-weight:600;text-decoration:none">&larr; Back to Vaccinators</a></div>';
+            if(!prof && !mine.length){
+                html += '<div style="padding:10px;color:#777">No profile found for this vaccinator in the HR master. Check the name or username.</div>';
+                body.innerHTML = html;
+                return;
+            }
+            const tel = prof && prof.phone ? locPhoneNorm(prof.phone) : '';
+            const telDisp = prof && prof.phone ? (String(prof.phone).trim().charAt(0) === '0' ? String(prof.phone).trim() : tel) : '';
+            html += '<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px">'
+                + locProfPhotoHtml(prof, 72)
+                + '<div><div style="font-size:17px;font-weight:800;color:#0d5c3d">' + svEsc(prof ? prof.name : (mine[0] ? mine[0].name : k)) + '</div>'
+                + (prof && prof.tehsil ? '<div style="font-size:13px;color:#444">' + svEsc(prof.tehsil) + (prof.uc ? ' · ' + svEsc(prof.uc) : '') + '</div>' : '')
+                + (prof && prof.username ? '<div style="font-size:13px;color:#444">User: ' + svEsc(prof.username) + '</div>' : '')
+                + (tel ? '<div style="font-size:13px;color:#444">📞 <a href="tel:' + tel + '">' + svEsc(telDisp) + '</a></div>' : '')
+                + (prof && prof.doj ? '<div style="font-size:13px;color:#444">Joined: ' + svEsc(prof.doj) + '</div>' : '')
+                + (prof && typeof prof.openingRemaining === 'number' && !isNaN(prof.openingRemaining) ? '<div style="font-size:13px;color:#444">Leaves left: ' + prof.openingRemaining + '</div>' : '')
+                + '</div></div>';
+            html += '<div style="font-size:15px;font-weight:700;color:#0d5c3d;margin:6px 0 8px">Service Record (' + mine.length + ')</div>';
+            if(!mine.length){
+                html += '<div style="padding:10px;color:#777;font-size:13.5px">No record entries yet. When an explanation or show-cause letter arrives, it will appear here.</div>';
+            }else{
+                mine.forEach(function(r){
+                    const col = typeColor[r.type] || '#555';
+                    html += '<div style="border:1px solid #ddd;border-left:4px solid ' + col + ';border-radius:6px;padding:10px 12px;margin-bottom:10px">'
+                        + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:' + col + '">' + svEsc(r.type || 'Record') + '</span><span style="font-size:12.5px;color:#666">' + svEsc(r.date) + '</span></div>'
+                        + (r.subject ? '<div style="font-weight:700;margin-top:4px">' + svEsc(r.subject) + '</div>' : '')
+                        + (r.ref ? '<div style="font-size:12.5px;color:#666">Ref: ' + svEsc(r.ref) + '</div>' : '')
+                        + (r.details ? '<div style="font-size:13.5px;margin-top:4px;white-space:pre-wrap">' + svEsc(r.details) + '</div>' : '')
+                        + '<div style="font-size:12.5px;color:#666;margin-top:6px">Status: <strong>' + svEsc(r.status || 'Pending') + '</strong>' + (r.by ? ' · Issued by: ' + svEsc(r.by) : '') + '</div>'
+                        + '</div>';
+                });
+            }
+            body.innerHTML = html;
+        }
 
         function openNidModal(){ window.open('nid-payment.html','_blank'); }
         function openSweepModule(){
@@ -9804,6 +9957,18 @@
                 const k = locNormUser(m.username) || String(m.name||'').trim().toLowerCase();
                 if(k && !profByUser[k]) profByUser[k] = m;
             });
+            // Shared with the HR Overview modal + vaccinator profile view:
+            // the same profile records, keyed by username, by name, and by name+UC.
+            window._locProfByUser = profByUser;
+            window._locProfByName = {};
+            window._locProfByNameUC = {};
+            Object.keys(profByUser).forEach(function(k){
+                const m = profByUser[k];
+                const nk = String(m.name||'').trim().toLowerCase();
+                if(nk && !window._locProfByName[nk]) window._locProfByName[nk] = m;
+                const nkuc = nk + '|' + String(m.uc||'').trim().toLowerCase();
+                if(nk && !window._locProfByNameUC[nkuc]) window._locProfByNameUC[nkuc] = m;
+            });
             points.forEach(function(p){
                 const r = p.r;
                 // Always green pin (no fresh/stale grey)
@@ -9821,7 +9986,7 @@
                 const photoHtml = thumb
                     ? '<span style="position:relative;display:inline-block;width:64px;height:64px;float:left;margin:0 10px 6px 0">'
                         + '<span style="position:absolute;inset:0;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:22px;line-height:64px;text-align:center">'+initials+'</span>'
-                        + '<img src="'+thumb+'" alt="" style="position:absolute;inset:0;width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid #0d5c3d" onerror="this.remove()">'
+                        + '<img src="'+thumb+'" alt="" title="Tap to enlarge" style="position:absolute;inset:0;width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid #0d5c3d;cursor:zoom-in" onclick="openImgModal(\''+thumb.replace('sz=w200','sz=w800')+'\')" onerror="this.remove()">'
                         + '</span>'
                     : '<span style="display:inline-block;width:64px;height:64px;border-radius:50%;background:#0d5c3d;color:#fff;font-weight:800;font-size:22px;line-height:64px;text-align:center;float:left;margin:0 10px 6px 0">'+initials+'</span>';
                 let leaveBadge = '';
@@ -9838,6 +10003,7 @@
                     + (tel ? ('📞 <a href="tel:'+tel+'">'+telDisp+'</a><br>') : '')
                     + (prof && prof.doj ? ('Joined: '+prof.doj+'<br>') : '')
                     + (prof && typeof prof.openingRemaining === 'number' && !isNaN(prof.openingRemaining) ? ('Leaves left: '+prof.openingRemaining+'<br>') : '')
+                    + (r.username ? ('👤 <a href="javascript:void(0)" onclick="openVaccinatorProfile(\''+String(r.username).replace(/\'/g, '')+'\')">View Profile</a><br>') : '')
                     + '<a href="'+maps+'" target="_blank" rel="noopener">Open in Google Maps</a>'
                     + '<div style="clear:both"></div>'
                     + '</div>';
@@ -13537,12 +13703,23 @@
         async function svLoad(){
             const st = document.getElementById('svStatus');
             if(st){ st.style.display = 'block'; st.textContent = 'Loading Summary by Vaccinator sheet…'; }
+            // Month archive: live tabs hold the current month; past months live in
+            // Out_YYYY-MM / Fix_YYYY-MM archive tabs, written nightly. The dropdown
+            // only lists months whose archive tabs exist.
+            const mSel = document.getElementById('svMonth');
+            const m = mSel ? mSel.value : '2026-11';
+            const now = new Date();
+            const cur = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            const isCurrent = (m === cur);
             try{
-                svOutreachRows = await svFetchTab('Outreach');
-                svFixedRows = await svFetchTab('Fixed');
+                svOutreachRows = await svFetchTab('Out_' + m);
+                svFixedRows = await svFetchTab('Fix_' + m);
                 svRender();
                 const asof = document.getElementById('svSectionAsOf');
-                if(asof) asof.textContent = new Date().toLocaleString('en-US', {month: 'long', year: 'numeric'}) + ' · Month to Date · Auto-updated every night';
+                if(asof){
+                    const label = mSel ? mSel.options[mSel.selectedIndex].text : m;
+                    asof.textContent = label + (isCurrent ? ' · Month to Date · Auto-updated every night' : ' · Full Month · Archived');
+                }
                 if(st) st.style.display = 'none';
             }catch(err){
                 console.error(err);
