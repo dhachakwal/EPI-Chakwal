@@ -9536,6 +9536,7 @@
                 const H=masterPack.headers, R=masterPack.rows;
                 const iT=locIx(H,['tehsil']), iU=locIx(H,['union council','uc']), iN=locIx(H,['vaccinator name','name']), iUser=locIx(H,['username']);
                 const iAv=locIx(H,['availed','total casual']), iRem=locIx(H,['remaining leave','remaining']);
+                const iPic=locIx(H,['vaccinator picture','picture','photo']), iPh=locIx(H,['vaccinator official mobile','official mobile','mobile']), iDoj=locIx(H,['date of joining','doj','joining']);
                 const newMaster = [];
                 R.forEach(function(row){
                     const name = iN>=0?String(row[iN]||'').trim():'';
@@ -9551,7 +9552,10 @@
                         tehsil:iT>=0?String(row[iT]||'').trim():'',
                         uc:iU>=0?String(row[iU]||'').trim():'',
                         openingRemaining: remaining,
-                        availedJanAug: isNaN(availed)?null:availed
+                        availedJanAug: isNaN(availed)?null:availed,
+                        picture:iPic>=0?String(row[iPic]||'').trim():'',
+                        phone:iPh>=0?String(row[iPh]==null?'':row[iPh]).trim():'',
+                        doj:iDoj>=0?String(row[iDoj]||'').trim():''
                     });
                 });
                 // Leave applications tab
@@ -9658,6 +9662,15 @@
             const n = parseFloat(s);
             return isNaN(n) ? NaN : n;
         }
+        // Google Drive share link -> direct thumbnail URL for <img>.
+        // Accepts both /file/d/<ID>/view and /open?id=<ID> formats.
+        function locDriveThumb(u){
+            if(!u) return '';
+            const s = String(u);
+            let m = s.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+            if(!m) m = s.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+            return m ? 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w200' : '';
+        }
         function locRenderMap(){
             const el = document.getElementById('locMapEl');
             const countEl = document.getElementById('locMapCount');
@@ -9759,6 +9772,13 @@
 
             locLeafletLayer.clearLayers();
             const bounds = [];
+            // Profile lookup (photo / phone / joining / leave balance) from the
+            // All Vaccinators Profile master, keyed by normalized username.
+            const profByUser = {};
+            (locMaster||[]).forEach(function(m){
+                const k = locNormUser(m.username) || String(m.name||'').trim().toLowerCase();
+                if(k && !profByUser[k]) profByUser[k] = m;
+            });
             points.forEach(function(p){
                 const r = p.r;
                 // Always green pin (no fresh/stale grey)
@@ -9768,15 +9788,30 @@
                 });
                 const late = locIsLate(r.ts);
                 const maps = r.maps || ('https://www.google.com/maps?q='+p.lat+','+p.lng);
-                const html = '<div style="min-width:180px;font-size:13px;line-height:1.45">'
+                const prof = profByUser[locNormUser(r.username) || String(r.name||'').trim().toLowerCase()] || null;
+                const thumb = prof ? locDriveThumb(prof.picture) : '';
+                const tel = prof && prof.phone ? String(prof.phone).replace(/[^0-9+]/g,'') : '';
+                let leaveBadge = '';
+                if(r.ymd && (locLeaveRows||[]).some(function(lv){ return lv.ymd===r.ymd && (locNormUser(lv.username) || String(lv.name||'').trim().toLowerCase()) === (locNormUser(r.username) || String(r.name||'').trim().toLowerCase()); })){
+                    leaveBadge = ' <span style="color:#c62828;font-weight:700">· On Leave</span>';
+                }
+                const html = '<div style="min-width:220px;font-size:13px;line-height:1.45">'
+                    + (thumb ? '<img src="'+thumb+'" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid #0d5c3d;float:left;margin:0 10px 6px 0" onerror="this.style.display=\'none\'">' : '')
                     + '<strong style="color:#0d5c3d">'+String(r.name||'')+'</strong><br>'
                     + (r.username ? ('User: '+locDispUser(r.username)+'<br>') : '')
                     + (r.tehsil ? (r.tehsil+(r.uc?' · '+r.uc:'')+'<br>') : '')
                     + (r.kitStation ? ('Kit: '+r.kitStation+'<br>') : '')
-                    + 'Time: '+locFmt(r.ts)+(late?' <span style="color:#c62828;font-weight:700">Late</span>':'')+'<br>'
+                    + 'Time: '+locFmt(r.ts)+(late?' <span style="color:#c62828;font-weight:700">Late</span>':'')+leaveBadge+'<br>'
+                    + (prof && prof.phone ? ('📞 <a href="tel:'+tel+'">'+prof.phone+'</a><br>') : '')
+                    + (prof && prof.doj ? ('Joined: '+prof.doj+'<br>') : '')
+                    + (prof && typeof prof.openingRemaining === 'number' && !isNaN(prof.openingRemaining) ? ('Leaves left: '+prof.openingRemaining+'<br>') : '')
                     + '<a href="'+maps+'" target="_blank" rel="noopener">Open in Google Maps</a>'
+                    + '<div style="clear:both"></div>'
                     + '</div>';
                 marker.bindPopup(html);
+                // Hover opens the popup on desktop; tap/click still works on mobile.
+                marker.on('mouseover', function(){ this.openPopup(); });
+                marker.on('mouseout', function(){ this.closePopup(); });
                 marker.addTo(locLeafletLayer);
                 bounds.push([p.lat, p.lng]);
             });
