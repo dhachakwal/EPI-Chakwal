@@ -87,6 +87,7 @@
         .map-container iframe{width:100%;height:100%;border:0}
         .location-btn{display:block;text-align:center;background:#1a8a5c;color:#fff;padding:9px 15px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600}
         .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:15px}
+        #imgModal{z-index:1100}
         .modal-overlay.active{display:flex}
         .modal-box{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:30px 25px;text-align:center;position:relative}
         .stat-modal-box{background:#fff;border-radius:14px;max-width:580px;width:100%;max-height:85vh;padding:25px;position:relative;overflow-y:auto}
@@ -2586,7 +2587,7 @@
 
         // ---- Vaccinator profile + service record (HR Overview) ----
         // Records live in the "Vaccinator Records" sheet (Pak Eagle), tab "Records":
-        // Date | Username | Name | Type | Ref No. | Subject | Details | Status | Issued By.
+        // Date | Username | Name | Type | Ref No. | Subject | Details | Status | Issued By | Letter File.
         // One row per vaccinator named in a letter — a letter naming 10 vaccinators
         // becomes 10 rows, one in each vaccinator's profile.
         const REC_SHEET_ID = '11GHoNbiXzpLhQb6qb9Hyki1Z8bd-pCMMZRt-UFyG764';
@@ -2629,6 +2630,9 @@
             })();
             return _locProfPromise;
         }
+        // Consonant skeleton of a name: vowels + spaces removed, so spelling
+        // variants like Nazir/Nazeer and Shaoib/Shoaib still match.
+        function locNameKey(s){ return String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/[aeiou]/g, ''); }
         function locFindProf(name, uc){
             const nk = String(name || '').trim().toLowerCase();
             if(!nk) return null;
@@ -2636,6 +2640,8 @@
             if(byUC && uc){ const m = byUC[nk + '|' + String(uc).trim().toLowerCase()]; if(m) return m; }
             if(byName && byName[nk]) return byName[nk];
             if(byUser && byUser[nk]) return byUser[nk];
+            // Fuzzy fallback on the consonant skeleton (Nazir ~ Nazeer).
+            if(byName){ const ck = locNameKey(nk); if(ck){ for(const k2 in byName){ if(locNameKey(k2) === ck) return byName[k2]; } } }
             return null;
         }
         function locProfPhotoHtml(prof, size){
@@ -2661,7 +2667,7 @@
             let prof = null;
             if(k){
                 const byUser = window._locProfByUser || {};
-                prof = byUser[locNormUser(k)] || byUser[k.toLowerCase()] || (window._locProfByName && window._locProfByName[k.toLowerCase()]) || null;
+                prof = byUser[locNormUser(k)] || byUser[k.toLowerCase()] || (window._locProfByName && window._locProfByName[k.toLowerCase()]) || locFindProf(k) || null;
             }
             title.textContent = prof ? prof.name : (k || 'Vaccinator Profile');
             body.innerHTML = '<div style="padding:10px;color:#777">Loading profile…</div>';
@@ -2683,6 +2689,7 @@
                 if(uname && locNormUser(r.username) === uname) return true;
                 if(prof && r.name && r.name.trim().toLowerCase() === prof.name.toLowerCase()) return true;
                 if(!prof && r.name && r.name.trim().toLowerCase() === k.toLowerCase()) return true;
+                if(!prof && r.name && locNameKey(k) && locNameKey(r.name) === locNameKey(k)) return true;
                 return false;
             });
             mine.sort(function(a, b){ return String(b.date).localeCompare(String(a.date)); });
