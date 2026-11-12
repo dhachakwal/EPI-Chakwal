@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Update My Profile | EPI Chakwal</title>
+<link rel="icon" href="favicon.png.png" type="image/png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(160deg,#e8f5e9 0%,#f0f7f4 45%,#e3f2fd 100%);min-height:100vh;color:#222}
+.wrap{max-width:440px;margin:0 auto;padding:16px 14px 32px}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(13,92,61,.12);padding:20px 18px;margin-top:10px}
+.brand{text-align:center;padding:6px 0 2px}
+.brand img{height:72px;width:72px;object-fit:contain;border-radius:10px}
+.brand h1{font-size:18px;color:#0d5c3d;margin:8px 0 2px;font-weight:800}
+.brand p{font-size:12px;color:#666;line-height:1.35}
+label{display:block;font-size:13px;font-weight:600;color:#0d5c3d;margin:12px 0 5px}
+select,input[type="text"],input[type="tel"]{width:100%;padding:12px;border:1.5px solid #c8e6c9;border-radius:10px;font-size:15px;background:#fafffe}
+select:focus,input:focus{outline:none;border-color:#1a8a5c;box-shadow:0 0 0 3px rgba(26,138,92,.15)}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
+.btn-sub{background:#1565c0;color:#fff}
+.btn-sub:disabled{opacity:.55;cursor:not-allowed}
+.btn-sec{background:#eceff1;color:#37474f;font-size:14px;padding:10px}
+.note{font-size:12px;color:#555;margin-top:10px;line-height:1.5;background:#f7faf8;border-radius:8px;padding:10px 12px;border:1px solid #e0eee4}
+.err{display:none;margin-top:12px;padding:12px;border-radius:10px;font-size:13px;background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a}
+.ok{display:none;margin-top:14px;padding:14px 12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;text-align:center;font-size:15px;line-height:1.6;color:#1b5e20;font-weight:600}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#photoPreview{display:none;margin-top:10px;text-align:center}
+#photoPreview img{width:140px;height:140px;object-fit:cover;border-radius:50%;border:3px solid #0d5c3d}
+.file-hint{font-size:11px;color:#666;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="favicon.png.png" alt="EPI" onerror="this.style.display='none'">
+    <h1>Update My Profile</h1>
+    <p>EPI District Chakwal &middot; Photo &amp; Mobile Number</p>
+  </div>
+  <div class="card">
+    <label for="teh">Tehsil</label>
+    <select id="teh"><option value="">Select Tehsil</option></select>
+    <label for="uc">Union Council (UC)</label>
+    <select id="uc" disabled><option value="">Select Tehsil first</option></select>
+    <label for="vacc">Vaccinator</label>
+    <select id="vacc" disabled><option value="">Select UC first</option></select>
+
+    <label for="photoFile">Your Photo (passport style, clear face)</label>
+    <input type="file" id="photoFile" accept="image/*" style="padding:8px;border:1.5px solid #c8e6c9;border-radius:10px;width:100%;background:#fafffe">
+    <div class="file-hint">Photo is compressed on your phone before upload (max ~1 MB). If you only want to update a mobile number, you may skip the photo.</div>
+    <div id="photoPreview"><img id="photoImg" alt="Your photo preview"></div>
+
+    <label for="mobile">Official Mobile No.</label>
+    <input type="tel" id="mobile" placeholder="03xx-xxxxxxx" autocomplete="off">
+    <label for="mobile2">2nd Mobile Number (optional)</label>
+    <input type="tel" id="mobile2" placeholder="03xx-xxxxxxx" autocomplete="off">
+
+    <div class="note">
+      <strong>Please note</strong><br>
+      &bull; Your photo and details go to the DHO office for review first.<br>
+      &bull; They appear on the live map only after approval.<br>
+      &bull; Your CNIC and other HR record details are never shown on the map.
+    </div>
+    <button type="button" class="btn btn-sub" id="btnSub" onclick="submitProfile()">✅ Submit for Review</button>
+    <button type="button" class="btn btn-sec" onclick="resetForm()" style="margin-top:8px">↺ Reset</button>
+    <div class="ok" id="okBox">Your profile update has been submitted for review. Thank you.</div>
+    <div class="err" id="errBox"></div>
+  </div>
+</div>
+<script>
+const PROFILE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8kcAtzTedwIggcPFsnZDHILUeGIg10UXbAamDIgfcNlGvriC_-WUG1E5C5nr7gCbW/exec';
+const ROSTER = [{"tehsil": "Chakwal", "uc": "BAIGAL", "name": "Riaz Hussain", "username": "9435_14244_OR"}, {"tehsil": "Chakwal", "uc": "BALKASSAR", "name": "Khuram Shahzad", "username": "9436_14245_OR"}, {"tehsil": "Chakwal", "uc": "BALOKASSAR", "name": "Saad Ali", "username": "3145442310"}, {"tehsil": "Chakwal", "uc": "BHEEN", "name": "Masood Iqbal", "username": "3108574182"}, {"tehsil": "Chakwal", "uc": "BIKHARI KALAN", "name": "Tahir Abbas", "username": "9301_14245_OR"}, {"tehsil": "Chakwal", "uc": "CHAK MALOOK", "name": "Umar Nawab", "username": "3079927497"}, {"tehsil": "Chakwal", "uc": "CHAK UMRA", "name": "Umer Shahzad", "username": "3355221400"}, {"tehsil": "Chakwal", "uc": "CHAKWAL URBAN I", "name": "Amjad Hussain", "username": "3325923065"}, {"tehsil": "Chakwal", "uc": "CHAKWAL URBAN II", "name": "Adnan Roshan", "username": "3348705194"}, {"tehsil": "Chakwal", "uc": "CHAKWAL URBAN III", "name": "Areeba Israr", "username": "12393_14252_OR"}, {"tehsil": "Chakwal", "uc": "CHAKWAL URBAN V", "name": "Syed Shams Ul Abbas", "username": "3335774743"}, {"tehsil": "Chakwal", "uc": "DAB", "name": "Tajammal Hussain", "username": "3335621463"}, {"tehsil": "Chakwal", "uc": "DHUDIAL", "name": "Waleed Shehzad", "username": "3371420786"}, {"tehsil": "Chakwal", "uc": "DHUMAN", "name": "Waqas Ali", "username": "3441509598"}, {"tehsil": "Chakwal", "uc": "DULLAH", "name": "Tabassam Nazir", "username": "3351527204"}, {"tehsil": "Chakwal", "uc": "JABAIRPUR", "name": "Usman Farooq", "username": "15361_25848_OR"}, {"tehsil": "Chakwal", "uc": "JAND", "name": "Qaiser Mehmood", "username": "3449232950"}, {"tehsil": "Chakwal", "uc": "JAND KHANZADA", "name": "Syed Shaoib Hussain Shah", "username": "3130564766"}, {"tehsil": "Chakwal", "uc": "JASWAL", "name": "Asad Hanif", "username": "3455966822"}, {"tehsil": "Chakwal", "uc": "KARSAL", "name": "Sajjad Hussain", "username": "3235941843"}, {"tehsil": "Chakwal", "uc": "KHAI", "name": "Muhammad Islam Sharif", "username": "12399_14263_OR"}, {"tehsil": "Chakwal", "uc": "KOT CHOHDRIAN", "name": "Muhammad Rehan Ul Tayyebain", "username": "3075083435"}, {"tehsil": "Chakwal", "uc": "MAINGON", "name": "Shahzaib", "username": "3465721095"}, {"tehsil": "Chakwal", "uc": "MULHAL MUGHLAN", "name": "Muhamamd Saghir", "username": "3431509042"}, {"tehsil": "Chakwal", "uc": "MUREED", "name": "Yasir Ahmed Khan", "username": "3125583110"}, {"tehsil": "Chakwal", "uc": "OUDHERWAL", "name": "Arshad Ali Khan", "username": "13145_14269_OR"}, {"tehsil": "Chakwal", "uc": "PADSHAN", "name": "Anas Farooq", "username": "3131564521"}, {"tehsil": "Chakwal", "uc": "SARAL", "name": "Abdul Muneeb", "username": "3325409690"}, {"tehsil": "Chakwal", "uc": "THANIL KAMAL", "name": "Haroon Ashraf", "username": "3366321574"}, {"tehsil": "Chakwal", "uc": "WARWAL", "name": "Nouman Ahmad", "username": "3328857204"}, {"tehsil": "Choa Saidan Shah", "uc": "BASHARAT", "name": "Abdul Basit", "username": "3410920389"}, {"tehsil": "Choa Saidan Shah", "uc": "CHOA SAIDEN SHAH", "name": "Danish Firdous", "username": "3465868570"}, {"tehsil": "Choa Saidan Shah", "uc": "DALWAL", "name": "Amir Nazeer", "username": "13146_16333_OR"}, {"tehsil": "Choa Saidan Shah", "uc": "DULMIAL", "name": "Ijaz Hussain", "username": "3435541163"}, {"tehsil": "Choa Saidan Shah", "uc": "LEHAR SULTAN PUR", "name": "Waqar Haider", "username": "10911_16336_OR"}, {"tehsil": "Kallar Kahar", "uc": "BHERPUR", "name": "Khalil ur Rehman", "username": "3433168268"}, {"tehsil": "Kallar Kahar", "uc": "BUCHAL KALAN", "name": "Prince Kashif Nouman", "username": "3135418054"}, {"tehsil": "Kallar Kahar", "uc": "BUCHAL KHURD", "name": "Muhammad Tauseef Nauman", "username": "3138413070"}, {"tehsil": "Kallar Kahar", "uc": "KALLAR KAHAR", "name": "Fahim Razaq", "username": "13141_14836_OR"}, {"tehsil": "Kallar Kahar", "uc": "KHAIRPUR", "name": "Khawar Iftakhar", "username": "3062260722"}, {"tehsil": "Kallar Kahar", "uc": "MIANI", "name": "Muhammad Sheraz", "username": "3345672589"}, {"tehsil": "Kallar Kahar", "uc": "MUNARA", "name": "Azhar Javed", "username": "3365848475"}, {"tehsil": "Kallar Kahar", "uc": "NURPUR", "name": "Muhammad Asif", "username": "12040_14840_OR"}, {"tehsil": "Talagang", "uc": "BHILOMAR", "name": "Muhammad Abdullah", "username": "3155944264"}, {"tehsil": "Talagang", "uc": "BIDHAR", "name": "Muhammad Atif", "username": "3025114922"}, {"tehsil": "Talagang", "uc": "DHERMOND", "name": "Muhammad Saqib", "username": "3013108960"}, {"tehsil": "Talagang", "uc": "DHOULAR", "name": "Aakash Rasheed", "username": "3316145042"}, {"tehsil": "Talagang", "uc": "DHURNAL", "name": "Nafees Ahmed", "username": "3065588692"}, {"tehsil": "Talagang", "uc": "JABI SHAH DILAWAR", "name": "Asif Iqbal", "username": "3070055841"}, {"tehsil": "Talagang", "uc": "JASIAL", "name": "Faisal Ayub", "username": "3015230335"}, {"tehsil": "Talagang", "uc": "JHATTLA", "name": "Waheed Iqbal", "username": "3345674669"}, {"tehsil": "Talagang", "uc": "KOT GULLAH", "name": "Umair Khalid", "username": "3315972653"}, {"tehsil": "Talagang", "uc": "KOT QAZI", "name": "Muhammad Amer Sameem", "username": "13142_15903_OR"}, {"tehsil": "Talagang", "uc": "KOT SARANG", "name": "Mohsin Iqbal", "username": "3105997875"}, {"tehsil": "Talagang", "uc": "LAWA RURAL", "name": "Shahid Iqbal", "username": "13143_15905_OR"}, {"tehsil": "Talagang", "uc": "LAWA URBAN", "name": "Muhammad Shabbir", "username": "3085704103"}, {"tehsil": "Talagang", "uc": "LETTI", "name": "Muhammad Waqas", "username": "14164_15906_OR"}, {"tehsil": "Talagang", "uc": "MALAKWAL", "name": "Muhammad Saqlain", "username": "15357_25855_OR"}, {"tehsil": "Talagang", "uc": "MULTAN KHURD", "name": "Muhammad Saddique", "username": "3142436159"}, {"tehsil": "Talagang", "uc": "NAKKA KAHUT", "name": "Muhammad Ali", "username": "3025120975"}, {"tehsil": "Talagang", "uc": "NIRAGHI", "name": "Muhammad Afzal", "username": "12401_15904_OR"}, {"tehsil": "Talagang", "uc": "PICHNAND", "name": "Saeed Ur Rehman", "username": "3075673618"}, {"tehsil": "Talagang", "uc": "PIRA FATEHIAL", "name": "Amjad Mehmood", "username": "3013220555"}, {"tehsil": "Talagang", "uc": "TALAGANG URBAN I", "name": "Ali Zeeshan Akbar", "username": "15359_25851_OR"}, {"tehsil": "Talagang", "uc": "TALAGANG URBAN II", "name": "Nouman Ali", "username": "15358_25852_OR"}, {"tehsil": "Talagang", "uc": "TAMMAN", "name": "Najeed ul Zaman", "username": "3023041318"}, {"tehsil": "Talagang", "uc": "TEHI", "name": "Farhan Shazad", "username": "3455881586"}, {"tehsil": "Talagang", "uc": "THOA MEHRAM KHAN I", "name": "Khalid Iqbal", "username": "3065699816"}, {"tehsil": "Talagang", "uc": "BHUDIAL", "name": "Waseem Ud Din", "username": "3012115441"}];
+
+function showErr(msg){
+  const el = document.getElementById('errBox');
+  el.style.display = 'block'; el.textContent = msg;
+  document.getElementById('okBox').style.display = 'none';
+}
+function showOk(){
+  document.getElementById('errBox').style.display = 'none';
+  document.getElementById('okBox').style.display = 'block';
+}
+function fillTehsils(){
+  const teh = document.getElementById('teh');
+  const list = [];
+  ROSTER.forEach(function(r){ if(list.indexOf(r.tehsil) < 0) list.push(r.tehsil); });
+  list.sort();
+  list.forEach(function(t){
+    const o = document.createElement('option'); o.value = t; o.textContent = t; teh.appendChild(o);
+  });
+}
+function onTehsil(){
+  const t = document.getElementById('teh').value;
+  const ucSel = document.getElementById('uc');
+  const vSel = document.getElementById('vacc');
+  ucSel.innerHTML = '<option value="">Select UC</option>';
+  vSel.innerHTML = '<option value="">Select UC first</option>';
+  vSel.disabled = true;
+  if(!t){ ucSel.disabled = true; return; }
+  const list = [];
+  ROSTER.forEach(function(r){ if(r.tehsil === t && list.indexOf(r.uc) < 0) list.push(r.uc); });
+  list.sort();
+  list.forEach(function(u){
+    const o = document.createElement('option'); o.value = u; o.textContent = u; ucSel.appendChild(o);
+  });
+  ucSel.disabled = false;
+}
+function onUC(){
+  const t = document.getElementById('teh').value;
+  const u = document.getElementById('uc').value;
+  const vSel = document.getElementById('vacc');
+  vSel.innerHTML = '<option value="">Select your name</option>';
+  if(!u){ vSel.disabled = true; return; }
+  ROSTER.forEach(function(r){
+    if(r.tehsil === t && r.uc === u){
+      const o = document.createElement('option');
+      o.value = r.username; o.textContent = r.name + ' (' + r.username + ')';
+      o.setAttribute('data-name', r.name);
+      vSel.appendChild(o);
+    }
+  });
+  vSel.disabled = false;
+}
+function selectedVacc(){
+  const vSel = document.getElementById('vacc');
+  const opt = vSel.options[vSel.selectedIndex];
+  if(!opt || !opt.value) return null;
+  return { username: opt.value, name: opt.getAttribute('data-name') || opt.textContent };
+}
+function compressPhoto(file){
+  return new Promise(function(resolve, reject){
+    if(!file) return reject(new Error('No photo selected'));
+    if(file.size > 12*1024*1024) return reject(new Error('Photo too large (max 12 MB).'));
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function(){
+      try{
+        let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        const side = 1200;
+        if(w > side || h > side){
+          if(w >= h){ h = Math.round(h * side / w); w = side; }
+          else { w = Math.round(w * side / h); h = side; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        let q = 0.85, dataUrl = canvas.toDataURL('image/jpeg', q);
+        while(dataUrl.length > 1.4e6 && q > 0.4){ q -= 0.08; dataUrl = canvas.toDataURL('image/jpeg', q); }
+        URL.revokeObjectURL(url);
+        resolve({ dataUrl: dataUrl, name: (file.name || 'photo.jpg').replace(/\.[^.]+$/, '') + '.jpg', mime: 'image/jpeg' });
+      }catch(e){ URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('Could not read photo')); };
+    img.src = url;
+  });
+}
+function postPayload(payload){
+  try{
+    let iframe = document.getElementById('profHiddenFrame');
+    if(!iframe){
+      iframe = document.createElement('iframe');
+      iframe.name = 'profHiddenFrame'; iframe.id = 'profHiddenFrame';
+      iframe.style.cssText = 'display:none;width:0;height:0;border:0';
+      document.body.appendChild(iframe);
+    }
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = PROFILE_SCRIPT_URL; form.target = 'profHiddenFrame'; form.style.display = 'none';
+    const dataInp = document.createElement('input');
+    dataInp.type = 'hidden'; dataInp.name = 'data'; dataInp.value = JSON.stringify(payload);
+    form.appendChild(dataInp);
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function(){ try{ form.remove(); }catch(e){} }, 4000);
+  }catch(e){}
+  try{
+    fetch(PROFILE_SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload), keepalive: true
+    });
+  }catch(e){}
+}
+async function submitProfile(){
+  const v = selectedVacc();
+  if(!v){ showErr('Please select your Tehsil, UC and name first.'); return; }
+  const mobile = document.getElementById('mobile').value.trim();
+  const mobile2 = document.getElementById('mobile2').value.trim();
+  const file = document.getElementById('photoFile').files[0] || null;
+  if(!file && !mobile){ showErr('Please attach your photo, or enter your official mobile number.'); return; }
+  const btn = document.getElementById('btnSub');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting…';
+  try{
+    let photo = null;
+    if(file) photo = await compressPhoto(file);
+    const payload = {
+      type: 'profile_update',
+      timestamp: new Date().toISOString(),
+      name: v.name,
+      username: v.username,
+      tehsil: document.getElementById('teh').value,
+      uc: document.getElementById('uc').value,
+      mobile: mobile,
+      mobile2: mobile2,
+      photo: photo
+    };
+    postPayload(payload);
+    showOk();
+    btn.textContent = '✅ Submitted';
+  }catch(e){
+    showErr(e && e.message ? e.message : 'Submission failed. Please try again.');
+    btn.disabled = false;
+    btn.textContent = '✅ Submit for Review';
+  }
+}
+function resetForm(){
+  document.getElementById('teh').selectedIndex = 0;
+  document.getElementById('uc').innerHTML = '<option value="">Select Tehsil first</option>';
+  document.getElementById('uc').disabled = true;
+  document.getElementById('vacc').innerHTML = '<option value="">Select UC first</option>';
+  document.getElementById('vacc').disabled = true;
+  document.getElementById('photoFile').value = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('mobile').value = '';
+  document.getElementById('mobile2').value = '';
+  document.getElementById('errBox').style.display = 'none';
+  document.getElementById('okBox').style.display = 'none';
+  const btn = document.getElementById('btnSub');
+  btn.disabled = false; btn.textContent = '✅ Submit for Review';
+}
+document.getElementById('teh').addEventListener('change', onTehsil);
+document.getElementById('uc').addEventListener('change', onUC);
+document.getElementById('photoFile').addEventListener('change', function(){
+  const f = this.files[0];
+  const pv = document.getElementById('photoPreview');
+  if(!f){ pv.style.display = 'none'; return; }
+  const img = document.getElementById('photoImg');
+  img.src = URL.createObjectURL(f);
+  pv.style.display = 'block';
+});
+fillTehsils();
+</script>
+</body>
+</html>
