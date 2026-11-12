@@ -2630,9 +2630,10 @@
             })();
             return _locProfPromise;
         }
-        // Consonant skeleton of a name: vowels + spaces removed, so spelling
-        // variants like Nazir/Nazeer and Shaoib/Shoaib still match.
-        function locNameKey(s){ return String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/[aeiou]/g, ''); }
+        // Consonant skeleton of a name: vowels + spaces removed and doubled
+        // letters collapsed, so spelling variants like Nazir/Nazeer,
+        // Shaoib/Shoaib, Shabbir/Shabir and Razzaq/Razaq still match.
+        function locNameKey(s){ return String(s || '').toLowerCase().replace(/[^a-z]/g, '').replace(/[aeiou]/g, '').replace(/(.)\1+/g, '$1'); }
         // True when every token of the query name appears (in order) in the
         // stored name, compared by consonant skeleton — so "Islam Sharif"
         // matches "Muhammad Islam Sharif" and "Nazir" matches "Nazeer".
@@ -2651,8 +2652,33 @@
             if(byUC && uc){ const m = byUC[nk + '|' + String(uc).trim().toLowerCase()]; if(m) return m; }
             if(byName && byName[nk]) return byName[nk];
             if(byUser && byUser[nk]) return byUser[nk];
+            // UC fallback: one vaccinator per UC, so a profile in the same UC
+            // sharing at least one name token is the same person even when
+            // the names differ more (e.g. HR "Muhammad Ejaz" vs "Ijaz Hussain").
+            if(byName && uc){
+                const uck = locNameKey(uc);
+                if(uck){
+                    const qt = nk.split(/[^a-z]+/).filter(Boolean).map(locNameKey).filter(Boolean);
+                    for(const k2 in byName){
+                        const p = byName[k2];
+                        if(!p || locNameKey(p.uc) !== uck) continue;
+                        const st2 = k2.split(/[^a-z]+/).filter(Boolean).map(locNameKey).filter(Boolean);
+                        if(qt.some(function(t){ return st2.indexOf(t) >= 0; })) return p;
+                    }
+                }
+            }
             // Fuzzy fallback: token-subsequence match (extra first name or vowel variant).
-            if(byName){ for(const k2 in byName){ if(locNameTokensMatch(k2, nk)) return byName[k2]; } }
+            // Best match wins: fewest stored tokens (closest in length).
+            if(byName){
+                let best = null, bestLen = 1e9;
+                for(const k2 in byName){
+                    if(locNameTokensMatch(k2, nk)){
+                        const len = k2.split(/[^a-z]+/).filter(Boolean).length;
+                        if(len < bestLen){ best = byName[k2]; bestLen = len; }
+                    }
+                }
+                if(best) return best;
+            }
             return null;
         }
         function locProfPhotoHtml(prof, size){
