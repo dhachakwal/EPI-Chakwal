@@ -1225,6 +1225,12 @@
                 <div id="emrModuleVCalls" style="display:none">
                 <style>
                 #vcStickyHead{position:sticky;top:0;z-index:60;background:#fff;padding:2px 0 2px;box-shadow:0 8px 12px -8px rgba(13,92,61,.35)}
+                #vcZero{margin:10px 0}
+                #vcZero .vc-zero-box{background:#fff3e0;border:1px solid #ffcc80;border-left:4px solid #ef6c00;border-radius:8px;padding:10px 12px;font-size:13.5px;color:#4e342e}
+                #vcZero .vc-zero-ok{background:#e8f5e9;border:1px solid #a5d6a7;border-left:4px solid #2e7d32;border-radius:8px;padding:10px 12px;font-size:13.5px;color:#1b5e20}
+                #vcZero .vc-zero-loading{background:#eceff1;border:1px solid #b0bec5;border-left:4px solid #78909c;border-radius:8px;padding:10px 12px;font-size:13.5px;color:#455a64}
+                #vcZero .vc-zero-uc{font-weight:700}
+                #vcZero .vc-zero-leave{color:#c62828;font-weight:700}
                 #vcSummary .vc-stats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
                 #vcSummary .vc-stat{background:#f1f8e9;border:1px solid #c8e6c9;border-radius:8px;padding:8px 12px;min-width:128px;cursor:pointer;transition:box-shadow .15s, background .15s}
                 #vcSummary .vc-stat:hover{box-shadow:0 2px 8px rgba(13,92,61,.25)}
@@ -1285,6 +1291,7 @@
                 </div>
                 <div id="vcSummary"></div>
                 </div><!-- /vcStickyHead -->
+                <div id="vcZero"></div>
                 <div id="vcList"></div>
                 </div><!-- /emrModuleVCalls -->
 
@@ -5592,6 +5599,85 @@
             vcStatusFilter = '';
             vcRender();
         }
+        // Zero-entry UCs (user's ask, 2026-11-13): for the selected date,
+        // list the roster UCs with no EMR entry that day, so vaccinators
+        // who did not enter anything are visible at a glance. Roster =
+        // profile sheet (locMaster) plus any UC seen in the month's EMR
+        // data. If the vaccinator is on leave that day (Leave tab, matched
+        // by username, else by name+UC), "Leave" is shown next to the UC.
+        let vcZeroTimer = null, vcZeroTries = 0;
+        function vcUcKey(s){ return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+        function vcNormUser(s){ return String(s || '').trim().toLowerCase(); }
+        function vcRenderZero(){
+            const box = document.getElementById('vcZero');
+            if(!box) return;
+            const all = vcDayRowsAll();
+            if(!all.ymd){ box.innerHTML = ''; return; }
+            const ymd = all.ymd;
+            const teh = (document.getElementById('vcTehsil') || {}).value || '';
+            const has = {};
+            (vcRows || []).forEach(function(r){
+                if(vcRowYmd(r) !== ymd) return;
+                const k = vcUcKey(emrCell(r, EMR_COLS.uc));
+                if(k) has[k] = true;
+            });
+            const master = (typeof locMaster !== 'undefined') ? locMaster : [];
+            const leaves = (typeof locLeaveRows !== 'undefined') ? locLeaveRows : [];
+            const roster = {};
+            (master || []).forEach(function(m){
+                if(!m.uc) return;
+                roster[vcUcKey(m.uc)] = {uc:m.uc, tehsil:m.tehsil || '', name:m.name || '', username:m.username || ''};
+            });
+            (vcRows || []).forEach(function(r){
+                const u = emrCell(r, EMR_COLS.uc), k = vcUcKey(u);
+                if(k && !roster[k]) roster[k] = {uc:u, tehsil:emrCell(r, EMR_COLS.tehsil) || '', name:'', username:''};
+            });
+            const keys = Object.keys(roster);
+            if(!keys.length){
+                try{ if(typeof locEnsureLoaded === 'function') locEnsureLoaded(); }catch(e){}
+                if(vcZeroTries < 10){
+                    vcZeroTries++;
+                    box.innerHTML = '<div class="vc-zero-loading">Loading UC roster…</div>';
+                    if(!vcZeroTimer) vcZeroTimer = setTimeout(function(){ vcZeroTimer = null; vcRenderZero(); }, 2000);
+                } else {
+                    box.innerHTML = '';
+                }
+                return;
+            }
+            vcZeroTries = 0;
+            const leaveByUser = {}, leaveByNameUc = {};
+            (leaves || []).forEach(function(l){
+                if(!l || l.ymd !== ymd) return;
+                const u = vcNormUser(l.username);
+                if(u) leaveByUser[u] = l;
+                else if(l.name) leaveByNameUc[l.name.toLowerCase() + '|' + vcUcKey(l.uc)] = l;
+            });
+            const zero = [];
+            keys.forEach(function(k){
+                if(has[k]) return;
+                const m = roster[k];
+                if(teh && m.tehsil && vcUcKey(m.tehsil) !== vcUcKey(teh)) return;
+                let lv = null;
+                const u = vcNormUser(m.username);
+                if(u && leaveByUser[u]) lv = leaveByUser[u];
+                else if(m.name) lv = leaveByNameUc[m.name.toLowerCase() + '|' + k] || null;
+                zero.push({uc:m.uc, tehsil:m.tehsil, name:m.name, leave:lv});
+            });
+            zero.sort(function(a, b){ return (a.tehsil + a.uc).localeCompare(b.tehsil + b.uc); });
+            if(!zero.length){
+                box.innerHTML = '<div class="vc-zero-ok">✓ All UCs have entries on ' + vcEsc(vcFmtYmd(ymd)) + (teh ? ' · ' + vcEsc(teh) : '') + '</div>';
+                return;
+            }
+            let h = '<div class="vc-zero-box"><strong>⚠ No entries on ' + vcEsc(vcFmtYmd(ymd)) + ' — ' + zero.length + ' UC' + (zero.length > 1 ? 's' : '') + (teh ? ' · ' + vcEsc(teh) : '') + ':</strong> ';
+            h += zero.map(function(z){
+                let s = '<span class="vc-zero-uc">' + vcEsc(z.uc) + '</span>';
+                if(z.name) s += ' (' + vcEsc(z.name) + ')';
+                if(z.leave) s += ' · <span class="vc-zero-leave">Leave' + (z.leave.leaveType ? ' (' + vcEsc(z.leave.leaveType) + ')' : '') + '</span>';
+                return s;
+            }).join(' &nbsp;·&nbsp; ');
+            h += '</div>';
+            box.innerHTML = h;
+        }
         function vcBindCard(card, ymd){
             if(!card) return;
             card.querySelectorAll('.vc-stbtn').forEach(function(b){
@@ -5615,6 +5701,8 @@
             if(!all.ymd){
                 const sum0 = document.getElementById('vcSummary');
                 if(sum0) sum0.innerHTML = '';
+                const z0 = document.getElementById('vcZero');
+                if(z0) z0.innerHTML = '';
                 wrap.innerHTML = '<p style="color:#c62828;padding:14px;font-weight:600">EMR data is not loaded yet. Please wait a few seconds and tap “🔄 Refresh Data”.</p>';
                 const meta0 = document.getElementById('vcMeta');
                 if(meta0) meta0.textContent = 'Data not ready';
@@ -5624,6 +5712,7 @@
             vcRowMap = {};
             all.rows.forEach(function(r){ vcRowMap[vcRowKey(r)] = r; });
             vcRenderSummary(ymd, all.rows);
+            vcRenderZero();
             const teh = (document.getElementById('vcTehsil') || {}).value || '';
             const ucf = (document.getElementById('vcUc') || {}).value || '';
             const show = (document.getElementById('vcShow') || {}).value || '';
