@@ -5602,9 +5602,11 @@
         // Zero-entry UCs (user's ask, 2026-11-13): for the selected date,
         // list the roster UCs with no EMR entry that day, so vaccinators
         // who did not enter anything are visible at a glance. Roster =
-        // profile sheet (locMaster) plus any UC seen in the month's EMR
-        // data. If the vaccinator is on leave that day (Leave tab, matched
-        // by username, else by name+UC), "Leave" is shown next to the UC.
+        // profile sheet (locMaster) ONLY — UCs with no vaccinator on
+        // record are not listed, because their vaccinator may enter under
+        // a different UC name and flagging them would be a false zero.
+        // If the vaccinator is on leave that day (Leave tab, matched by
+        // username, else by name+UC), "Leave" is shown next to the UC.
         let vcZeroTimer = null, vcZeroTries = 0;
         function vcUcKey(s){ return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
         function vcNormUser(s){ return String(s || '').trim().toLowerCase(); }
@@ -5626,11 +5628,9 @@
             const roster = {};
             (master || []).forEach(function(m){
                 if(!m.uc) return;
-                roster[vcUcKey(m.uc)] = {uc:m.uc, tehsil:m.tehsil || '', name:m.name || '', username:m.username || ''};
-            });
-            (vcRows || []).forEach(function(r){
-                const u = emrCell(r, EMR_COLS.uc), k = vcUcKey(u);
-                if(k && !roster[k]) roster[k] = {uc:u, tehsil:emrCell(r, EMR_COLS.tehsil) || '', name:'', username:''};
+                const rk = vcUcKey(m.uc);
+                if(!rk || /^\d+$/.test(rk)) return; // skip blank / purely numeric UC values
+                roster[rk] = {uc:m.uc, tehsil:m.tehsil || '', name:m.name || '', username:m.username || ''};
             });
             const keys = Object.keys(roster);
             if(!keys.length){
