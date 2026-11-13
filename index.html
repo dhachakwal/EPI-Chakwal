@@ -5338,6 +5338,15 @@
             const el = document.getElementById('vcSyncLine');
             if(el) el.textContent = txt;
         }
+        // Last-sync clock (user's ask, 2026-11-13): after every successful
+        // sync the line shows when it happened, e.g. "Last sync 10:24 AM".
+        // Failed/offline states keep their own message — the time always
+        // means the last sync that actually succeeded.
+        function vcSyncLineOk(){
+            let t = '';
+            try{ t = new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}); }catch(e){}
+            vcSyncLine('\u2601 Cloud sync: ON \u2014 all devices up to date' + (t ? ' \u00b7 Last sync ' + t : ''));
+        }
         function vcPushRec(ymd, key){
             if(!VC_SYNC_URL) return;
             const rec = vcLocalRec(ymd, key);
@@ -5346,7 +5355,7 @@
             fetch(VC_SYNC_URL, { method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
                 body: JSON.stringify({ type: 'vc_set', date: ymd, mr: key, status: rec.status, comment: rec.comment, updatedAt: rec.ts || Date.now() })
             }).then(function(r){ return r.json(); }).then(function(j){
-                if(j && j.ok) vcSyncLine('\u2601 Cloud sync: ON \u2014 all devices up to date');
+                if(j && j.ok) vcSyncLineOk();
                 else vcSyncLine('\u2601 Cloud sync: will retry on next Sync');
             }).catch(function(){ vcSyncLine('\u2601 Offline \u2014 saved on this device, will sync later'); });
         }
@@ -5386,7 +5395,7 @@
                 });
                 const sel = document.getElementById('vcDate');
                 const done = function(){
-                    vcSyncLine('\u2601 Cloud sync: ON \u2014 all devices up to date');
+                    vcSyncLineOk();
                     if(sel && sel.value === ymd) vcRender();
                 };
                 if(push.length){
