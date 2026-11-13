@@ -1224,6 +1224,7 @@
                 </div><!-- /emrModuleSweep -->
                 <div id="emrModuleVCalls" style="display:none">
                 <style>
+                #vcStickyHead{position:sticky;top:0;z-index:60;background:#fff;padding:2px 0 2px;box-shadow:0 8px 12px -8px rgba(13,92,61,.35)}
                 #vcSummary .vc-stats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
                 #vcSummary .vc-stat{background:#f1f8e9;border:1px solid #c8e6c9;border-radius:8px;padding:8px 12px;min-width:128px;cursor:pointer;transition:box-shadow .15s, background .15s}
                 #vcSummary .vc-stat:hover{box-shadow:0 2px 8px rgba(13,92,61,.25)}
@@ -1255,6 +1256,7 @@
                 .vc-cmtcancel{background:#eceff1;color:#37474f;border:1px solid #b0bec5;border-radius:14px;padding:6px 14px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:6px;margin-left:6px}
                 </style>
                 <p class="emr-note"><strong>Source:</strong> EMR Outreach entries (same data as Outreach Reports). Select a date to get that day's verification call list — narrow it with the Tehsil and UC filters to view one UC's children only. Tap <strong>Dial</strong> to call the parent/guardian — on a PC connected to your mobile with Phone Link, the call goes through your mobile. After each call, tap one status button; statuses save automatically and sync to all your devices through the cloud — a status set on one laptop or mobile appears on every other device. Download the day's Excel file (with statuses) any time with the button above the list. You can also attach an <strong>Additional Comment</strong> to any child — comments save with the record and are included in the Excel download. <strong>Tip:</strong> click any summary box above the list (Total Children, Verified, Not Responding, …) to filter the list to just those children.</p>
+                <div id="vcStickyHead">
                 <div class="emr-filter">
                     <label>Date
                         <select id="vcDate" onchange="vcOnDateChange()"></select>
@@ -1282,6 +1284,7 @@
                     <span class="sweep-meta" id="vcSyncLine">☁ Cloud sync: ready</span>
                 </div>
                 <div id="vcSummary"></div>
+                </div><!-- /vcStickyHead -->
                 <div id="vcList"></div>
                 </div><!-- /emrModuleVCalls -->
 
@@ -5195,8 +5198,8 @@
 
 
         // ===== Verification Calls =====
-        const VC_STATUSES = ['Verified','Invalid Number','Not Responding','Not Exist','Not Vaccinated','Powered Off'];
-        const VC_COLORS = {'Verified':'#2e7d32','Invalid Number':'#c62828','Not Responding':'#ef6c00','Not Exist':'#6a1b9a','Not Vaccinated':'#ad1457','Powered Off':'#546e7a'};
+        const VC_STATUSES = ['Verified','Invalid Number','Wrong Number','Not Responding','Not Exist','Not Vaccinated','Powered Off'];
+        const VC_COLORS = {'Verified':'#2e7d32','Invalid Number':'#c62828','Wrong Number':'#00838f','Not Responding':'#ef6c00','Not Exist':'#6a1b9a','Not Vaccinated':'#ad1457','Powered Off':'#546e7a'};
         const VC_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         let vcStoreCache = null;
         let vcRowMap = {};
