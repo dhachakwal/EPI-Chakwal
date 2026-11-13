@@ -1225,12 +1225,6 @@
                 <div id="emrModuleVCalls" style="display:none">
                 <style>
                 #vcStickyHead{position:sticky;top:0;z-index:60;background:#fff;padding:2px 0 2px;box-shadow:0 8px 12px -8px rgba(13,92,61,.35)}
-                #vcZero{margin:10px 0}
-                #vcZero .vc-zero-box{background:#fff3e0;border:1px solid #ffcc80;border-left:4px solid #ef6c00;border-radius:8px;padding:10px 12px;font-size:13.5px;color:#4e342e}
-                #vcZero .vc-zero-ok{background:#e8f5e9;border:1px solid #a5d6a7;border-left:4px solid #2e7d32;border-radius:8px;padding:10px 12px;font-size:13.5px;color:#1b5e20}
-                #vcZero .vc-zero-loading{background:#eceff1;border:1px solid #b0bec5;border-left:4px solid #78909c;border-radius:8px;padding:10px 12px;font-size:13.5px;color:#455a64}
-                #vcZero .vc-zero-uc{font-weight:700}
-                #vcZero .vc-zero-leave{color:#c62828;font-weight:700}
                 #vcSummary .vc-stats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
                 #vcSummary .vc-stat{background:#f1f8e9;border:1px solid #c8e6c9;border-radius:8px;padding:8px 12px;min-width:128px;cursor:pointer;transition:box-shadow .15s, background .15s}
                 #vcSummary .vc-stat:hover{box-shadow:0 2px 8px rgba(13,92,61,.25)}
@@ -1267,6 +1261,19 @@
                     <label>Date
                         <select id="vcDate" onchange="vcOnDateChange()"></select>
                     </label>
+                    <label>Entries
+                        <select id="vcMode" onchange="vcOnModeChange()">
+                            <option value="">Vaccination</option>
+                            <option value="novax">No Vaccination</option>
+                        </select>
+                    </label>
+                    <label id="vcReasonWrap" style="display:none">Reason
+                        <select id="vcReason" onchange="vcRender()">
+                            <option value="">All Reasons</option>
+                            <option value="leave">Leave</option>
+                            <option value="notleave">Not Leave</option>
+                        </select>
+                    </label>
                     <label>Tehsil
                         <select id="vcTehsil" onchange="vcOnTehsilChange()"><option value="">All Tehsils</option></select>
                     </label>
@@ -1291,7 +1298,6 @@
                 </div>
                 <div id="vcSummary"></div>
                 </div><!-- /vcStickyHead -->
-                <div id="vcZero"></div>
                 <div id="vcList"></div>
                 </div><!-- /emrModuleVCalls -->
 
@@ -5610,13 +5616,13 @@
         let vcZeroTimer = null, vcZeroTries = 0;
         function vcUcKey(s){ return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
         function vcNormUser(s){ return String(s || '').trim().toLowerCase(); }
-        function vcRenderZero(){
-            const box = document.getElementById('vcZero');
-            if(!box) return;
-            const all = vcDayRowsAll();
-            if(!all.ymd){ box.innerHTML = ''; return; }
-            const ymd = all.ymd;
-            const teh = (document.getElementById('vcTehsil') || {}).value || '';
+        function vcZeroList(ymd){
+            // Roster UCs with no EMR entry on the given date. Returns
+            // {ready:false} while the profile roster is still loading.
+            // Roster = profile sheet (locMaster) ONLY — UCs with no
+            // vaccinator on record are not listed, because their
+            // vaccinator may enter under a different UC name and flagging
+            // them would be a false zero.
             const has = {};
             (vcRows || []).forEach(function(r){
                 if(vcRowYmd(r) !== ymd) return;
@@ -5633,18 +5639,7 @@
                 roster[rk] = {uc:m.uc, tehsil:m.tehsil || '', name:m.name || '', username:m.username || ''};
             });
             const keys = Object.keys(roster);
-            if(!keys.length){
-                try{ if(typeof locEnsureLoaded === 'function') locEnsureLoaded(); }catch(e){}
-                if(vcZeroTries < 10){
-                    vcZeroTries++;
-                    box.innerHTML = '<div class="vc-zero-loading">Loading UC roster…</div>';
-                    if(!vcZeroTimer) vcZeroTimer = setTimeout(function(){ vcZeroTimer = null; vcRenderZero(); }, 2000);
-                } else {
-                    box.innerHTML = '';
-                }
-                return;
-            }
-            vcZeroTries = 0;
+            if(!keys.length) return {ready:false, list:[]};
             const leaveByUser = {}, leaveByNameUc = {};
             (leaves || []).forEach(function(l){
                 if(!l || l.ymd !== ymd) return;
@@ -5656,7 +5651,6 @@
             keys.forEach(function(k){
                 if(has[k]) return;
                 const m = roster[k];
-                if(teh && m.tehsil && vcUcKey(m.tehsil) !== vcUcKey(teh)) return;
                 let lv = null;
                 const u = vcNormUser(m.username);
                 if(u && leaveByUser[u]) lv = leaveByUser[u];
@@ -5664,19 +5658,87 @@
                 zero.push({uc:m.uc, tehsil:m.tehsil, name:m.name, leave:lv});
             });
             zero.sort(function(a, b){ return (a.tehsil + a.uc).localeCompare(b.tehsil + b.uc); });
-            if(!zero.length){
-                box.innerHTML = '<div class="vc-zero-ok">✓ All UCs have entries on ' + vcEsc(vcFmtYmd(ymd)) + (teh ? ' · ' + vcEsc(teh) : '') + '</div>';
+            return {ready:true, list:zero};
+        }
+        function vcOnModeChange(){
+            const mode = (document.getElementById('vcMode') || {}).value || '';
+            const rw = document.getElementById('vcReasonWrap');
+            if(rw) rw.style.display = mode === 'novax' ? '' : 'none';
+            if(mode === 'novax'){
+                // The UC list only holds UCs WITH entries, so a stale UC
+                // value would be misleading here; same for the call filters.
+                const usel = document.getElementById('vcUc');
+                if(usel) usel.value = '';
+                const showEl = document.getElementById('vcShow');
+                if(showEl) showEl.value = '';
+                vcStatusFilter = '';
+            }
+            vcRender();
+        }
+        function vcRenderNoVax(ymd){
+            const sum = document.getElementById('vcSummary');
+            const wrap = document.getElementById('vcList');
+            const meta = document.getElementById('vcMeta');
+            if(!wrap) return;
+            const z = vcZeroList(ymd);
+            if(!z.ready){
+                try{ if(typeof locEnsureLoaded === 'function') locEnsureLoaded(); }catch(e){}
+                if(sum) sum.innerHTML = '';
+                if(vcZeroTries < 10){
+                    vcZeroTries++;
+                    wrap.innerHTML = '<p style="color:#546e7a;padding:14px;font-weight:600">Loading UC roster…</p>';
+                    if(!vcZeroTimer) vcZeroTimer = setTimeout(function(){ vcZeroTimer = null; vcRender(); }, 2000);
+                } else {
+                    wrap.innerHTML = '<p style="color:#c62828;padding:14px;font-weight:600">UC roster could not be loaded. Please tap “🔄 Refresh Data”.</p>';
+                }
                 return;
             }
-            let h = '<div class="vc-zero-box"><strong>⚠ No entries on ' + vcEsc(vcFmtYmd(ymd)) + ' — ' + zero.length + ' UC' + (zero.length > 1 ? 's' : '') + (teh ? ' · ' + vcEsc(teh) : '') + ':</strong> ';
-            h += zero.map(function(z){
-                let s = '<span class="vc-zero-uc">' + vcEsc(z.uc) + '</span>';
-                if(z.name) s += ' (' + vcEsc(z.name) + ')';
-                if(z.leave) s += ' · <span class="vc-zero-leave">Leave' + (z.leave.leaveType ? ' (' + vcEsc(z.leave.leaveType) + ')' : '') + '</span>';
-                return s;
-            }).join(' &nbsp;·&nbsp; ');
-            h += '</div>';
-            box.innerHTML = h;
+            vcZeroTries = 0;
+            const total = z.list.length;
+            const lvN = z.list.filter(function(x){ return !!x.leave; }).length;
+            const reason = (document.getElementById('vcReason') || {}).value || '';
+            const box = function(key, num, label, color){
+                return '<div class="vc-stat' + ((reason === key || (reason === '' && key === 'all')) ? ' active' : '') + '" data-vcr="' + key + '" title="Click to filter the list"><div class="n"' + (color ? ' style="color:' + color + '"' : '') + '>' + num + '</div><div class="l">' + label + '</div></div>';
+            };
+            if(sum){
+                sum.innerHTML = '<div class="vc-stats">'
+                    + box('all', total, 'No Entries', '')
+                    + box('leave', lvN, 'On Leave', '#c62828')
+                    + box('notleave', total - lvN, 'Not on Leave', '#78909c')
+                    + '</div>';
+                sum.querySelectorAll('.vc-stat').forEach(function(el){
+                    el.addEventListener('click', function(){
+                        const k = el.getAttribute('data-vcr');
+                        const sel = document.getElementById('vcReason');
+                        if(sel) sel.value = (k === 'all') ? '' : k;
+                        vcRender();
+                    });
+                });
+            }
+            const teh = (document.getElementById('vcTehsil') || {}).value || '';
+            const q = ((document.getElementById('vcSearch') || {}).value || '').trim().toLowerCase();
+            const rows = z.list.filter(function(x){
+                if(teh && x.tehsil && vcUcKey(x.tehsil) !== vcUcKey(teh)) return false;
+                if(reason === 'leave' && !x.leave) return false;
+                if(reason === 'notleave' && x.leave) return false;
+                if(q && (x.uc + ' ' + x.name).toLowerCase().indexOf(q) < 0) return false;
+                return true;
+            });
+            if(meta) meta.textContent = 'Showing ' + rows.length + ' of ' + total + ' UCs with no entries · ' + vcFmtYmd(ymd);
+            if(!rows.length){
+                wrap.innerHTML = '<p style="color:#2e7d32;padding:14px;font-weight:600">✓ ' + (total ? 'No UCs match these filters for ' + vcFmtYmd(ymd) + '.' : 'All UCs have entries on ' + vcFmtYmd(ymd) + '.') + '</p>';
+                return;
+            }
+            let h = '';
+            rows.forEach(function(x){
+                h += '<div class="vc-card" style="border-left-color:' + (x.leave ? '#c62828' : '#ef6c00') + '">'
+                    + '<div class="vc-name">' + vcEsc(x.uc) + (x.name ? ' — ' + vcEsc(x.name) : '')
+                    + (x.leave ? '<span class="vc-chip" style="background:#c62828">Leave' + (x.leave.leaveType ? ' · ' + vcEsc(x.leave.leaveType) + '</span>' : '</span>') : '')
+                    + '</div>'
+                    + '<div class="vc-meta">' + vcEsc(x.tehsil || '') + (x.leave && x.leave.reason ? ' · ' + vcEsc(x.leave.reason) : '') + '</div>'
+                    + '</div>';
+            });
+            wrap.innerHTML = h;
         }
         function vcBindCard(card, ymd){
             if(!card) return;
@@ -5701,18 +5763,16 @@
             if(!all.ymd){
                 const sum0 = document.getElementById('vcSummary');
                 if(sum0) sum0.innerHTML = '';
-                const z0 = document.getElementById('vcZero');
-                if(z0) z0.innerHTML = '';
                 wrap.innerHTML = '<p style="color:#c62828;padding:14px;font-weight:600">EMR data is not loaded yet. Please wait a few seconds and tap “🔄 Refresh Data”.</p>';
                 const meta0 = document.getElementById('vcMeta');
                 if(meta0) meta0.textContent = 'Data not ready';
                 return;
             }
             const ymd = all.ymd;
+            if((((document.getElementById('vcMode') || {}).value) || '') === 'novax'){ vcRenderNoVax(ymd); return; }
             vcRowMap = {};
             all.rows.forEach(function(r){ vcRowMap[vcRowKey(r)] = r; });
             vcRenderSummary(ymd, all.rows);
-            vcRenderZero();
             const teh = (document.getElementById('vcTehsil') || {}).value || '';
             const ucf = (document.getElementById('vcUc') || {}).value || '';
             const show = (document.getElementById('vcShow') || {}).value || '';
