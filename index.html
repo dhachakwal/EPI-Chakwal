@@ -5401,6 +5401,25 @@
             const sel = document.getElementById('vcDate');
             if(sel && sel.value) vcSyncDate(sel.value);
         }
+        // Auto-sync every 2 minutes while the module is open (user's choice,
+        // 2026-11-13): the same two-way sync as the Sync Now button — pulls
+        // other devices' statuses and retries any record the last push
+        // missed. Skips a round while the tab is hidden, while the module
+        // is closed, or while a comment is being typed (so a re-render
+        // never eats typed text).
+        let vcAutoTimer = null;
+        function vcAutoSyncTick(){
+            if(document.hidden) return;
+            const mod = document.getElementById('emrModuleVCalls');
+            if(!mod || mod.style.display === 'none') return;
+            const ae = document.activeElement;
+            if(ae && ae.classList && ae.classList.contains('vc-cmtarea')) return;
+            vcSyncCurrent();
+        }
+        function vcStartAutoSync(){
+            if(vcAutoTimer) return;
+            vcAutoTimer = setInterval(vcAutoSyncTick, 120000);
+        }
         // Once per module open: quietly sync earlier dates too — the recent ones in
         // the date list, plus the 10 calendar days before the selected date (those
         // reach back into the previous month, whose dates are no longer listed) —
@@ -5478,6 +5497,7 @@
             vcRender();
             vcSyncDate((document.getElementById('vcDate') || {}).value || '');
             vcWarmCarry();
+            vcStartAutoSync();
         }
         function vcBuildDates(){
             const sel = document.getElementById('vcDate');
