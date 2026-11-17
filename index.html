@@ -429,6 +429,36 @@
 
 
     </style>
+    <style>
+        /* ===== Professional top navigation + header polish (v14.22) ===== */
+        .header{padding:16px 20px 14px;border-bottom:3px solid #c9a227}
+        .header h1{font-size:26px;letter-spacing:.3px}
+        .header p{font-size:14px}
+        .topnav{position:sticky;top:0;z-index:900;background:#0d5c3d;box-shadow:0 4px 12px rgba(0,0,0,.18);display:flex;align-items:center;gap:4px;padding:0 14px;min-height:48px}
+        .topnav-toggle{display:none;background:transparent;border:1px solid rgba(255,255,255,.55);color:#fff;font-size:15px;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer}
+        .topnav-list{display:flex;align-items:stretch;list-style:none;margin:0;padding:0;flex:1}
+        .topnav-item{position:relative}
+        .topnav-link{background:transparent;border:none;color:#fff;font-size:14.5px;font-weight:600;padding:14px 16px;cursor:pointer;white-space:nowrap}
+        .topnav-link:hover,.topnav-item.open .topnav-link{background:#09402b}
+        .topnav-link::after{content:' \25BE';font-size:11px;opacity:.85}
+        .topnav-drop{display:none;position:absolute;left:0;top:100%;min-width:250px;background:#fff;border-radius:0 0 10px 10px;box-shadow:0 10px 24px rgba(0,0,0,.22);list-style:none;margin:0;padding:6px 0;z-index:950}
+        .topnav-item.open .topnav-drop,.topnav-item:hover .topnav-drop{display:block}
+        .topnav-drop button{display:block;width:100%;text-align:left;background:none;border:none;padding:11px 18px;font-size:14px;color:#1f3d2b;cursor:pointer}
+        .topnav-drop button:hover{background:#e8f5e9;color:#0d5c3d}
+        .topnav-date{color:#d7efe2;font-size:13px;font-weight:600;white-space:nowrap;padding:0 6px}
+        .section-title{scroll-margin-top:64px}
+        @media(max-width:768px){
+            .topnav{flex-wrap:wrap;padding:6px 10px}
+            .topnav-toggle{display:inline-block}
+            .topnav-list{display:none;flex-direction:column;width:100%;padding:6px 0}
+            .topnav-list.mobile-open{display:flex}
+            .topnav-item{width:100%}
+            .topnav-link{width:100%;text-align:left;padding:12px 10px}
+            .topnav-item:hover .topnav-drop{display:none}
+            .topnav-item.open .topnav-drop{display:block;position:static;box-shadow:none;border-radius:8px;margin:0 0 6px}
+            .topnav-date{display:none}
+        }
+    </style>
 </head>
 <body>
 <div class="site-lock" id="siteLock">
@@ -450,6 +480,58 @@
         <div><h1>EPI District Chakwal Dashboard</h1><p>Official Website | Punjab Expanded Programme on Immunization</p></div>
         <img src="logo-right2.png" alt="Logo" class="logo-right">
     </div>
+
+    <!-- ===== Professional top navigation (dropdown menu, v14.22) ===== -->
+    <nav class="topnav" id="topNav" aria-label="Main navigation">
+        <button type="button" class="topnav-toggle" id="topNavToggle" onclick="navToggleMobile()" aria-label="Open menu" aria-expanded="false">☰ Menu</button>
+        <ul class="topnav-list" id="topNavList">
+            <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">🏠 Dashboard</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-emr')">EMR Outreach</button></li>
+                    <li><button type="button" onclick="navGo('section-emr','vCalls')">📞 Verification Calls</button></li>
+                    <li><button type="button" onclick="navGo('section-emr','location')">📍 Field Location</button></li>
+                    <li><button type="button" onclick="navGo('section-emr','noentry')">16. Zero-Entry Vaccinators</button></li>
+                </ul>
+            </li>
+            <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📊 Summary</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-sv')">Summary by Vaccinators</button></li>
+                </ul>
+            </li>
+            <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">🔬 Surveillance</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-mr')">Measles-Rubella (MR)</button></li>
+                    <li><button type="button" onclick="navGo('section-afp')">Acute Flaccid Paralysis (AFP)</button></li>
+                </ul>
+            </li>
+            <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📋 Supervisory</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-svvisits')">Supervisory Visit Reports</button></li>
+                    <li><button type="button" onclick="navGo('section-cards')">Daily EPI Cards</button></li>
+                </ul>
+            </li>
+            <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">👥 HR</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-hr')">HR Overview</button></li>
+                    <li><button type="button" onclick="navGo('section-officers')">Key Officers</button></li>
+                </ul>
+            </li>
+            <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📁 Reports</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-downloads')">Official Downloads</button></li>
+                    <li><button type="button" onclick="navGo('section-downloads')">Training Library</button></li>
+                    <li><button type="button" onclick="navGo('section-contact')">Contact &amp; Location</button></li>
+                </ul>
+            </li>
+        </ul>
+        <span class="topnav-date" id="topNavDate"></span>
+    </nav>
 
     <div class="search-wrap">
         <div class="search-box">
@@ -568,7 +650,7 @@
         </div>
 
         <div class="main-content">
-            <div class="section-title">HR Overview - District Chakwal</div>
+            <div class="section-title" id="section-hr">HR Overview - District Chakwal</div>
             <div class="stats-grid">
                 <div class="stat-card" onclick="openStatModal('tehsils')"><div class="stat-number">4</div><div class="stat-label">Total Tehsils</div></div>
                 <div class="stat-card" onclick="openStatModal('ucs')"><div class="stat-number">83</div><div class="stat-label">Total UCs</div></div>
@@ -584,7 +666,7 @@
 
             
             
-<div class="section-title">EPI Supervisory Staff — Daily EPI Cards Checking &amp; Submission and HF Monitoring</div>
+<div class="section-title" id="section-cards">EPI Supervisory Staff — Daily EPI Cards Checking &amp; Submission and HF Monitoring</div>
 <div class="emr-card" id="cardsCard">
   <p style="font-size:13.5px;color:#444;margin-bottom:6px">Source: Supervisors submit 20 EPI Card photos, the HF Monitoring Picture and the HF Monitoring Form every day through the <strong>supervisors.html</strong> page. The photos are stored in Google Drive and a PDF of each submission is prepared automatically.</p>
   <div class="stats-grid">
@@ -609,7 +691,7 @@
   <div id="cardsMissing" style="margin-top:10px;font-size:13.5px;line-height:1.6"></div>
 </div>
 
-<div class="section-title">Supervisory Visit Reports — EPI-MIS Checklist (14 Aug – 14 Nov 2026)</div>
+<div class="section-title" id="section-svvisits">Supervisory Visit Reports — EPI-MIS Checklist (14 Aug – 14 Nov 2026)</div>
 <div class="emr-card" id="svVisitsCard">
   <style>
     .sv-chart{margin:14px 0}
@@ -2008,7 +2090,7 @@ rcaInit();
                 </div>
             </div>
 
-            <div class="section-title">Official Downloads & Reports</div>
+            <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
             <div class="download-grid">
                 <div class="download-card">
                     <h3>Monthly EPI Presentation</h3>
@@ -2183,7 +2265,7 @@ rcaInit();
 
             </div>
 
-            <div class="section-title">Key Officers</div>
+            <div class="section-title" id="section-officers">Key Officers</div>
             <div class="officers-grid">
                 <div class="officer-card" onclick="openOfficerModal('ceo')">
                     <div class="officer-avatar"><img src="CEO_Health_Dr_Saeed_Akhtar_Profile_Picture.jpg" alt="CEO"></div>
@@ -2202,7 +2284,7 @@ rcaInit();
                 </div>
             </div>
 
-            <div class="section-title">Contact & Office Location</div>
+            <div class="section-title" id="section-contact">Contact & Office Location</div>
             <div class="contact-location-grid">
                 <div class="contact-card">
                     <h3>✉️ Official Contact Information</h3>
@@ -15925,5 +16007,67 @@ const AFP_META={"downloaded":"2026-11-16","source":"AFP surveillance workbook (s
             try{ initCollapsibleSections(); }catch(e){}
         }
         </script>
+    <script>
+        /* ===== Top navigation (dropdown menu, v14.22) ===== */
+        function navCloseAll(){
+            try{ document.querySelectorAll('.topnav-item.open').forEach(function(el){ el.classList.remove('open'); }); }catch(e){}
+        }
+        function navToggleGroup(btn){
+            try{
+                var li = btn && btn.parentElement;
+                if(!li) return;
+                var wasOpen = li.classList.contains('open');
+                navCloseAll();
+                if(!wasOpen) li.classList.add('open');
+            }catch(e){}
+        }
+        function navToggleMobile(){
+            try{
+                var list = document.getElementById('topNavList');
+                var tgl = document.getElementById('topNavToggle');
+                if(!list) return;
+                var open = list.classList.toggle('mobile-open');
+                if(tgl) tgl.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if(!open) navCloseAll();
+            }catch(e){}
+        }
+        function navGo(secId, mod){
+            try{ navCloseAll(); }catch(e){}
+            try{
+                var list = document.getElementById('topNavList');
+                if(list) list.classList.remove('mobile-open');
+                var tgl = document.getElementById('topNavToggle');
+                if(tgl) tgl.setAttribute('aria-expanded','false');
+            }catch(e){}
+            var t = document.getElementById(secId);
+            if(!t) return;
+            try{
+                var body = t.nextElementSibling;
+                if(body && body.classList && body.classList.contains('section-collapse-body') && !body.classList.contains('open')){
+                    if(typeof window.toggleSectionHeader === 'function') window.toggleSectionHeader(t);
+                }
+            }catch(e){}
+            setTimeout(function(){
+                try{ t.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ try{ t.scrollIntoView(); }catch(e2){} }
+            }, 60);
+            if(mod){
+                setTimeout(function(){
+                    try{
+                        if(mod === 'noentry'){ if(typeof emrSwitch === 'function') emrSwitch('noentry'); }
+                        else if(typeof emrSwitchModule === 'function') emrSwitchModule(mod);
+                    }catch(e){}
+                }, 450);
+            }
+        }
+        document.addEventListener('click', function(e){
+            try{ if(!e.target.closest('.topnav')) navCloseAll(); }catch(err){}
+        });
+        (function(){
+            try{
+                var el = document.getElementById('topNavDate');
+                if(el) el.textContent = new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+            }catch(e){}
+        })();
+    </script>
 </body>
 </html>
