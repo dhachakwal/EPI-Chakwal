@@ -459,6 +459,20 @@
             .topnav-date{display:none}
         }
     </style>
+    <style>
+        /* ===== Appearance polish (v14.23) ===== */
+        html,body{background:linear-gradient(180deg,#f0f7f4 0%,#e8f3ed 100%)}
+        .section-title{background:linear-gradient(90deg,#ffffff 0%,#eef7f1 100%);border-left:5px solid #0d5c3d;border-radius:14px;box-shadow:0 4px 16px rgba(13,92,61,.10);font-size:19px}
+        .section-title .section-arrow{width:30px;height:30px;border-radius:50%;background:#0d5c3d;color:#fff;font-size:13px}
+        .section-title.open .section-arrow{background:#c9a227;color:#0d5c3d}
+        .main-content .emr-card{box-shadow:0 8px 28px rgba(13,92,61,.12)}
+        .btn{box-shadow:0 2px 8px rgba(13,92,61,.25);transition:transform .15s,box-shadow .15s}
+        .btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(13,92,61,.30)}
+        .topnav-link:hover,.topnav-item.open .topnav-link{box-shadow:inset 0 -3px 0 #c9a227}
+        .back-to-top{position:fixed;right:18px;bottom:18px;z-index:950;width:46px;height:46px;border-radius:50%;border:none;background:#0d5c3d;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);display:none;align-items:center;justify-content:center}
+        .back-to-top.show{display:flex}
+        .back-to-top:hover{background:#09402b}
+    </style>
 </head>
 <body>
 <div class="site-lock" id="siteLock">
@@ -16007,6 +16021,7 @@ const AFP_META={"downloaded":"2026-11-16","source":"AFP surveillance workbook (s
             try{ initCollapsibleSections(); }catch(e){}
         }
         </script>
+    <button type="button" class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" aria-label="Back to top">↑</button>
     <script>
         /* ===== Top navigation (dropdown menu, v14.22) ===== */
         function navCloseAll(){
@@ -16062,6 +16077,23 @@ const AFP_META={"downloaded":"2026-11-16","source":"AFP surveillance workbook (s
         document.addEventListener('click', function(e){
             try{ if(!e.target.closest('.topnav')) navCloseAll(); }catch(err){}
         });
+        document.addEventListener('keydown', function(e){
+            if(e.key === 'Escape'){
+                navCloseAll();
+                try{
+                    var list = document.getElementById('topNavList');
+                    if(list) list.classList.remove('mobile-open');
+                    var tgl = document.getElementById('topNavToggle');
+                    if(tgl) tgl.setAttribute('aria-expanded','false');
+                }catch(err){}
+            }
+        });
+        window.addEventListener('scroll', function(){
+            try{
+                var b = document.getElementById('backToTop');
+                if(b) b.classList.toggle('show', window.scrollY > 600);
+            }catch(e){}
+        }, {passive:true});
         (function(){
             try{
                 var el = document.getElementById('topNavDate');
