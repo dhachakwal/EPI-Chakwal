@@ -469,6 +469,7 @@
         .btn{box-shadow:0 2px 8px rgba(13,92,61,.25);transition:transform .15s,box-shadow .15s}
         .btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(13,92,61,.30)}
         .topnav-link:hover,.topnav-item.open .topnav-link{box-shadow:inset 0 -3px 0 #c9a227}
+        .topnav.no-hover .topnav-item:hover .topnav-drop{display:none}
         .back-to-top{position:fixed;right:18px;bottom:18px;z-index:950;width:46px;height:46px;border-radius:50%;border:none;background:#0d5c3d;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);display:none;align-items:center;justify-content:center}
         .back-to-top.show{display:flex}
         .back-to-top:hover{background:#09402b}
@@ -16085,13 +16086,18 @@ const AFP_META={"downloaded":"2026-11-16","source":"AFP surveillance workbook (s
                     if(list) list.classList.remove('mobile-open');
                     var tgl = document.getElementById('topNavToggle');
                     if(tgl) tgl.setAttribute('aria-expanded','false');
+                    var nv = document.getElementById('topNav');
+                    if(nv) nv.classList.add('no-hover');
                 }catch(err){}
             }
+        });
+        document.addEventListener('mousemove', function(){
+            try{ var nv=document.getElementById('topNav'); if(nv) nv.classList.remove('no-hover'); }catch(e){}
         });
         window.addEventListener('scroll', function(){
             try{
                 var b = document.getElementById('backToTop');
-                if(b) b.classList.toggle('show', window.scrollY > 600);
+                if(b) b.classList.toggle('show', window.scrollY > 250);
             }catch(e){}
         }, {passive:true});
         (function(){
