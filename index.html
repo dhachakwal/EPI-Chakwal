@@ -518,9 +518,7 @@
             <li class="topnav-item">
                 <button type="button" class="topnav-link" onclick="navToggleGroup(this)">🔬 Surveillance</button>
                 <ul class="topnav-drop">
-                    <li><button type="button" onclick="navGo('section-mr')">Measles-Rubella (MR)</button></li>
-                    <li><button type="button" onclick="navGo('section-afp')">Acute Flaccid Paralysis (AFP)</button></li>
-                    <li><button type="button" onclick="navGo('section-vpd')">VPD — Other Diseases</button></li>
+                    <li><button type="button" onclick="navGo('section-surv')">Surveillance Data — District Health Authority Chakwal</button></li>
                 </ul>
             </li>
             <li class="topnav-item">
@@ -1731,7 +1729,17 @@ rcaInit();
 
 
             <!-- MR Surveillance -->
-            <div class="section-title" id="section-mr">Measles-Rubella (MR) Surveillance — District Chakwal</div>
+            <div class="section-title" id="section-surv">Surveillance Data — District Health Authority Chakwal</div>
+            <div class="emr-tabs" id="survTabs">
+                <button type="button" class="emr-tab active" data-surv="MR" onclick="survSwitch('MR')">Measles-Rubella (MR)</button>
+                <button type="button" class="emr-tab" data-surv="AFP" onclick="survSwitch('AFP')">Acute Flaccid Paralysis (AFP)</button>
+                <button type="button" class="emr-tab" data-surv="AEFI" onclick="survSwitch('AEFI')">AEFI</button>
+                <button type="button" class="emr-tab" data-surv="Diphtheria" onclick="survSwitch('Diphtheria')">Diphtheria</button>
+                <button type="button" class="emr-tab" data-surv="Pertussis" onclick="survSwitch('Pertussis')">Pertussis</button>
+                <button type="button" class="emr-tab" data-surv="NNT" onclick="survSwitch('NNT')">Neonatal Tetanus</button>
+                <button type="button" class="emr-tab" data-surv="Childhood TB" onclick="survSwitch('Childhood TB')">Childhood TB</button>
+            </div>
+            <div id="survPaneMR">
             <div class="emr-card" id="mrCard">
                 <p class="emr-note"><strong>Source:</strong> Measles Case-Based Surveillance Line List (EPI Chakwal 2026). Search by <strong>EPID No.</strong></p>
                 <div class="emr-filter">
@@ -2052,8 +2060,9 @@ rcaInit();
 
             </div>
 
-            <!-- AF (AFP) Surveillance -->
-            <div class="section-title" id="section-afp">Acute Flaccid Paralysis (AFP) Surveillance — District Chakwal</div>
+            </div>
+
+            <div id="survPaneAFP" style="display:none">
             <div class="emr-card" id="afpCard">
                 <p class="emr-note"><strong>Source:</strong> AFP surveillance workbook (same sheet as the monthly AFP reports), downloaded 16 Nov 2026; 2023 data from the line-list file received 17 Nov 2026. Rows that carry only an EPID number with no case details are not shown. Diagnosis shows the Final Diagnosis; where it is blank (2021–2022) the Initial Diagnosis is shown. Search by <strong>EPID No.</strong> or name.</p>
                 <div class="emr-filter">
@@ -2106,8 +2115,9 @@ rcaInit();
                 </div>
             </div>
 
-            <!-- VPD Surveillance — Other Diseases -->
-            <div class="section-title" id="section-vpd">VPD Surveillance — Other Diseases (AEFI, Diphtheria, Pertussis, Neonatal Tetanus, Childhood TB) — District Chakwal</div>
+            </div>
+
+            <div id="survPaneVPD" style="display:none">
             <div class="emr-card" id="vpdCard">
                 <p class="emr-note"><strong>Source:</strong> VPD &amp; AEFI Surveillance linelist files 2019–2025 (district Chakwal). Measles-Rubella cases are in the MR Surveillance section above. Search by <strong>EPID No.</strong> or name. <strong>Note:</strong> 2019 Diphtheria — EPID PAK/PB/13/19/Dip/0001 is used for two different children (Komal and Abdullah) in the source file; both rows are shown as written. 2023 Pertussis — the case Mehrosh carries a measles EPID (PAK/PB/13/23/Msl/0001) in the source file; shown as written. No file was received for 2017, and the 2018 file contains measles only, so those years have no cases here.</p>
                 <div class="emr-filter">
@@ -2138,7 +2148,7 @@ rcaInit();
                     </div>
                 </div>
 
-                <div class="emr-tabs" id="vpdTabs">
+                <div class="emr-tabs" id="vpdTabs" style="display:none">
                     <button type="button" class="emr-tab active" data-vpd="AEFI" onclick="vpdSwitch('AEFI')">1. AEFI</button>
                     <button type="button" class="emr-tab" data-vpd="Diphtheria" onclick="vpdSwitch('Diphtheria')">2. Diphtheria</button>
                     <button type="button" class="emr-tab" data-vpd="Pertussis" onclick="vpdSwitch('Pertussis')">3. Pertussis</button>
@@ -2159,6 +2169,8 @@ rcaInit();
                         <tbody id="vpdBody"></tbody>
                     </table>
                 </div>
+            </div>
+
             </div>
 
 <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
@@ -14409,7 +14421,16 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         function vpdSwitch(d){
             vpdMode=d;
             document.querySelectorAll('#vpdTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-vpd')===d); });
+            document.querySelectorAll('#survTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-surv')===d); });
             vpdApply();
+        }
+        function survSwitch(d){
+            document.querySelectorAll('#survTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-surv')===d); });
+            var mr=document.getElementById('survPaneMR'), afp=document.getElementById('survPaneAFP'), vpd=document.getElementById('survPaneVPD');
+            if(mr) mr.style.display=(d==='MR')?'block':'none';
+            if(afp) afp.style.display=(d==='AFP')?'block':'none';
+            if(vpd) vpd.style.display=(d==='MR'||d==='AFP')?'none':'block';
+            if(d!=='MR'&&d!=='AFP'&&typeof vpdSwitch==='function') vpdSwitch(d);
         }
         function vpdReset(){
             const y=document.getElementById('vpdYear'); if(y) y.value='';
