@@ -520,6 +520,7 @@
                 <ul class="topnav-drop">
                     <li><button type="button" onclick="navGo('section-mr')">Measles-Rubella (MR)</button></li>
                     <li><button type="button" onclick="navGo('section-afp')">Acute Flaccid Paralysis (AFP)</button></li>
+                    <li><button type="button" onclick="navGo('section-vpd')">VPD — Other Diseases</button></li>
                 </ul>
             </li>
             <li class="topnav-item">
@@ -2105,7 +2106,62 @@ rcaInit();
                 </div>
             </div>
 
-            <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
+            <!-- VPD Surveillance — Other Diseases -->
+            <div class="section-title" id="section-vpd">VPD Surveillance — Other Diseases (AEFI, Diphtheria, Pertussis, Neonatal Tetanus, Childhood TB) — District Chakwal</div>
+            <div class="emr-card" id="vpdCard">
+                <p class="emr-note"><strong>Source:</strong> VPD &amp; AEFI Surveillance linelist files 2019–2025 (district Chakwal). Measles-Rubella cases are in the MR Surveillance section above. Search by <strong>EPID No.</strong> or name. <strong>Note:</strong> 2019 Diphtheria — EPID PAK/PB/13/19/Dip/0001 is used for two different children (Komal and Abdullah) in the source file; both rows are shown as written. 2023 Pertussis — the case Mehrosh carries a measles EPID (PAK/PB/13/23/Msl/0001) in the source file; shown as written. No file was received for 2017, and the 2018 file contains measles only, so those years have no cases here.</p>
+                <div class="emr-filter">
+                    <label>Period (Year)
+                        <select id="vpdYear" onchange="vpdApply()"><option value="">All years</option></select>
+                    </label>
+                    <label>Tehsil
+                        <select id="vpdTehsil" onchange="vpdApply()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Search EPID / Name
+                        <span style="display:flex;gap:6px;align-items:center">
+                            <input type="text" id="vpdSearch" placeholder="EPID e.g. PAK/PB/13/22/Dip/0001 or name" style="min-width:180px" onkeydown="if(event.key==='Enter'){event.preventDefault();vpdApply();}">
+                            <button type="button" class="btn btn-sm" onclick="vpdApply()" style="background:#0d5c3d;padding:8px 12px">🔍 Search</button>
+                            <button type="button" class="btn btn-sm" onclick="vpdReset()" style="background:#78909c;padding:8px 12px">↺ Reset</button>
+                        </span>
+                    </label>
+                    <span class="sweep-meta" id="vpdMeta">Not loaded</span>
+                </div>
+
+                <div class="emr-summary-panel" id="vpdSummaryPanel">
+                    <div class="emr-summary-head">
+                        <h3>Overall Situation Panel</h3>
+                        <div class="emr-summary-meta">Cases in filter: <strong id="vpdFilterCount">—</strong></div>
+                    </div>
+                    <div class="emr-summary-scope" id="vpdSummaryScope">Scope: District Chakwal</div>
+                    <div class="emr-summary-grid" id="vpdSummaryGrid">
+                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                    </div>
+                </div>
+
+                <div class="emr-tabs" id="vpdTabs">
+                    <button type="button" class="emr-tab active" data-vpd="AEFI" onclick="vpdSwitch('AEFI')">1. AEFI</button>
+                    <button type="button" class="emr-tab" data-vpd="Diphtheria" onclick="vpdSwitch('Diphtheria')">2. Diphtheria</button>
+                    <button type="button" class="emr-tab" data-vpd="Pertussis" onclick="vpdSwitch('Pertussis')">3. Pertussis</button>
+                    <button type="button" class="emr-tab" data-vpd="NNT" onclick="vpdSwitch('NNT')">4. Neonatal Tetanus</button>
+                    <button type="button" class="emr-tab" data-vpd="Childhood TB" onclick="vpdSwitch('Childhood TB')">5. Childhood TB</button>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+                    <button type="button" class="btn btn-sm" onclick="vpdDownloadExcel()" style="background:#1565c0">⬇ Download Excel (Tab)</button>
+                    <button type="button" class="btn btn-sm" onclick="vpdExportPdf()" style="background:#6a1b9a">📄 PDF (This Tab)</button>
+                    <span style="font-size:12px;color:#666">Excel / PDF = open tab</span>
+                </div>
+                <div class="emr-stats" id="vpdStats"></div>
+                <div id="vpdStatus" class="sweep-loading" style="display:none"></div>
+                <div class="emr-table-wrap" id="vpdTableWrap" style="display:none">
+                    <table class="emr-table">
+                        <thead id="vpdHead"></thead>
+                        <tbody id="vpdBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+<div class="section-title" id="section-downloads">Official Downloads & Reports</div>
             <div class="download-grid">
                 <div class="download-card">
                     <h3>Monthly EPI Presentation</h3>
@@ -9673,7 +9729,7 @@ rcaInit();
         // auto-load EMR when page ready
         document.addEventListener('DOMContentLoaded', function(){
             checkSiteLock(); collapseEventsSidebarDefault(); initCollapsibleSections();
-            setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); if(document.getElementById('emrFixedCard')) loadFixedData(); if(document.getElementById('mrCard')) loadMrData(); if(document.getElementById('afpCard')) afpInit(); }, 1200);
+            setTimeout(function(){ if(document.getElementById('emrCard')) loadEmrData(); if(document.getElementById('emrFixedCard')) loadFixedData(); if(document.getElementById('mrCard')) loadMrData(); if(document.getElementById('afpCard')) afpInit(); if(document.getElementById('vpdCard')) vpdInit(); }, 1200);
         });
 
         async function captureSweepCanvas(){
@@ -13610,7 +13666,7 @@ rcaInit();
             const meta = document.getElementById('mrMeta');
             if(status){ status.style.display='block'; status.textContent='Loading MR year sheets…'; }
             try{
-                const yearSheets = ['2026','2025','2024','2023','2022'];
+                const yearSheets = ['2026','2025','2024','2023','2022','2021','2020','2019','2018'];
                 let all = [];
                 let loaded = [];
                 for(let yi=0; yi<yearSheets.length; yi++){
@@ -14307,6 +14363,172 @@ const AFP_DATA=[[2020,"PB/13/20/001","Sidra Bibi","Khair Ullah","14","M","Chakwa
 // Cross-notified: [epid, name, father, ageMo, sex, district, tehsil, uc, month, week, onset, notif, invest, facility, notifyingDistrict, notifiedBy, diagnosis, investigator, stool1, stool1Sent, stool2, stool2Sent]
 const AFP_CROSS=[["PB/42/24/097","TAHIRA","SHER ALI","23","F","Khushab","Qaidabad","GolyWali","November","5","2024-11-11","2024-11-15","2024-11-16","Islamabad Medical Center Tamman","Chakwal","Dr Tayyab Khan Paediatrician","Hypokalemic Paralysis / Myositis?","Dr. Sajjad Ali Khan DSO","2024-11-17","2024-11-19","2024-11-18","2024-11-19"]];
 const AFP_META={"downloaded":"2026-11-17","source":"AFP surveillance workbook (same sheet as the monthly AFP reports)","years":{"2020":78,"2021":96,"2022":171,"2024":156,"2025":166,"2026":101,"2023":143},"total":911,"missing_years":[],"excluded_epid_only":438};
+
+const VPD_DATA=[[2020, "AEFI", "PAK/PB/13/20/AEFI/0001", "Dua Zahra", "Fazal", 9, "mo", "F", "Chakwal", "Chakwal 3", "Mohallah Bhatian Kot Sarfaraz", "December", 52, "2020-12-17", "2020-12-24", "2020-12-24", "DHQ  Chakwal", "DHQ", "Mild", "", "", "Hospitalized", "", "Measles", "Lethargic", "Yes", "03345861400", "Chakwal"], [2021, "AEFI", "PAK/PB/13/21/AEFI/0001", "Ahmad", "Talal Deen", 5, "mo", "M", "Choa Saidan Shah", "Choa Saidan Shah", "Mustafa Abad", "November", 45, "2021-11-10", "2021-11-13", "2021-11-13", "THQ Choa Saiden Shah", "THQ", "Mild", "", "", "Alive", "", "Penta", "Abseces", "No", "03465027044", "Chakwal"], [2021, "AEFI", "PAK/PB/13/21/AEFI/0002", "Malyqa Noor", "sohail Ahmed", 23, "mo", "F", "Choa Saidan Shah", "Lehr Sultan Pur", "Minhala", "November", 46, "2021-11-15", "2021-11-15", "2021-11-15", "THQ Choa Saiden Shah", "THQ", "Severe", "", "", "Alive", "", "DTP", "Fever/ Rash/ Fits", "Yes", "03435819049", "Chakwal"], [2023, "AEFI", "PAK/PB/13/23/AEFI/0001", "Anaya", "Muhammad Afsar", 6, "mo", "F", "Choa Saidan Shah", "Dulmail", "Dheryala Kahoon", "February", 8, "2023-02-21", "2023-02-23", "2023-02-23", "THQ Hospital Choa Saiden Shah", "THQ", "Mild", "", "", "Alive", "", "Penta                    PCV 13                    OPV                        IPV", "Fever", "Yes", "0310012074", "Chakwal"], [2023, "AEFI", "PAK/PB/13/23/AEFI/0002", "Najeeb Ullah", "Qudrat Wali", 5, "mo", "M", "Choa Saidan Shah", "Lehr Sultan Pur", "Khajoola Road", "February", 9, "2023-03-02", "2023-03-02", "2023-03-02", "THQ Hospital Choa Saiden Shah", "THQ", "Mild", "", "", "Alive", "", "Penta                    PCV 13                    OPV                        ROTA", "Fever", "Yes", "03485076011", "Chakwal"], [2023, "AEFI", "PAK/PB/13/23/AEFI/0003", "Ayesha", "Ismail", 2, "mo", "F", "Kallar Kahar", "Noorpur", "Bhall", "November", 2, "2023-11-11", "2023-11-11", "2023-11-11", "Bhu Noorpur", "BHU", "Mild", "", "", "", "", "Penta", "Fever", "", "03434324260", "Chakwal"], [2023, "AEFI", "PAK/PB/13/23/AEFI/0004", "Boby", "Ehtisham", "14 Days", "", "M", "Kallar Kahar", "Noorpur", "Bhalial", "November", "14 Days", "2023-11-11", "2023-11-11", "2023-11-11", "Bhu Noorpur", "BHU", "Mild", "", "", "", "", "PENTA", "Fever", "", "03349274110", "Chakwal"], [2025, "AEFI", "PAK/PB/District ID/24/AEFI/0001", "Alisha Waseem", "Waseem Ashraf", 3.5, "mo", "M", "Kallar Kahar", "Buchal Khurd", "Ransial", "May", 20, "2025-05-14", "2025-05-14", "2025-05-14", "BHU Kahut", "Govt Hospital", "Severe", "", "", "Alive", "", "OPVIII, IPVI, Penta III, Pcv13III", "Severe Local Reaction, Fever", "Yes", "03348742579", "Chakwal"], [2019, "Diphtheria", "PAK/PB/13/19/Dip/0001", "Komal", "Asad", 8, "mo", "F", "Kallar Kahar", "Khair Pur", "Khokar zeer Chakwal", "January", 5, "", "2019-01-27", "", "Holy Family Hospital, Satellite Town, Rawalpindi", "Teaching Hospital", "DIPHTHERIA SUSPECTED", "NA", "", "", "", "", "[]", "", "03470054277", "Chakwal"], [2019, "Diphtheria", "PAK/PB/13/19/Dip/0001", "Abdullah", "Nawazish", 42, "mo", "M", "Kallar Kahar", "Kallar Kahar", "Kallar Kahar,Kallar Kahar,Chakwal", "July", 29, "2019-07-18", "2019-07-18", "2019-07-18", "Holy Family Hospital, Satellite Town, Rawalpindi", "Teaching Hospital", "DIPHTHERIA SUSPECTED", "Negative for Corynebacterium Diphtheriae", "", "Alive", 3, "", "[\"Sore Throat\", \"Low Grade Fever\", \"Adherent Membrane\"]", "", "03359348789", "Chakwal"], [2019, "Diphtheria", "PAK/PB/13/19/Dip/0002", "Mubeen Hassan", "M. Ayub", 180, "mo", "M", "Chakwal town", "Chak Malook", "Chakral", "September", 38, "2019-09-16", "2019-09-19", "2019-09-19", "DHQ Chakwal", "DHQ", "DIPHTHERIA SUSPECTED", "Negative for Corynebacterium Diphtheriae", "", "Alive", 3, "", "[\"Sore Throat\", \"Low Grade Fever\"]", "", "03232312612", "Chakwal"], [2019, "Diphtheria", "PAK/PB/13/19/Dip/0003", "Abdullah", "Nawazish", 42, "mo", "M", "Kallar Kahar", "Kallar Kahar", "Kallar Kahar,Kallar Kahar,Chakwal", "July", 29, "2019-07-19", "2019-07-19", "2019-07-18", "Holy Family Hospital, Satellite Town, Rawalpindi", "Teaching Hospital", "DIPHTHERIA SUSPECTED", "Negative for Corynebacterium Diphtheriae", "", "Alive", 3, "", "[\"Sore Throat\", \"Low Grade Fever\", \"Adherent Membrane\"]", "", "03359348789", "Chakwal"], [2022, "Diphtheria", "PAK/PB/13/22/Dip/0001", "Wajeeh Ul Hassan", "Shoukat Mehmood", 93, "mo", "M", "Chakwal", "Chakwal 4", "Mohallah Sargojra Chakwal", "August", 33, "2022-08-10", "2022-08-15", "2022-08-15", "DHQ Chakwal", "DHQ", "Diphtheria", "Negative", "Discarded", "Alive", 3, "", "Fever,Sore throat, Adherent Membrance", "", "03315770835", "Chakwal"], [2022, "Diphtheria", "PAK/PB/13/22/Dip/0002", "Areeba Tahir", "Tahir Mehmood", 25, "mo", "F", "Choa Saidan Shah", "Dulmial", "Dharyala Kahoon", "October", 40, "2022-10-06", "2022-10-07", "2022-10-08", "Care Hospital Chakwal (Private)", "Private", "Diphtheria", "Negative", "Discarded", "Alive", 3, "", "Fever,Sore throat, Adherent Membrance", "", "03348121213", "Chakwal"], [2022, "Diphtheria", "PAK/PB/13/22/Dip/0003", "Anabia", "Taimoor", 65, "mo", "F", "Kallar Kahar", "Buchal Kalan", "Buchal Kalan", "October", 41, "2022-10-09", "2022-10-12", "2022-10-12", "Mariam Cilinic", "Private", "Diphtheria", "", "Discarded", "Alive", 3, "", "Fever,Sore throat, Adherent Membrance", "", "03337485815", "Chakwal"], [2022, "Diphtheria", "PAK/PB/13/22/Dip/0004", "Shazil Irfan", "Irfan Nasir", 11, "mo", "M", "Kallar Kahar", "Munara", "Dhoke Dand Munara", "October", 41, "2022-10-09", "2022-10-12", "2022-10-12", "Mariam Cilinic", "Private", "Diphtheria", "", "Discarded", "Alive", 3, "", "Fever,Sore throat, Adherent Membrance", "", "03365320746", "Chakwal"], [2023, "Diphtheria", "PAK/PB/13/23/Dip/0001", "Eshal Zahra", "Kamran Shabeer", 90, "mo", "F", "Kallar Kahar", "Buchal Khurd", "Near Noorani Masjid Gufanwala", "September", 36, "2023-09-01", "2023-09-06", "2023-09-06", "THQ KALLAR KAHAR", "THQ", "DIPHTERIA", "Negative", "Discarded", "Alive", 3, "", "sore throat,low grade fever,adherent membrane", "", "03351641487", "Chakwal"], [2023, "Diphtheria", "PAK/PB/13/23/Dip/0002", "Umaima Fatima", "Mehr Khan", 124, "mo", "F", "Chakwal", "Dab", "Mughal Kassar", "December", 51, "2023-12-10", "2023-12-14", "2023-12-14", "DHQ HOSPITAL CHAKWAL", "DHQ", "DIPHTERIA", "", "", "", 3, "", "sore throat,low grade fever,adherent membrane", "", "03349543557", "Chakwal"], [2024, "Diphtheria", "PAK/PB/13/24/Dip/0001", "Eman Fatima", "Ejaz Hussain", 146, "mo", "F", "Choa Saidan Shah", "Ara", "Sidhandi", "April", 13, "2024-02-04", "2024-02-04", "2024-02-04", "DHQ Hospital Chakwal", "DHQ", "Dip", "Negative", "Discarded", "Alive", 3, "", "", "", "03255650242", "Chakwal"], [2024, "Diphtheria", "PAK/PB/13/24/Dip/0002", "Muhammad Arsam", "Muhammad Asim", 28, "mo", "M", "Kallar Kahar", "Dab Khushaal", "Dhab Kalan", "May", 17, "2024-04-24", "2024-04-25", "2024-04-25", "Marium Hospital Kallar Kahar", "THQ", "Dip", "Negative", "Discarded", "Alive", 3, "", "", "", "03255645916", "Chakwal"], [2025, "Diphtheria", "PAK/PB/13/2025/Diph/0001", "Muhammad Khalil", "Muhammad Aslam", 228, "mo", "M", "Kallar Kahar", "Bhoun", "Masjid Kumaran Wali, Village bhoun", "March", 12, "2025-03-13", "2025-03-17", "2025-03-17", "BBH Hospital", "Govt Hospital", "Diphtheria", "POSITIVE", "POSITIVE", "", 2, "", "", "", "03115934223", "Rawalpindi"], [2019, "Pertussis", "PAK/PB/13/19/Per/0001", "Muhammad Usman", "Gultasab Mehmood", 41, "mo", "M", "Chakwal town", "Oudherwal", "Chakora", "February", 8, "2019-02-20", "2019-03-14", "2019-03-13", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "NA", "", "Alive", 0, "", "[\"Post-tussive vomiting\"]", "", "03365742534", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0002", "Sehar Zainab", "Gultasab Mehmood", 73, "mo", "F", "Chakwal town", "Oudherwal", "Chakora", "February", 8, "2019-02-20", "2019-03-14", "2019-03-13", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "NA", "", "Alive", 1, "", "[\"Inspiratory whooping\"]", "", "03365742534", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0003", "Sama Dorain", "M Shehzad", 36, "mo", "F", "Kallar Kahar", "Miani", "Gufanwala near GHS", "March", 11, "2019-03-15", "2019-04-06", "2019-04-06", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "Negative", "Discarded Negative for Bordetella Pertussis", "Alive", 3, "", "[\"Inspiratory whooping\", \"Post-tussive vomiting\"]", "", "03335772463", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0004", "Asma Manan", "Abdul Manan", 24, "mo", "F", "Chakwal town", "Kariyalla", "Kariyalla", "June", 24, "2019-06-15", "2019-06-20", "2019-06-20", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "NA", "", "Alive", 3, "", "[\"Inspiratory whooping\", \"Post-tussive vomiting\"]", "", "03455965394", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0005", "Ghousallah", "Abul Raheem", 11, "mo", "M", "Chakwal town", "Chak Malook", "Near Rizwan Mill Chakwal", "July", 30, "2019-07-10", "2019-07-22", "2019-07-22", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "NA", "", "Alive", 3, "", "[\"Inspiratory whooping\"]", "", "03015316410", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0006", "Muhammad Ali", "Muhammad Pervaiz", 96, "mo", "M", "Kallar Kahar", "Noor pur", "Bhall", "July", 30, "2019-07-16", "2019-07-22", "2019-07-22", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "NA", "", "Alive", 2, "", "[\"Inspiratory whooping\"]", "", "03465825537", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0007", "Mohammad", "Ghulam Haider", 36, "mo", "M", "Talagang", "Talagang West", "Raheem Abad, Mohallah Jound Talagang", "August", 34, "2019-08-01", "2019-08-21", "2019-08-20", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "Negative", "Discarded Negative for Bordetella Pertussis", "Alive", 3, "", "[\"Inspiratory whooping\", \"Post-tussive vomiting\"]", "", "03466450960", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0008", "Haleema", "Ghulam Haider", 48, "mo", "F", "Talagang", "Talagang West", "Raheem Abad, Mohallah Jound, Talagang", "August", 34, "2019-08-11", "2019-08-21", "2019-08-20", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "Negative", "Discarded Negative for Bordetella Pertussis", "Alive", 3, "", "[\"Inspiratory whooping\"]", "", "03466450960", "Chakwal"], [2019, "Pertussis", "PAK/PB/13/19/Per/0009", "Rukhsana Bibi", "Ayoub Khan", 35, "mo", "F", "Kallar Kahar", "Kallar Kahar", "Bhar Pur Road Chakwal", "October", 42, "2019-10-13", "2019-10-19", "2019-10-19", "Faisal Clinic", "Private Clinic", "PERTUSSIS SUSPECTED", "Negative", "Discarded Negative for Bordetella Pertussis", "Alive", 3, "", "[\"Inspiratory whooping\"]", "", "03435603771", "Chakwal"], [2023, "Pertussis", "PAK/PB/13/23/Msl/0001", "Mehrosh", "Umair Ehtesham", 17, "mo", "F", "Chakwal", "Padshahan", "Chowhan", "December", 51, "2023-12-13", "2023-12-20", "2023-12-20", "Care Children Hospital", "Hospital", "", "", "", "", 3, "", "", "", "", "ChAKWAL"], [2019, "NNT", "PAK/PB/13/19/NNT/0001", "Ayesha", "Sohbat Khan", 8, "days", "F", "Talagang", "Thoa Mehram Khan", "Dhoke Shafi/Afzal Thoa Mehram Khan", "March", 11, "2019-03-12", "2019-03-16", "2019-03-16", "Islamabad Medical Centre Talagang", "Private Hospital", "NEONATAL TETANUS (SUSPECTED)", "NA", "", "Death (20.03.19)", "", "", "[\"able to suck milk cry during the first 2 days of life\", \"Unable to suck milk after the first 2 days\"]", "", "03088457012", "Chakwal"], [2019, "NNT", "PAK/PB/13/19/NNT/0002", "Baby of Gul Bibi", "Zia Khan", 9, "days", "M", "Chakwal town", "Chakwal 2`", "Pindi Chakwal Road, Jungian", "August", 34, "2019-08-23", "2019-08-24", "2019-08-24", "Holy Family Hospital, Satellite Town, Rawalpindi", "Teaching Hospital", "NEONATAL TETANUS (SUSPECTED)", "NA", "Clinically Confirmed Case", "Death (25.08.19)", "", "", "[\"able to suck milk cry during the first 2 days of life\", \"Unable to suck milk after the first 2 days\", \"Stiffness\", \"Fits\"]", "", "03075109477", "Chakwal"], [2020, "NNT", "PAK/PB/13/20/NNT/0001", "Baby of Sakina", "Azad Khan", 6, "days", "M", "Chakwal town", "Kariyala", "Sheer Shah Chowk Near Ghazi Hotel Choa Road Chakwal", "June", 24, "2020-06-11", "2020-12-06", "2020-12-06", "Holy Family Hospital, Satellite Town, Rawalpindi", "Teaching Hospital", "NEONATAL TETANUS (SUSPECTED)", "NA", "Clinically Confirmed Case", "Death, Date:13-06-20", "", "", "[\"able to suck milk cry during the first 2 days of life\", \"Unable to suck milk after the first 2 days\", \"Stiffness\", \"Fits\"]", "", "03405573018", "Chakwal"], [2020, "NNT", "PAK/PB/13/20/NNT/0002", "Hameed Ullah", "Nazik Meer", 14, "days", "M", "Chakwal town", "Dab", "Main Pindi Road Behkri,", "August", 35, "2020-08-23", "2020-08-27", "2020-08-26", "Faisal Clinic", "Private", "NEONATAL TETANUS (SUSPECTED)", "NA", "", "Other", "", "", "[\"Fever\", \"able to suck milk cry during the first 2 days of life\", \"Unable to suck milk after the first 2 days\", \"Fits\", \"Fever\"]", "", "", "Chakwal"], [2023, "NNT", "PAK/PB/13/23/NNT/0001", "Baby of Farzana", "Muhammad Javed", 7, "days", "M", "Chakwal", "Chakwal 4", "Near Qazi Service Station Chakwal", "January", 2, "2023-01-11", "2023-01-13", "2023-01-13", "Holy Faimly Hospital Rawalpinid", "Teaching", "NNT", "", "", "Alive", "", "", "Clinical NNT", "", "03057409996", "Chakwal"], [2019, "Childhood TB", "PAK/PB/13/19/001", "Fiza Kalsoom", "Muhammad Azad", 7, "yr", "F", "Talagang", "Kot Qazi", "Balwal", "", "", "", "", "", "RHC Kot Qazi", "RHC", "TUBERCULOSIS (SUSPECTED)", "Sputum Negative", "", "Alive", 1, "", "", "", "03025197030", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0001", "ghulam muhammad", "noor muhammad", 6, "yr", "M", "", "", "talagang", "", "", "", "", "", "Ch. Pervaiz Elahi City Hospital Talagang", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0002", "rasheeda", "feroz khan", 13, "yr", "F", "", "", "talagang", "", "", "", "", "", "Ch. Pervaiz Elahi City Hospital Talagang", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0003", "hayat", "imtiaz", 10, "yr", "M", "", "", "talagang", "", "", "", "", "", "Ch. Pervaiz Elahi City Hospital Talagang", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0004", "asia", "khuram", 10, "yr", "F", "Talagang", "Talagang East", "Talagang East, Talagang, Chakwal", "", "", "", "", "", "Ch. Pervaiz Elahi City Hospital Talagang", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0005", "umer", "ghulam, raza", 12, "yr", "M", "Talagang", "Talagang East", "Talagang East, Talagang, Chakwal", "", "", "", "", "", "Ch. Pervaiz Elahi City Hospital Talagang", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0006", "ifra", "muhammad zakriya", 13, "yr", "F", "", "", "talagang", "", "", "", "", "", "Ch. Pervaiz Elahi City Hospital Talagang", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0007", "m nasir", "yasir", 5, "yr", "M", "Chakwal town", "", "Tala Gung", "", "", "", "", "", "Government TB Sanatorium, Samli, Tehsil Murree, Rawalpindi", "Teaching Hospital", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "", "Rawalpindi"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0008", "Saifullah", "Shah Wali", 3, "yr", "M", "Chakwal town", "Bheen", "Chohan", "", "", "2020-08-28", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03452065458", "Chakwal"], [2020, "Childhood TB", "PAK/PB/13/20/TB/0009", "Farishta", "Anar Khan", 13, "yr", "F", "Chakwal town", "Chakwal 4", "Near Pakistan Cadet School Mohallah Sargojra Sharqi Chakwal", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 1, "", "", "", "03125507796", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/001", "M. Arsalan", "Arif Nadeem", 14, "yr", "M", "Chakwal", "Chakwal City", "Chakwal", "", "", "2021-12-01", "", "", "DHQ Chakwal", "DHQ", "Suspected TB", "SS+ve", "", "Under Treatment", 1, "", "", "", "03335597384", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/002", "Naima Ishaq", "M. Ishaq", 13, "yr", "F", "Talagang", "Kot Sarang", "Niraghi", "", "", "", "", "", "City Hospital Talagang", "THQ", "Suspected TB", "SS-ve", "", "Under Treatment", 1, "", "", "", "03425325347", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/003", "Sumaira Tahir", "Fateh Khan", 14, "yr", "F", "Talagang", "Talagang", "Talagang", "", "", "", "", "", "City Hospital Talagang", "THQ", "Suspected TB", "NA", "", "Under Treatment", 1, "", "", "", "03481154484", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/004", "Sajida Bibi", "Abdul Maalik", 14, "yr", "F", "Chakwal", "Chakwal 2", "Nishat Colony Chakwal", "", "", "2021-02-22", "", "", "DHQ Chakwal", "DHQ", "Suspected TB", "SS+ve", "", "Under Treatment", 1, "", "", "", "03430527291", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/005", "Umair Ahmed", "Hamid Ali", 12, "yr", "M", "Talagang", "Leti", "Sukka", "", "", "2021-08-03", "", "", "City Hospital Talagang", "THQ", "Suspected TB", "SS+ve", "", "Under Treatment", 1, "", "", "", "03022549057", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/006", "Ibne Ali", "M. Qaiser", 4, "yr", "M", "Chakwal", "Jabeer Pur", "Dab", "", "", "2021-06-03", "", "", "DHQ Chakwal", "DHQ", "Suspected TB", "NA", "", "Under Treatment", 1, "", "", "", "03480622878", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/007", "Ali Haider", "M. Shafqat", 10, "yr", "M", "Choa Saidan Shah", "Dalwal", "Minhala", "", "", "", "", "", "DHQ Chakwal", "DHQ", "Suspected TB", "NA", "", "Under Treatment", 1, "", "", "", "03465770723", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/008", "Zoha Nisar", "Nisar Ahmed", 12, "yr", "F", "Chakwal", "Chakwal 1", "Line Park Chakwal", "", "", "2021-10-04", "", "", "DHQ Chakwal", "DHQ", "Suspected TB", "SS+ve", "", "Under Treatment", 1, "", "", "", "03485564725", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/009", "Ali Muawia", "Abdul Qadeer", 9, "yr", "M", "Chakwal", "Chakwal 3", "Jhelum Chungi Dab Road", "", "", "2021-10-05", "", "", "DHQ Chakwal", "DHQ", "Suspected TB", "Ex-Pulmonary", "", "Under Treatment", 1, "", "", "", "03359408917", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/010", "Farzana Bibi", "Salman Rasool", 9, "yr", "F", "Choa Saidan Shah", "Lehr Sultan Pur", "Chumbi", "", "", "2021-05-29", "", "", "THQ Choa Saiden Shah", "THQ", "Suspected TB", "SS-ve", "", "Under Treatment", 1, "", "", "", "03455189406", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/011", "Aisha Huma", "M. Latif", 13, "yr", "F", "Choa Saidan Shah", "Dalwal", "Dalwal", "", "", "2021-08-06", "", "", "THQ Choa Saiden Shah", "THQ", "Suspected TB", "SS-ve", "", "Under Treatment", 1, "", "", "", "03235924586", "Chakwal"], [2021, "Childhood TB", "PAK/PB/13/21/CHTB/012", "Sadia", "Saif Ur Rehman", 6, "yr", "F", "Chakwal town", "Dab", "Jabairpur", "", "", "2021-10-07", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "Under Treatment", 1, "", "", "", "03465782023", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0001", "Abiha Sajid", "Sajid Imran", 6, "yr", "F", "Chakwal town", "Balkasar", "Mohallah Imam Bargah VPO And UC Balkasar Chakwal", "", "", "2022-02-07", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", "", "", "", "", "03165268466", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0002", "Nabiha", "Ameer Hamza", 10, "yr", "F", "Choa Saidan Shah", "Basharat", "VPO And UC Basharat", "", "", "2022-02-07", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", "", "", "", "", "03451091070", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0003", "Awais", "M. Naeem", 1, "yr", "M", "Chakwal town", "Jabairpur", "Samanabad VPO And UC Jabairpur", "", "", "2021-12-16", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", "", "", "", "", "03359091846", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0004", "Muhammed sabir", "Muhammed irfan", 8, "yr", "M", "Choa Saidan Shah", "Dandoot", "dandoot", "", "", "", "", "", "THQ Choa Saiden Shah", "THQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", 0, "", "", "", "03125721314", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0005", "Hassan Ali", "Shaukat Ali", 3, "yr", "M", "Chakwal town", "Chakumra", "VPO Dhab Loharan", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03135875485", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0006", "Syeda Hijab Zahra", "Syed Bashir Hussain", 12, "yr", "F", "Chakwal town", "Chakwal 1", "Mohallah Dhok Feroz Chakwal", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03425355258", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0007", "M. Zubair", "Javed Iqbal", 8, "yr", "M", "Chakwal town", "Chakwal 1", "Mohallah Dhok Feroz Chakwal", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03449231131", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0008", "M. Afnan", "M. Hasnain", 3, "yr", "M", "Chakwal town", "Chakwal 1", "Mohallah Dhok Feroz Chakwal", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03449231131", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0009", "B/O Rimsha", "Faizan Tajamal", 0, "yr", "F", "Chakwal town", "Kariyalla", "VPO Bhalla", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03155963688", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0010", "M. Saad", "M. Hussain", 14, "yr", "M", "Talagang", "Bhudial", "VPO Misrial", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03055125186", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0011", "Bushra", "Samiullah", 6, "mo", "F", "Chakwal town", "Chakwal 1", "Mohallah Hussaini Maqbool Chowk Chakwal", "", "", "", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03445780513", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0012", "aleyan", "dildar hussain", 8, "yr", "M", "Choa Saidan Shah", "Khair Pur", "khokher bala", "", "", "", "", "", "THQ Choa Saiden Shah", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03105124752", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0013", "M. Sami", "Nasir Iqbal", 5, "yr", "M", "Chakwal town", "Chakwal 1", "Mohallah Umarabad Chakwal", "", "", "2022-10-20", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", 0, "", "", "", "03345306994", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0014", "Ali Akbar", "Mohsin Sajid", 5, "yr", "M", "Chakwal town", "Chakwal 1", "Mohallah Line Park Chakwal", "", "", "2022-10-25", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", 0, "", "", "", "03355136010", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0015", "Mehek Fatima", "M. Aqeel", 14, "yr", "F", "Chakwal town", "Chakwal 1", "Near Tatral Hotel Chakwal", "", "", "2022-10-15", "", "", "DHQ Chakwal", "DHQ", "TUBERCULOSIS (SUSPECTED)", "Negative", "", "", 0, "", "", "", "03335006247", "Chakwal"], [2022, "Childhood TB", "PAK/PB/13/22/CHD/0016", "faria tahir", "tahir yaqoob", 13, "yr", "F", "Kallar Kahar", "Kallar Kahar", "kalar kahar", "", "", "", "", "", "THQ Choa Saiden Shah", "THQ", "TUBERCULOSIS (SUSPECTED)", "NA", "", "", 0, "", "", "", "03335909630", "Chakwal"]];
+const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (district Chakwal)", "years": {"2019": 16, "2020": 12, "2021": 14, "2022": 20, "2023": 8, "2024": 2, "2025": 2}, "byDisease": {"AEFI": 8, "Diphtheria": 13, "Pertussis": 10, "NNT": 5, "Childhood TB": 38}, "total": 74, "updated": "2026-11-18", "notes": ["2019 Diphtheria: EPID PAK/PB/13/19/Dip/0001 is used for two different children (Komal and Abdullah) in the source file; both rows are shown as written.", "2023 Pertussis: the case Mehrosh carries a measles EPID (PAK/PB/13/23/Msl/0001) in the source file; shown as written.", "2017: no file received for 2017, so no 2017 cases are shown.", "2018: the 2018 file contains measles only; no other-disease tabs."]};
+
+        // ===== VPD Surveillance — Other Diseases (baked data from linelist files 2019–2025) =====
+        const VPD_FIELDS=['year','disease','epid','name','father','age','ageUnit','sex','tehsil','uc','village','month','week','onset','notif','invest','hf','hfType','type','lab','finalClass','outcome','doses','vaccine','presentation','hosp','contact','district'];
+        const VPD_DISEASES=['AEFI','Diphtheria','Pertussis','NNT','Childhood TB'];
+        const VPD_LABELS={'AEFI':'AEFI','Diphtheria':'Diphtheria','Pertussis':'Pertussis','NNT':'Neonatal Tetanus','Childhood TB':'Childhood TB'};
+        let vpdMode='AEFI';
+        let vpdLastExport={headers:[], rows:[]};
+        function vpdObj(a){ const o={}; VPD_FIELDS.forEach(function(f,i){ o[f]=a[i]; }); return o; }
+        function vpdEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function vpdAge(r){
+            if(r.age===''||r.age==null) return '';
+            if(typeof r.age==='number') return String(r.age)+(r.ageUnit?' '+r.ageUnit:'');
+            return String(r.age);
+        }
+        function vpdInit(){
+            const ysel=document.getElementById('vpdYear');
+            if(ysel){
+                const years=[2019,2020,2021,2022,2023,2024,2025];
+                ysel.innerHTML='<option value="">All years</option>'+years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+            }
+            const tsel=document.getElementById('vpdTehsil');
+            if(tsel){
+                const tehs=['Chakwal','Choa Saidan Shah','Kallar Kahar','Talagang'];
+                tsel.innerHTML='<option value="">All Tehsils</option>'+tehs.map(function(t){ return '<option>'+t+'</option>'; }).join('');
+            }
+            const meta=document.getElementById('vpdMeta');
+            if(meta) meta.textContent=VPD_META.total.toLocaleString()+' cases · 2019–2025 · Data as of '+VPD_META.updated;
+            vpdApply();
+        }
+        function vpdFiltered(){
+            const y=(document.getElementById('vpdYear')||{}).value||'';
+            const t=(document.getElementById('vpdTehsil')||{}).value||'';
+            const q=((document.getElementById('vpdSearch')||{}).value||'').trim().toLowerCase();
+            return VPD_DATA.map(vpdObj).filter(function(r){
+                if(y && String(r.year)!==String(y)) return false;
+                if(t && r.tehsil!==t) return false;
+                if(q && (String(r.epid).toLowerCase().indexOf(q)<0 && String(r.name).toLowerCase().indexOf(q)<0)) return false;
+                return true;
+            });
+        }
+        function vpdSwitch(d){
+            vpdMode=d;
+            document.querySelectorAll('#vpdTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-vpd')===d); });
+            vpdApply();
+        }
+        function vpdReset(){
+            const y=document.getElementById('vpdYear'); if(y) y.value='';
+            const t=document.getElementById('vpdTehsil'); if(t) t.value='';
+            const q=document.getElementById('vpdSearch'); if(q) q.value='';
+            vpdApply();
+        }
+        function vpdUpdatePanel(data){
+            const grid=document.getElementById('vpdSummaryGrid');
+            const scope=document.getElementById('vpdSummaryScope');
+            const cnt=document.getElementById('vpdFilterCount');
+            if(cnt) cnt.textContent=data.length.toLocaleString();
+            const y=(document.getElementById('vpdYear')||{}).value||'';
+            const t=(document.getElementById('vpdTehsil')||{}).value||'';
+            let sc='Scope: District Chakwal';
+            if(y) sc+=' · '+y;
+            if(t) sc+=' · Tehsil '+t;
+            if(scope) scope.textContent=sc;
+            if(!grid) return;
+            let male=0, female=0;
+            const per={};
+            VPD_DISEASES.forEach(function(d){ per[d]=0; });
+            data.forEach(function(r){
+                if(per[r.disease]!=null) per[r.disease]++;
+                if(r.sex==='M') male++;
+                else if(r.sex==='F') female++;
+            });
+            const items=VPD_DISEASES.map(function(d){
+                return '<div class="emr-sum-item" style="cursor:pointer" onclick="vpdSwitch(\''+d+'\')"><div class="n">'+per[d].toLocaleString()+'</div><div class="l">'+VPD_LABELS[d]+'</div></div>';
+            });
+            items.push('<div class="emr-sum-item"><div class="n">'+male.toLocaleString()+'</div><div class="l">Male</div></div>');
+            items.push('<div class="emr-sum-item"><div class="n">'+female.toLocaleString()+'</div><div class="l">Female</div></div>');
+            grid.innerHTML=items.join('');
+        }
+        function vpdRenderTable(headers, rowsHtml, exportRows){
+            const wrap=document.getElementById('vpdTableWrap');
+            const head=document.getElementById('vpdHead');
+            const body=document.getElementById('vpdBody');
+            if(!wrap||!head||!body) return;
+            head.innerHTML='<tr>'+headers.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>';
+            body.innerHTML=rowsHtml||('<tr><td colspan="'+headers.length+'" style="text-align:center;color:#888">No rows</td></tr>');
+            wrap.style.display='block';
+            vpdLastExport={headers:headers, rows:(exportRows||[]).slice()};
+        }
+        function vpdSetStats(items){
+            const box=document.getElementById('vpdStats');
+            if(!box) return;
+            box.innerHTML=(items||[]).map(function(it){
+                return '<div class="emr-stat"><div class="emr-stat-num">'+it.n+'</div><div class="emr-stat-lbl">'+it.l+'</div></div>';
+            }).join('');
+        }
+        function vpdApply(){
+            const all=vpdFiltered();
+            vpdUpdatePanel(all);
+            const data=all.filter(function(r){ return r.disease===vpdMode; });
+            const headers=['Sr','Year','EPID No.','Name','Father','Age','Sex','Tehsil','UC','Village','Month','Onset','Reporting HF','Type','Lab Result','Outcome'];
+            const rowsHtml=data.map(function(r,i){
+                return '<tr><td>'+(i+1)+'</td><td>'+vpdEsc(r.year)+'</td><td>'+vpdEsc(r.epid)+'</td><td>'+vpdEsc(r.name)+'</td><td>'+vpdEsc(r.father)+'</td><td>'+vpdEsc(vpdAge(r))+'</td><td>'+vpdEsc(r.sex)+'</td><td>'+vpdEsc(r.tehsil)+'</td><td>'+vpdEsc(r.uc)+'</td><td>'+vpdEsc(r.village)+'</td><td>'+vpdEsc(r.month)+'</td><td>'+vpdEsc(r.onset)+'</td><td>'+vpdEsc(r.hf)+'</td><td>'+vpdEsc(r.type)+'</td><td>'+vpdEsc(r.lab)+'</td><td>'+vpdEsc(r.outcome)+'</td></tr>';
+            }).join('');
+            const exportRows=data.map(function(r,i){
+                return [i+1, r.year, r.epid, r.name, r.father, vpdAge(r), r.sex, r.tehsil, r.uc, r.village, r.month, r.week, r.onset, r.notif, r.invest, r.hf, r.hfType, r.type, r.lab, r.finalClass, r.outcome, r.doses, r.vaccine, r.presentation, r.hosp, r.contact, r.district];
+            });
+            const exportHeaders=['Sr','Year','EPID No.','Name','Father','Age','Sex','Tehsil','UC','Village','Month','Week','Onset','Notification','Investigation','Reporting HF','HF Type','Type','Lab Result','Final Classification','Outcome','Doses','Vaccine/s','Clinical Presentation','Hospitalization','Contact','District'];
+            vpdRenderTable(headers, rowsHtml, exportRows);
+            // keep the wider export headers for Excel/PDF
+            vpdLastExport.headers=exportHeaders;
+            vpdSetStats([
+                {n:data.length.toLocaleString(), l:VPD_LABELS[vpdMode]+' cases (in filter)'},
+                {n:all.length.toLocaleString(), l:'All diseases (in filter)'}
+            ]);
+        }
+        function vpdDownloadExcel(){
+            if(typeof XLSX==='undefined'){ alert('XLSX missing'); return; }
+            if(!vpdLastExport.headers.length){ alert('No table data'); return; }
+            const aoa=[vpdLastExport.headers].concat(vpdLastExport.rows||[]);
+            const ws=XLSX.utils.aoa_to_sheet(aoa);
+            const wb=XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, vpdMode.replace(/[^A-Za-z0-9]+/g,'_').slice(0,31));
+            XLSX.writeFile(wb, 'VPD_'+vpdMode.replace(/[^A-Za-z0-9]+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+        }
+        function vpdExportPdf(){
+            if(typeof window.jspdf==='undefined'){ alert('jsPDF missing'); return; }
+            let headers=(vpdLastExport.headers||[]).slice();
+            const rows=(vpdLastExport.rows||[]).slice();
+            if(!headers.length){ alert('No table data'); return; }
+            if(typeof pdfNormalizeHeaders==='function') headers=pdfNormalizeHeaders(headers);
+            const { jsPDF }=window.jspdf;
+            const ncols=headers.length;
+            const pdf=new jsPDF({orientation:ncols>6?'landscape':'portrait', unit:'mm', format:'a4'});
+            const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+            const margin=10, usable=pageW-margin*2;
+            const colW=(typeof pdfBuildColWidths==='function')?pdfBuildColWidths(headers,rows,usable):headers.map(function(){ return usable/ncols; });
+            let y=margin;
+            pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(13,92,61);
+            pdf.text('EPI District Chakwal — VPD Other Diseases ('+VPD_LABELS[vpdMode]+')', margin, y); y+=6;
+            pdf.setFontSize(10); pdf.text('Tab: '+VPD_LABELS[vpdMode]+'  |  '+new Date().toLocaleString(), margin, y); y+=6;
+            function drawHead(){
+                pdf.setFillColor(13,92,61); pdf.rect(margin,y,usable,7,'F');
+                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
+                let x=margin;
+                headers.forEach(function(h,i){ pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,h,colW[i]-2):String(h).substring(0,12)), x+1.2, y+4.8); x+=colW[i]; });
+                y+=7; pdf.setFont('helvetica','normal'); pdf.setTextColor(20,20,20);
+            }
+            drawHead();
+            rows.forEach(function(row,ri){
+                if(y+6>pageH-margin){ pdf.addPage(); y=margin; drawHead(); }
+                if(ri%2){ pdf.setFillColor(232,245,233); pdf.rect(margin,y,usable,6,'F'); }
+                let x=margin;
+                for(let i=0;i<ncols;i++){
+                    pdf.setDrawColor(200,200,200); pdf.rect(x,y,colW[i],6);
+                    pdf.setFontSize(7);
+                    pdf.text((typeof pdfFitText==='function'?pdfFitText(pdf,String(row[i]==null?'':row[i]),colW[i]-2):String(row[i]==null?'':row[i]).substring(0,14)), x+1.2, y+4.8);
+                    x+=colW[i];
+                }
+                y+=6;
+            });
+            pdf.save('VPD_'+vpdMode.replace(/[^A-Za-z0-9]+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+        }
+
 
         // ===== AF (AFP) Surveillance — baked data, refreshed every 14 days =====
         let afpMode='list';
