@@ -1516,6 +1516,7 @@ rcaInit();
                                 <button type="button" class="btn btn-sm" onclick="locMapExportExcel()" title="Download pins as Excel" style="background:#1b5e20;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">📥 Excel</button>
                                 <button type="button" class="btn btn-sm" onclick="locMapExportPdf()" title="Download current map view as PDF" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">📄 PDF</button>
                                 <button type="button" class="btn btn-sm" onclick="locMapExportPng()" title="Download current map view as PNG" style="background:#6a1b9a;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">🖼 PNG</button>
+                                <button type="button" class="btn btn-sm" onclick="locMapFitPins()" title="Zoom the map to fit all pins" style="background:#6a1b9a;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">⌖ Fit to pins</button>
                                 <button type="button" class="btn btn-sm" id="locMapFsBtn" onclick="locMapToggleFullscreen()" title="Full Map View" style="background:#0d5c3d;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer">⛶ Full Map</button>
                             </span>
                         </div>
@@ -10573,6 +10574,8 @@ rcaInit();
         }
         let locMapAutoTimer = null;
         let locLeafletMap = null;
+        let locMapFitted = false;      // view fitted once (first render) — later renders must NOT reset the user's zoom/pan
+        let locMapFitRequested = false; // set by the "Fit to pins" button
         let locLeafletLayer = null;
         function locParseCoord(v){
             if(v==null || v==='') return NaN;
@@ -10801,13 +10804,30 @@ rcaInit();
                 countEl.textContent = dayLbl;
             }
 
-            if(bounds.length === 1){
-                locLeafletMap.setView(bounds[0], 14);
-            } else if(bounds.length > 1){
-                try{ locLeafletMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 }); }
-                catch(e){ locLeafletMap.setView([32.93, 72.85], 10); }
-            } else {
-                locLeafletMap.setView([32.93, 72.85], 10);
+            // Fit the view ONLY on first render or when the user taps "Fit to pins".
+            // Re-fitting on every render used to throw away the user's zoom/pan —
+            // the 2-minute auto-refresh reset the view, so a "+" zoom never stuck.
+            // The fit runs after invalidateSize, once the container has its final size.
+            if(!locMapFitted || locMapFitRequested){
+                locMapFitRequested = false;
+                locMapFitted = true;
+                setTimeout(function(){
+                    if(!locLeafletMap) return;
+                    try{ locLeafletMap.invalidateSize(); }catch(e){}
+                    // Fit to pins inside the district box; a stray wrong-GPS pin
+                    // far outside must not zoom the whole map out. Pins outside
+                    // the box still show — they just don't drive the fit.
+                    const fitPts = bounds.filter(function(p){ return p[0] >= 32.0 && p[0] <= 34.0 && p[1] >= 71.5 && p[1] <= 74.5; });
+                    const usePts = fitPts.length ? fitPts : bounds;
+                    if(usePts.length === 1){
+                        locLeafletMap.setView(usePts[0], 14);
+                    } else if(usePts.length > 1){
+                        try{ locLeafletMap.fitBounds(usePts, { padding: [36, 36], maxZoom: 15 }); }
+                        catch(e){ locLeafletMap.setView([32.93, 72.85], 10); }
+                    } else {
+                        locLeafletMap.setView([32.93, 72.85], 10);
+                    }
+                }, 150);
             }
         }
         function locSwitch(mode){
@@ -10843,6 +10863,12 @@ rcaInit();
                 }
             }
             locApply();
+        }
+        function locMapFitPins(){
+            // Re-fit the view to the current pins on demand (the auto-refresh
+            // no longer resets the view, so this is the manual way back).
+            locMapFitRequested = true;
+            locRenderMap();
         }
         function locMapToggleFullscreen(){
             const wrap = document.getElementById('locMapWrap');
