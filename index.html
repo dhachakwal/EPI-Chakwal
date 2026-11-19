@@ -10576,6 +10576,7 @@ rcaInit();
         let locLeafletMap = null;
         let locMapFitted = false;      // view fitted once (first render) — later renders must NOT reset the user's zoom/pan
         let locMapFitRequested = false; // set by the "Fit to pins" button
+        let locLastBounds = [];        // latest pin bounds (for the deferred fit)
         let locLeafletLayer = null;
         function locParseCoord(v){
             if(v==null || v==='') return NaN;
@@ -10804,30 +10805,46 @@ rcaInit();
                 countEl.textContent = dayLbl;
             }
 
+            locLastBounds = bounds;
             // Fit the view ONLY on first render or when the user taps "Fit to pins".
             // Re-fitting on every render used to throw away the user's zoom/pan —
             // the 2-minute auto-refresh reset the view, so a "+" zoom never stuck.
-            // The fit runs after invalidateSize, once the container has its final size.
+            // The fit itself is deferred to locFitMapView, which waits until the
+            // map box is really laid out (a fit run while the box is still short
+            // zooms far too wide and then never corrects itself).
             if(!locMapFitted || locMapFitRequested){
                 locMapFitRequested = false;
-                locMapFitted = true;
-                setTimeout(function(){
-                    if(!locLeafletMap) return;
-                    try{ locLeafletMap.invalidateSize(); }catch(e){}
-                    // Fit to pins inside the district box; a stray wrong-GPS pin
-                    // far outside must not zoom the whole map out. Pins outside
-                    // the box still show — they just don't drive the fit.
-                    const fitPts = bounds.filter(function(p){ return p[0] >= 32.0 && p[0] <= 34.0 && p[1] >= 71.5 && p[1] <= 74.5; });
-                    const usePts = fitPts.length ? fitPts : bounds;
-                    if(usePts.length === 1){
-                        locLeafletMap.setView(usePts[0], 14);
-                    } else if(usePts.length > 1){
-                        try{ locLeafletMap.fitBounds(usePts, { padding: [36, 36], maxZoom: 15 }); }
-                        catch(e){ locLeafletMap.setView([32.93, 72.85], 10); }
-                    } else {
-                        locLeafletMap.setView([32.93, 72.85], 10);
-                    }
-                }, 150);
+                setTimeout(function(){ locFitMapView(0); }, 150);
+            }
+        }
+        function locFitMapView(tryN){
+            // Fit the map to the current pins. Waits until the map box has its
+            // full height (>=400px); a fit attempted while the box is still
+            // short computes a far too wide zoom (height ~120px fits at zoom 6
+            // instead of the district zoom 10). Does NOT lock locMapFitted
+            // until a fit really happens, so a too-early attempt can't strand
+            // the map on a wide zoom — the next render tries again.
+            if(!locLeafletMap) return;
+            const el = document.getElementById('locMapEl');
+            const h = el ? el.clientHeight : 0;
+            if(h < 400){
+                if((tryN||0) < 10) setTimeout(function(){ locFitMapView((tryN||0)+1); }, 300);
+                return;
+            }
+            locMapFitted = true;
+            try{ locLeafletMap.invalidateSize(); }catch(e){}
+            // Fit to pins inside the district box; a stray wrong-GPS pin far
+            // outside must not zoom the whole map out. Pins outside the box
+            // still show — they just don't drive the fit.
+            const fitPts = (locLastBounds||[]).filter(function(p){ return p[0] >= 32.0 && p[0] <= 34.0 && p[1] >= 71.5 && p[1] <= 74.5; });
+            const usePts = fitPts.length ? fitPts : (locLastBounds||[]);
+            if(usePts.length === 1){
+                locLeafletMap.setView(usePts[0], 14);
+            } else if(usePts.length > 1){
+                try{ locLeafletMap.fitBounds(usePts, { padding: [36, 36], maxZoom: 15 }); }
+                catch(e){ locLeafletMap.setView([32.93, 72.85], 10); }
+            } else {
+                locLeafletMap.setView([32.93, 72.85], 10);
             }
         }
         function locSwitch(mode){
