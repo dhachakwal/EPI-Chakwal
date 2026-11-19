@@ -10648,6 +10648,13 @@ rcaInit();
 
             if(!locLeafletMap){
                 locLeafletMap = L.map(el, { scrollWheelZoom: true, zoomControl: true });
+                // Set a correct district view SYNCHRONOUSLY at creation. A Leaflet
+                // map with no view is not loaded at all, and the deferred fit
+                // below is a race (data load vs layout) — if it ever runs late,
+                // at a bad size, or not at all, the map must still open on the
+                // district instead of a random wide view. The fit then only
+                // refines this to the exact pins.
+                locLeafletMap.setView([32.93, 72.85], 10);
                 // Empty-map click closes any open popup. Guard: a marker click also
                 // reaches the map (propagated, with propagatedFrom set), so skip those
                 // — otherwise clicking a marker would close the popup it just opened.
@@ -10818,16 +10825,20 @@ rcaInit();
             }
         }
         function locFitMapView(tryN){
-            // Fit the map to the current pins. Waits until the map box has its
-            // full height (>=400px); a fit attempted while the box is still
-            // short computes a far too wide zoom (height ~120px fits at zoom 6
-            // instead of the district zoom 10). Does NOT lock locMapFitted
-            // until a fit really happens, so a too-early attempt can't strand
-            // the map on a wide zoom — the next render tries again.
+            // Fit the map to the current pins. Waits until BOTH the map box has
+            // its full height (>=400px) AND the location data has loaded — a fit
+            // attempted while the box is still short computes a far too wide
+            // zoom (height ~120px fits at zoom 6 instead of the district
+            // zoom 10), and a fit with no data yet would lock in the default
+            // view and never re-fit. Does NOT lock locMapFitted until a fit
+            // really happens, so a too-early attempt can't strand the map on
+            // a wide zoom — the next render tries again. (The map already
+            // shows the district via the setView at creation, so waiting is safe.)
             if(!locLeafletMap) return;
             const el = document.getElementById('locMapEl');
             const h = el ? el.clientHeight : 0;
-            if(h < 400){
+            const haveData = (locRows||[]).length > 0 && (locLastBounds||[]).length > 0;
+            if(h < 400 || !haveData){
                 if((tryN||0) < 10) setTimeout(function(){ locFitMapView((tryN||0)+1); }, 300);
                 return;
             }
