@@ -475,7 +475,10 @@ function getLocation(){
 }
 
 function postPayload(payload){
-  // form + fetch dual path
+  // SINGLE post path (hidden-form POST). The old dual path (form + fetch)
+  // wrote every submission TWICE into the sheet — that is why ~half the
+  // Location rows are exact duplicates. If the form post throws, fall back
+  // to fetch — never both.
   try{
     let iframe=document.getElementById('locHiddenFrame');
     if(!iframe){
@@ -499,6 +502,7 @@ function postPayload(payload){
     document.body.appendChild(form);
     form.submit();
     setTimeout(function(){ try{ form.remove(); }catch(e){} }, 4000);
+    return;
   }catch(e){}
   try{
     fetch(LOC_SCRIPT_URL, {
@@ -615,10 +619,60 @@ async function verifyLeaveInSheet(name, username, leaveDate, attempts){
   }
   return false;
 }
+async function verifyLocationInSheet(name, username, tsIso, lat, lng, attempts){
+  // Confirm the location row actually landed in the Location tab before the
+  // form says "Submitted" (same idea as verifyLeaveInSheet). Matches on
+  // username + the exact posted timestamp; falls back to username + same
+  // instant (within 60s) + same GPS pin, in case the script re-stamps it.
+  attempts = attempts || 4;
+  const key = normUserKey(username);
+  const nm = String(name||'').trim().toLowerCase();
+  const latS = (lat==null||lat==='') ? '' : parseFloat(lat).toFixed(6);
+  const lngS = (lng==null||lng==='') ? '' : parseFloat(lng).toFixed(6);
+  const tsMs = Date.parse(tsIso);
+  for(let a=0; a<attempts; a++){
+    try{
+      const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/export?format=xlsx&_='+Date.now();
+      const res = await fetch(url);
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const sn = (wb.SheetNames||[]).find(function(n){ return /location/i.test(n); }) || 'Location';
+      const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:false});
+      if(!aoa || aoa.length < 2) { await sleep(1800); continue; }
+      const headers = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
+      function ix(cands){
+        for(let c=0;c<cands.length;c++){
+          const j=headers.indexOf(cands[c]); if(j>=0) return j;
+          for(let i=0;i<headers.length;i++){ if(headers[i].indexOf(cands[c])>=0) return i; }
+        }
+        return -1;
+      }
+      const jTs=ix(['timestamp','time']), jN=ix(['name']), jU=ix(['username']),
+            jLat=ix(['latitude','lat']), jLng=ix(['longitude','long','lng']);
+      for(let r=1;r<aoa.length;r++){
+        const row=aoa[r];
+        const rn=jN>=0?String(row[jN]||'').trim().toLowerCase():'';
+        const ru=jU>=0?normUserKey(row[jU]):'';
+        const samePerson = (key && ru && key===ru) || (nm && rn && nm===rn);
+        if(!samePerson) continue;
+        const rawTs = jTs>=0 ? String(row[jTs]||'').trim() : '';
+        if(rawTs && tsIso && rawTs===tsIso) return true;
+        const ms = Date.parse(rawTs);
+        if(!isNaN(ms) && !isNaN(tsMs) && Math.abs(ms-tsMs) <= 60000){
+          const rLat = jLat>=0 ? parseFloat(row[jLat]) : NaN;
+          const rLng = jLng>=0 ? parseFloat(row[jLng]) : NaN;
+          if(!isNaN(rLat) && !isNaN(rLng) && rLat.toFixed(6)===latS && rLng.toFixed(6)===lngS) return true;
+        }
+      }
+    }catch(e){}
+    await sleep(1800);
+  }
+  return false;
+}
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
 
-function submitDuty(){
+async function submitDuty(){
   showErr('');
   const v=selectedVacc();
   if(!v){ showErr('Please select a vaccinator.'); return; }
@@ -627,23 +681,35 @@ function submitDuty(){
   if(!lastLoc){ showErr('Please get your location first.'); return; }
   const btn=document.getElementById('btnSub');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Submitting…';
-  const payload={
-    type:'location',
-    timestamp:new Date().toISOString(),
-    name:v.name, username:v.username||'', tehsil:v.tehsil, uc:v.uc,
-    kitStation:String(kit).trim(),
-    lat:String(lastLoc.lat), lng:String(lastLoc.lng),
-    accuracy:String(Math.round(lastLoc.accuracy||0)), maps:lastLoc.maps
-  };
-  postPayload(payload);
-  setTimeout(function(){
+  try{
+    const payload={
+      type:'location',
+      timestamp:new Date().toISOString(),
+      name:v.name, username:v.username||'', tehsil:v.tehsil, uc:v.uc,
+      kitStation:String(kit).trim(),
+      lat:String(lastLoc.lat), lng:String(lastLoc.lng),
+      accuracy:String(Math.round(lastLoc.accuracy||0)), maps:lastLoc.maps
+    };
+    postPayload(payload);
+    // Do NOT say "Submitted" until the row is confirmed in the sheet.
+    // A failed upload used to look like a success after 600ms.
+    btn.innerHTML='<span class="spinner"></span> Verifying on server…';
+    const ok = await verifyLocationInSheet(v.name, v.username, payload.timestamp, payload.lat, payload.lng, 5);
+    if(!ok){
+      btn.disabled=false; btn.className='btn btn-sub'; btn.innerHTML='✅ Submit Location';
+      showErr('Location did NOT save on server. Check internet and try again — do not leave this page until you see "Location Submitted".');
+      return;
+    }
     btn.className='btn btn-done';
     btn.innerHTML='Location Submitted<span class="thank">Thank You, '+v.name+'</span>';
     const ur=document.getElementById('urduOk');
     ur.style.display='block';
     ur.innerHTML='آپ نے کامیابی کے ساتھ اپنی آج کی لوکیشن سبمٹ کر دی ہے۔';
     document.getElementById('btnLoc').disabled=true;
-  }, 600);
+  }catch(err){
+    btn.disabled=false; btn.className='btn btn-sub'; btn.innerHTML='✅ Submit Location';
+    showErr(err.message||String(err));
+  }
 }
 
 function readFileAsBase64(file){
