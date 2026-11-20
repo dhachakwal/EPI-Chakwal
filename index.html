@@ -522,6 +522,17 @@
                 </ul>
             </li>
             <li class="topnav-item">
+                <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📱 Vaccinator App</button>
+                <ul class="topnav-drop">
+                    <li><button type="button" onclick="navGo('section-vaccapp')">Vaccinator App — Live Data, Reports &amp; Downloads</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaMap')">Live Map</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaReports')">Daily Reports</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaZero')">Zero Entry</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaMicro')">Microplans</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaApk')">APK Download</button></li>
+                </ul>
+            </li>
+            <li class="topnav-item">
                 <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📋 Supervisory</button>
                 <ul class="topnav-drop">
                     <li><button type="button" onclick="navGo('section-svvisits')">Supervisory Visit Reports</button></li>
@@ -539,7 +550,6 @@
                 <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📁 Reports</button>
                 <ul class="topnav-drop">
                     <li><button type="button" onclick="navGo('section-downloads')">Official Downloads</button></li>
-                    <li><button type="button" onclick="navGo('section-downloads');setTimeout(function(){var el=document.getElementById('archiveSearchInput');if(el){el.focus();}},700)">File Archive Search</button></li>
                     <li><button type="button" onclick="navGo('section-downloads')">Training Library</button></li>
                     <li><button type="button" onclick="navGo('section-contact')">Contact &amp; Location</button></li>
                 </ul>
@@ -2175,26 +2185,118 @@ rcaInit();
 
             </div>
 
+            <!-- Vaccinator App (v14.33, 20 Nov 2026) — live view of the Vaccinators App (Flutter APK v1.0.0) -->
+            <div class="section-title" id="section-vaccapp">Vaccinator App — Live Data, Reports &amp; Downloads</div>
+            <div class="emr-card" id="vaccAppCard">
+                <p class="emr-note"><strong>Source:</strong> Vaccinators App (Flutter APK v1.0.0) — live data from the same Google Sheets the app uses: Location &amp; Leave (master sheet), Summary by Vaccinators, Attendance, Vaccinator Records and EMR Outreach. Use the filters below to view District, Tehsil or UC data. Data loads when this section is opened.</p>
+                <div class="emr-filter">
+                    <label>Tehsil
+                        <select id="vaTehsil" onchange="vaOnTehsil()"><option value="">All Tehsils</option></select>
+                    </label>
+                    <label>Union Council
+                        <select id="vaUC" onchange="vaApply()"><option value="">All UCs</option></select>
+                    </label>
+                    <label>Date
+                        <input type="date" id="vaDate" onchange="vaApply()">
+                    </label>
+                    <button type="button" class="btn btn-sm" onclick="vaLoad(true)" style="background:#0d5c3d">🔄 Refresh Data</button>
+                    <span class="sweep-meta" id="vaMeta">Not loaded</span>
+                </div>
+
+                <div class="emr-summary-panel" id="vaSummaryPanel">
+                    <div class="emr-summary-head">
+                        <h3>District Overview</h3>
+                        <div class="emr-summary-meta">Scope: <strong id="vaSummaryScope">District Chakwal</strong></div>
+                    </div>
+                    <div class="emr-summary-scope" id="vaSummaryScope2">Select a Tehsil or UC above to narrow the figures below.</div>
+                    <div class="emr-summary-grid" id="vaSummaryGrid">
+                        <div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>
+                    </div>
+                </div>
+
+                <div class="emr-tabs" id="vaTabs">
+                    <button type="button" class="emr-tab active" data-va="vaMap" onclick="vaSwitch('vaMap')">1. Live Map</button>
+                    <button type="button" class="emr-tab" data-va="vaReports" onclick="vaSwitch('vaReports')">2. Daily Reports</button>
+                    <button type="button" class="emr-tab" data-va="vaZero" onclick="vaSwitch('vaZero')">3. Zero Entry</button>
+                    <button type="button" class="emr-tab" data-va="vaLeave" onclick="vaSwitch('vaLeave')">4. Leave</button>
+                    <button type="button" class="emr-tab" data-va="vaMicro" onclick="vaSwitch('vaMicro')">5. Microplans</button>
+                    <button type="button" class="emr-tab" data-va="vaData" onclick="vaSwitch('vaData')">6. Vaccinator Data</button>
+                    <button type="button" class="emr-tab" data-va="vaApk" onclick="vaSwitch('vaApk')">7. APK Download</button>
+                </div>
+
+                <div id="vaPaneMap">
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+                        <button type="button" class="btn btn-sm" onclick="vaMapFit()" style="background:#0d5c3d">🎯 Fit to pins</button>
+                        <span style="font-size:12px;color:#666">One pin per vaccinator — latest location for the selected date. Green pins are the latest reported positions.</span>
+                    </div>
+                    <div class="emr-stats" id="vaMapCount"></div>
+                    <div id="vaMapEl" style="height:480px;border-radius:12px;border:1px solid #c8e6c9;z-index:1"></div>
+                </div>
+
+                <div id="vaPaneReports" style="display:none">
+                    <div class="emr-stats" id="vaRepStats"></div>
+                    <div id="vaRepStatus" class="sweep-loading" style="display:none"></div>
+                    <div class="emr-table-wrap">
+                        <table class="emr-table">
+                            <thead id="vaRepHead"></thead>
+                            <tbody id="vaRepBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="emr-note">Doses are month-to-date from Summary by Vaccinators (Outreach + Fixed; Fixed facilities are mapped to their UC). Antigens: BCG, OPV0, Penta1–3, Pneumo1–3, OPV1–3, IPV, Measles1–2, HepB, Rota1–2, IPV2, DPT Booster, TCV, HPV.</p>
+                </div>
+
+                <div id="vaPaneZero" style="display:none">
+                    <div class="emr-stats" id="vaZeroStats"></div>
+                    <div id="vaZeroStatus" class="sweep-loading" style="display:none"></div>
+                    <div class="emr-table-wrap">
+                        <table class="emr-table">
+                            <thead id="vaZeroHead"></thead>
+                            <tbody id="vaZeroBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="emr-note">Entries are counted UC-wise from the EMR Outreach data for the selected date (the EMR sheet does not record the vaccinator name). Vaccinators of every UC with no entry on that date are listed here. Leave status is taken from the Leave tab of the master sheet.</p>
+                </div>
+
+                <div id="vaPaneLeave" style="display:none">
+                    <div class="emr-stats" id="vaLeaveStats"></div>
+                    <div id="vaLeaveStatus" class="sweep-loading" style="display:none"></div>
+                    <div class="emr-table-wrap">
+                        <table class="emr-table">
+                            <thead id="vaLeaveHead"></thead>
+                            <tbody id="vaLeaveBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="emr-note">Leave applications from the Leave tab of the master sheet. Change the date above to see who was on leave on another day.</p>
+                </div>
+
+                <div id="vaPaneMicro" style="display:none">
+                    <div class="emr-stats" id="vaMicroStats"></div>
+                    <div id="vaMicroBox"></div>
+                </div>
+
+                <div id="vaPaneData" style="display:none">
+                    <div class="emr-filter" style="margin-bottom:10px">
+                        <label>Search vaccinator
+                            <input type="text" id="vaDataSearch" placeholder="Name or UC…" oninput="vaRenderData()" style="min-width:200px">
+                        </label>
+                    </div>
+                    <div class="emr-stats" id="vaDataStats"></div>
+                    <div id="vaDataStatus" class="sweep-loading" style="display:none"></div>
+                    <div class="emr-table-wrap">
+                        <table class="emr-table">
+                            <thead id="vaDataHead"></thead>
+                            <tbody id="vaDataBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="emr-note">Check-in / check-out from the Attendance sheet for the selected date; doses are month-to-date from Summary by Vaccinators; service records from the Vaccinator Records sheet.</p>
+                </div>
+
+                <div id="vaPaneApk" style="display:none">
+                    <div id="vaApkBox"></div>
+                </div>
+            </div>
 <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
             <div class="download-grid">
-                <div class="download-card" id="archiveSearchCard" style="grid-column:1/-1;text-align:left">
-                    <h3 style="text-align:left">🔍 File Archive Search</h3>
-                    <p style="text-align:left;margin-bottom:10px">Search the DHA Chakwal file archive by file name — 14,307 files (letters, orders, certificates, reports). Files open in Google Drive.</p>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap">
-                        <input type="text" id="archiveSearchInput" placeholder="Type a name, subject, letter number or date — e.g. Yasir Ahmed Khan, Zero Report Week 38..." autocomplete="off" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid #ccc;border-radius:8px;font-size:14px" oninput="runArchiveSearch(this.value)" onfocus="archiveSearchLoad(function(){})">
-                        <select id="archiveTypeFilter" onchange="runArchiveSearch(document.getElementById('archiveSearchInput').value)" style="padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px">
-                            <option value="">All types</option>
-                            <option value="W">Word</option>
-                            <option value="X">Excel</option>
-                            <option value="P">PDF</option>
-                            <option value="I">Image</option>
-                            <option value="S">Presentation</option>
-                            <option value="O">Other</option>
-                        </select>
-                    </div>
-                    <div id="archiveSearchStatus" style="font-size:12.5px;color:#666;margin-top:8px">Type at least 3 characters to search by file name.</div>
-                    <div id="archiveSearchResults" style="margin-top:10px"></div>
-                </div>
                 <div class="download-card">
                     <h3>Monthly EPI Presentation</h3>
                     <p>July 2026 District Performance Review</p>
@@ -3585,7 +3687,6 @@ rcaInit();
                 {type:'section', title:'Field Location Check-In', desc:'GPS location submits, late after 09:30 (inside Outreach)', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Measles-Rubella (MR) Surveillance', desc:'Case line list, lab, EPID search', action:'scroll', target:'Measles-Rubella'},
                 {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
-                {type:'section', title:'File Archive Search', desc:'Search 14,307 archive files by name — opens in Google Drive', action:'scroll', target:'Official Downloads'},
                 {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
                 {type:'section', title:'Dropout Analysis', desc:'Drop-out rates by tehsil', action:'fn', target:'openDropoutModal'},
                 {type:'section', title:'Key Officers', desc:'CEO, DHO, DSV', action:'scroll', target:'Key Officers'},
@@ -16339,6 +16440,533 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             try{ initCollapsibleSections(); }catch(e){}
         }
         </script>
+    <script>
+        /* ===== Vaccinator App section (v14.33, 20 Nov 2026) =====
+           Live view of the Vaccinators App (Flutter APK v1.0.0) data.
+           Same Google Sheets as the app: Location & Leave (master
+           sheet), Summary by Vaccinators, Attendance, Vaccinator
+           Records and EMR Outreach. Lazy: nothing is fetched until
+           the section scrolls into view or a tab is opened. All
+           fetches use the site's gviz pattern (public sheets). */
+        const VA_MASTER_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
+        const VA_SUMMARY_ID = '16YcZU2RwgWMtNjfjukHqsNTH-EW5T-TcZ5XNwgh79ls';
+        const VA_ATT_ID = '1KAuJOL3WuYdp5YA4sD70kofeVkYPP3bJ5Rxro_0MUUc';
+        const VA_REC_ID = '11GHoNbiXzpLhQb6qb9Hyki1Z8bd-pCMMZRt-UFyG764';
+        const VA_EMR_ID = '13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo';
+        const VA_APK_URL = 'https://github.com/dhachakwal/vaccinators-app/releases/download/v30/vaccinators-app-v1.0.0-1.apk';
+        const VA_RELEASE_URL = 'https://github.com/dhachakwal/vaccinators-app/releases';
+        const VA_ANTIGENS = ['BCG','OPV0','Penta1','Pneumo1','OPV1','OPV2','OPV3','Penta2','Pneumo2','Penta3','Pneumo3','IPV','Measles1','Measles2','HepB','Rota1','Rota2','IPV2','DPT Booster','TCV','HPV'];
+        let vaMode = 'vaMap', vaLoaded = false, vaLoading = false;
+        let vaLocRows = [], vaLeaveRows = [], vaOutRows = [], vaFixRows = [];
+        let vaInRows = [], vaOut2Rows = [], vaRecRows = [], vaEmrRows = [];
+        let vaMicro = null, vaMicroError = '', vaVersion = null, vaVersionTried = false;
+        let vaMap = null, vaMapLayer = null, vaMapFitted = false;
+
+        function vaEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function vaNorm(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g,''); }
+        function vaNormUc(s){ return String(s || '').toUpperCase().replace(/\s+/g,' ').trim(); }
+        function vaNum(n){ return Number(n || 0).toLocaleString('en-US'); }
+        function vaTodayYmd(){ try{ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'}); }catch(e){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } }
+        function vaCurYm(){ return vaTodayYmd().slice(0,7); }
+        function vaTs(v){
+            if(v == null || v === '') return 0;
+            if(v instanceof Date && !isNaN(v)) return v.getTime();
+            const s = String(v).trim();
+            let m = s.match(/Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})(?:,\s*(\d{1,2}),\s*(\d{1,2})(?:,\s*(\d{1,2}))?)?\)/);
+            if(m) return new Date(+m[1], +m[2], +(m[3]||1), +(m[4]||0), +(m[5]||0), +(m[6]||0)).getTime();
+            const t = Date.parse(s);
+            return isNaN(t) ? 0 : t;
+        }
+        function vaYmd(v){
+            const t = vaTs(v);
+            if(!t) return '';
+            const d = new Date(t);
+            return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        }
+        function vaTimeStr(v){
+            const t = vaTs(v);
+            if(!t) return '';
+            const d = new Date(t);
+            let h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
+            const ap = h >= 12 ? 'PM' : 'AM';
+            h = h % 12; if(h === 0) h = 12;
+            return h + ':' + m + ' ' + ap;
+        }
+        function vaFmtDay(ymd){ const p = String(ymd||'').split('-'); if(p.length!==3) return ymd||''; const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return Number(p[2])+' '+mo[Number(p[1])-1]+' '+p[0]; }
+        async function vaGviz(sheetId, tab){
+            const url = 'https://docs.google.com/spreadsheets/d/'+sheetId+'/gviz/tq?tqx=out:json&headers=1&sheet='+encodeURIComponent(tab);
+            const res = await fetch(url);
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            const text = await res.text();
+            const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}')+1));
+            const cols = (data.table.cols||[]).map(function(c){ return String((c&&c.label)||'').toLowerCase().trim(); });
+            return (data.table.rows||[]).map(function(r){
+                const cells = r.c||[]; const o = {};
+                cols.forEach(function(col,i){
+                    if(!col) return;
+                    const cell = cells[i];
+                    let v = '', f = '';
+                    if(cell){ v = (cell.v != null ? cell.v : ''); f = (cell.f != null ? String(cell.f) : ''); }
+                    o[col] = v;
+                    if(f) o[col+'__f'] = f;
+                });
+                return o;
+            });
+        }
+        function vaPick(row, cands){
+            if(!row) return '';
+            const keys = Object.keys(row);
+            for(let i=0;i<cands.length;i++){
+                const c = cands[i].toLowerCase();
+                for(let j=0;j<keys.length;j++){ if(keys[j] === c){ const v = row[keys[j]]; return v == null ? '' : String(v); } }
+            }
+            for(let i=0;i<cands.length;i++){
+                const c = cands[i].toLowerCase();
+                for(let j=0;j<keys.length;j++){ if(keys[j].indexOf(c) >= 0 && keys[j].indexOf('__f') < 0){ const v = row[keys[j]]; return v == null ? '' : String(v); } }
+            }
+            return '';
+        }
+        function vaTehsil(){ const el = document.getElementById('vaTehsil'); return el ? el.value : ''; }
+        function vaUc(){ const el = document.getElementById('vaUC'); return el ? el.value : ''; }
+        function vaDate(){ const el = document.getElementById('vaDate'); return (el && el.value) || vaTodayYmd(); }
+        function vaRoster(){
+            const out = [];
+            try{
+                const t = (typeof hrData !== 'undefined' && hrData.vaccinators) || {};
+                Object.keys(t).forEach(function(teh){
+                    (t[teh]||[]).forEach(function(v){ out.push({name:v.name||'', uc:v.uc||'', tehsil:teh, mobile:v.mobile||'', vacant:!!v.vacant}); });
+                });
+            }catch(e){}
+            return out;
+        }
+        function vaFacUC(facName){
+            try{
+                if(typeof SV_FAC_UC !== 'undefined' && typeof svNormName === 'function') return SV_FAC_UC[svNormName(facName)] || '';
+            }catch(e){}
+            return '';
+        }
+        function vaInitFilters(){
+            const tEl = document.getElementById('vaTehsil');
+            if(tEl && tEl.options.length <= 1){
+                let tehs = [];
+                try{ tehs = Object.keys((typeof hrData !== 'undefined' && hrData.tehsilUCs) || {}); }catch(e){}
+                tehs.forEach(function(t){ const o=document.createElement('option'); o.value=t; o.textContent=t; tEl.appendChild(o); });
+            }
+            vaFillUc();
+            const dEl = document.getElementById('vaDate');
+            if(dEl && !dEl.value) dEl.value = vaTodayYmd();
+        }
+        function vaFillUc(){
+            const tEl = document.getElementById('vaTehsil'), uEl = document.getElementById('vaUC');
+            if(!uEl) return;
+            const cur = uEl.value;
+            uEl.innerHTML = '<option value="">All UCs</option>';
+            let ucs = [];
+            try{ const t = vaTehsil(); const m = (typeof hrData !== 'undefined' && hrData.tehsilUCs) || {}; ucs = t ? (m[t]||[]) : []; }catch(e){}
+            ucs.forEach(function(u){ const o=document.createElement('option'); o.value=u.uc; o.textContent=u.uc; uEl.appendChild(o); });
+            if(cur && Array.prototype.some.call(uEl.options, function(o){ return o.value === cur; })) uEl.value = cur;
+        }
+        function vaOnTehsil(){ vaFillUc(); vaApply(); }
+        function vaApply(){ if(!vaLoaded){ vaLoad(); return; } vaRenderSummary(); vaRenderPane(); }
+        function vaSwitch(mode){
+            vaMode = mode || 'vaMap';
+            document.querySelectorAll('#vaTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-va') === vaMode); });
+            ['Map','Reports','Zero','Leave','Micro','Data','Apk'].forEach(function(p){
+                const el = document.getElementById('vaPane'+p);
+                if(el) el.style.display = ('va'+p === vaMode) ? '' : 'none';
+            });
+            if(!vaLoaded){ vaLoad(); return; }
+            vaRenderPane();
+            if(vaMode === 'vaMap') setTimeout(function(){ try{ if(vaMap) vaMap.invalidateSize(); }catch(e){} }, 120);
+        }
+        function vaRenderPane(){
+            if(vaMode === 'vaMap') vaRenderMap();
+            else if(vaMode === 'vaReports') vaRenderReports();
+            else if(vaMode === 'vaZero') vaRenderZero();
+            else if(vaMode === 'vaLeave') vaRenderLeave();
+            else if(vaMode === 'vaMicro') vaRenderMicro();
+            else if(vaMode === 'vaData') vaRenderData();
+            else if(vaMode === 'vaApk') vaRenderApk();
+        }
+        async function vaLoad(force){
+            if(vaLoading) return;
+            if(vaLoaded && !force){ vaRenderSummary(); vaRenderPane(); return; }
+            vaLoading = true;
+            const st = document.getElementById('vaMeta');
+            if(st) st.textContent = 'Loading…';
+            const ym = vaCurYm();
+            await Promise.all([
+                vaGviz(VA_MASTER_ID,'Location').then(function(r){ vaLocRows = r; }).catch(function(){ vaLocRows = []; }),
+                vaGviz(VA_MASTER_ID,'Leave').then(function(r){ vaLeaveRows = r; }).catch(function(){ vaLeaveRows = []; }),
+                vaGviz(VA_SUMMARY_ID,'Out_'+ym).then(function(r){ vaOutRows = r; }).catch(function(){ vaOutRows = []; }),
+                vaGviz(VA_SUMMARY_ID,'Fix_'+ym).then(function(r){ vaFixRows = r; }).catch(function(){ vaFixRows = []; }),
+                vaGviz(VA_ATT_ID,'Chek-In').then(function(r){ vaInRows = r; }).catch(function(){ vaInRows = []; }),
+                vaGviz(VA_ATT_ID,'Check-Out').then(function(r){ vaOut2Rows = r; }).catch(function(){ vaOut2Rows = []; }),
+                vaGviz(VA_REC_ID,'Records').then(function(r){ vaRecRows = r; }).catch(function(){ vaRecRows = []; }),
+                vaEmrLoad(ym)
+            ]);
+            if(!vaOutRows.length){ try{ vaOutRows = await vaGviz(VA_SUMMARY_ID,'Outreach'); }catch(e){} }
+            if(!vaFixRows.length){ try{ vaFixRows = await vaGviz(VA_SUMMARY_ID,'Fixed'); }catch(e){} }
+            vaLoaded = true; vaLoading = false;
+            if(st) st.textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' · ' + vaNum(vaLocRows.length) + ' location rows · ' + vaNum(vaEmrRows.length) + ' EMR rows';
+            vaRenderSummary(); vaRenderPane();
+            if(vaMode === 'vaMap') setTimeout(function(){ try{ if(vaMap) vaMap.invalidateSize(); }catch(e){} }, 120);
+        }
+        async function vaEmrLoad(ym){
+            const p = ym.split('-'); const y = p[0], mo = Number(p[1]);
+            const sh = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const lo = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const tries = [sh[mo-1]+'-'+y, sh[mo-1]+' '+y, lo[mo-1]+'-'+y, lo[mo-1]+' '+y, sh[mo-1]+'-'+String(y).slice(2)];
+            vaEmrRows = [];
+            for(let i=0;i<tries.length;i++){
+                try{ const r = await vaGviz(VA_EMR_ID, tries[i]); if(r && r.length){ vaEmrRows = r; return; } }catch(e){}
+            }
+        }
+        function vaSummaryCompiled(){
+            const map = {}, order = [];
+            function add(teh, uc, vals){
+                const k = vaNormUc(teh)+'|'+vaNormUc(uc);
+                if(!map[k]){ map[k] = {tehsil:teh, name:uc, vals:new Array(21).fill(0), total:0}; order.push(k); }
+                for(let i=0;i<21;i++) map[k].vals[i] += (vals[i]||0);
+                map[k].total += vals.reduce(function(a,b){ return a+(b||0); },0);
+            }
+            vaOutRows.forEach(function(r){
+                const vals = VA_ANTIGENS.map(function(a){ return Number(vaPick(r,[a])) || 0; });
+                add(vaPick(r,['tehsil']), vaPick(r,['name']), vals);
+            });
+            vaFixRows.forEach(function(r){
+                const vals = VA_ANTIGENS.map(function(a){ return Number(vaPick(r,[a])) || 0; });
+                const uc = vaFacUC(vaPick(r,['name']));
+                if(uc) add(vaPick(r,['tehsil']), uc, vals);
+                else add(vaPick(r,['tehsil']), 'Unmapped: ' + vaPick(r,['name']), vals);
+            });
+            return order.map(function(k){ return map[k]; });
+        }
+        function vaScopeRows(rows){
+            const teh = vaTehsil(), uc = vaUc();
+            return rows.filter(function(r){
+                if(teh && vaNormUc(r.tehsil) !== vaNormUc(teh)) return false;
+                if(uc && vaNormUc(r.name || r.uc || '') !== vaNormUc(uc)) return false;
+                return true;
+            });
+        }
+        function vaRenderSummary(){
+            const grid = document.getElementById('vaSummaryGrid');
+            const scope = document.getElementById('vaSummaryScope');
+            const scope2 = document.getElementById('vaSummaryScope2');
+            const day = vaDate(), teh = vaTehsil(), uc = vaUc();
+            if(scope) scope.textContent = uc ? (uc + ' · ' + (teh || 'District Chakwal')) : (teh ? (teh + ' · District Chakwal') : 'District Chakwal');
+            if(scope2) scope2.textContent = 'Figures for ' + vaFmtDay(day) + ' (location, leave, zero-entry) and month-to-date ' + vaCurYm() + ' (doses).';
+            if(!vaLoaded){ if(grid) grid.innerHTML = '<div class="emr-sum-item"><div class="n">—</div><div class="l">Load data</div></div>'; return; }
+            const seen = {};
+            vaLocRows.forEach(function(r){ if(vaYmd(vaPick(r,['timestamp'])) === day){ const k = vaNorm(vaPick(r,['username'])) || vaNorm(vaPick(r,['name'])); if(k) seen[k] = true; } });
+            const locCount = Object.keys(seen).length;
+            const comp = vaScopeRows(vaSummaryCompiled());
+            const doses = comp.reduce(function(s,r){ return s + r.total; }, 0);
+            const leaveCount = vaLeaveRows.filter(function(r){
+                if(vaYmd(vaPick(r,['leavedate'])) !== day) return false;
+                if(teh && vaNormUc(vaPick(r,['tehsil'])) !== vaNormUc(teh)) return false;
+                if(uc && vaNormUc(vaPick(r,['uc'])) !== vaNormUc(uc)) return false;
+                return true;
+            }).length;
+            const perUc = {};
+            vaEmrRows.forEach(function(r){ if(vaYmd(vaPick(r,['lastupdateddate'])) === day){ const k = vaNormUc(vaPick(r,['ucname','uc'])); perUc[k] = (perUc[k]||0)+1; } });
+            const roster = vaRoster().filter(function(p){
+                if(teh && p.tehsil !== teh) return false;
+                if(uc && vaNormUc(p.uc) !== vaNormUc(uc)) return false;
+                return true;
+            });
+            const zeroCount = roster.filter(function(p){ return (perUc[vaNormUc(p.uc)]||0) === 0; }).length;
+            if(grid) grid.innerHTML =
+                '<div class="emr-sum-item"><div class="n">' + vaNum(locCount) + '</div><div class="l">Locations Today</div></div>'
+                + '<div class="emr-sum-item"><div class="n">' + vaNum(doses) + '</div><div class="l">Doses (Month to Date)</div></div>'
+                + '<div class="emr-sum-item"><div class="n">' + vaNum(leaveCount) + '</div><div class="l">On Leave Today</div></div>'
+                + '<div class="emr-sum-item"><div class="n">' + vaNum(zeroCount) + '</div><div class="l">Zero-Entry UCs Today</div></div>';
+        }
+        function vaParseCoord(v){ if(v==null||v==='') return NaN; if(typeof v==='number') return v; const n=parseFloat(String(v).trim().replace(/,/g,'')); return isNaN(n)?NaN:n; }
+        function vaPinIcon(){
+            const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52">'
+                + '<defs><linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">'
+                + '<stop offset="0%" stop-color="#1b9e5a"/><stop offset="100%" stop-color="#0d5c3d"/></linearGradient>'
+                + '<filter id="vs" x="-20%" y="-10%" width="140%" height="140%">'
+                + '<feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-opacity="0.35"/></filter></defs>'
+                + '<path filter="url(#vs)" fill="url(#vg)" stroke="#fff" stroke-width="1.5" '
+                + 'd="M20 1.5c-9.4 0-17 7.6-17 17 0 12.8 17 31.5 17 31.5S37 31.3 37 18.5c0-9.4-7.6-17-17-17z"/>'
+                + '<circle cx="20" cy="18.5" r="9.2" fill="#fff"/>'
+                + '<path d="M14.2 18.8l3.6 3.6 7.8-7.8" fill="none" stroke="#0d5c3d" stroke-width="2.6" '
+                + 'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            return L.icon({ iconUrl:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg), iconSize:[40,52], iconAnchor:[20,50], popupAnchor:[0,-44] });
+        }
+        function vaRenderMap(){
+            const el = document.getElementById('vaMapEl');
+            const countEl = document.getElementById('vaMapCount');
+            if(!el) return;
+            if(typeof L === 'undefined'){
+                el.innerHTML = '<div style="padding:24px;text-align:center;color:#c62828">Leaflet map library not loaded. Refresh the page.</div>';
+                if(countEl) countEl.textContent = '';
+                return;
+            }
+            const day = vaDate(), teh = vaTehsil(), uc = vaUc();
+            const byKey = {};
+            vaLocRows.forEach(function(r){
+                const ymd = vaYmd(vaPick(r,['timestamp']));
+                if(day && ymd && ymd !== day) return;
+                const t2 = vaPick(r,['tehsil']), u2 = vaPick(r,['uc']);
+                if(teh && t2 && vaNormUc(t2) !== vaNormUc(teh)) return;
+                if(uc && u2 && vaNormUc(u2) !== vaNormUc(uc)) return;
+                const lat = vaParseCoord(vaPick(r,['latitude','lat'])), lng = vaParseCoord(vaPick(r,['longitude','long','lng']));
+                if(isNaN(lat) || isNaN(lng)) return;
+                if(lat < 10 || lat > 42 || lng < 55 || lng > 85) return;
+                const key = vaNorm(vaPick(r,['username'])) || vaNorm(vaPick(r,['name']));
+                if(!key) return;
+                const t = vaTs(vaPick(r,['timestamp']));
+                if(!byKey[key] || t > byKey[key].t) byKey[key] = { r:r, lat:lat, lng:lng, t:t };
+            });
+            const points = Object.keys(byKey).map(function(k){ return byKey[k]; });
+            if(!vaMap){
+                vaMap = L.map(el, { scrollWheelZoom:true, zoomControl:true });
+                vaMap.setView([32.93, 72.85], 10);
+                vaMap.on('click', function(e){ if(e && e.propagatedFrom) return; vaMap.closePopup(); });
+                const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' });
+                const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Tiles &copy; Esri' });
+                const hybrid = L.layerGroup([
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Tiles &copy; Esri' }),
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { maxZoom:19, attribution:'&copy; CARTO', opacity:0.9 })
+                ]);
+                const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom:17, attribution:'&copy; OpenTopoMap' });
+                streets.addTo(vaMap);
+                vaMapLayer = L.layerGroup().addTo(vaMap);
+                L.control.layers({ 'Streets':streets, 'Satellite':satellite, 'Hybrid':hybrid, 'Terrain':topo }, null, { position:'topright', collapsed:false }).addTo(vaMap);
+            }
+            setTimeout(function(){ try{ vaMap.invalidateSize(); }catch(e){} }, 80);
+            if(!vaMapLayer) vaMapLayer = L.layerGroup().addTo(vaMap);
+            vaMapLayer.clearLayers();
+            const bounds = [];
+            const icon = (window._locPinFresh) ? window._locPinFresh : vaPinIcon();
+            points.forEach(function(p){
+                const r = p.r;
+                const marker = L.marker([p.lat, p.lng], { icon:icon, title:String(vaPick(r,['name'])||'') });
+                const timeTxt = p.t ? new Date(p.t).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+                const acc = vaPick(r,['accuracy_m']);
+                marker.bindPopup('<b>'+vaEsc(vaPick(r,['name']))+'</b><br>UC: '+vaEsc(vaPick(r,['uc']))+' · '+vaEsc(vaPick(r,['tehsil']))+'<br>'+vaEsc(timeTxt)+(acc ? '<br>Accuracy: '+vaEsc(acc)+' m' : '')+'<br><a href="https://www.google.com/maps?q='+p.lat+','+p.lng+'" target="_blank" rel="noopener">Open in Google Maps</a>');
+                marker.addTo(vaMapLayer);
+                bounds.push([p.lat, p.lng]);
+            });
+            if(countEl) countEl.textContent = vaNum(points.length) + ' vaccinator pins · ' + vaFmtDay(day) + (teh ? ' · ' + teh : '') + (uc ? ' · ' + uc : '');
+            if(bounds.length && !vaMapFitted){
+                try{ vaMap.fitBounds(bounds, { padding:[36,36], maxZoom:15 }); vaMapFitted = true; }
+                catch(e){ vaMap.setView([32.93, 72.85], 10); }
+            } else if(!bounds.length && !vaMapFitted){
+                vaMap.setView([32.93, 72.85], 10);
+            }
+        }
+        function vaMapFit(){
+            if(!vaMap) return;
+            vaMapFitted = false;
+            vaRenderMap();
+        }
+        function vaRenderReports(){
+            const head = document.getElementById('vaRepHead'), body = document.getElementById('vaRepBody');
+            const stats = document.getElementById('vaRepStats');
+            if(!head || !body) return;
+            const rows = vaScopeRows(vaSummaryCompiled());
+            const totals = new Array(21).fill(0);
+            rows.forEach(function(r){ for(let i=0;i<21;i++) totals[i] += r.vals[i]; });
+            const grand = totals.reduce(function(a,b){ return a+b; }, 0);
+            if(stats) stats.textContent = vaNum(rows.length) + ' UCs · ' + vaNum(grand) + ' doses · Month ' + vaCurYm() + (vaTehsil() ? ' · ' + vaTehsil() : '') + (vaUc() ? ' · ' + vaUc() : '');
+            head.innerHTML = '<tr><th>Tehsil</th><th>UC / Facility</th>' + VA_ANTIGENS.map(function(a){ return '<th>'+vaEsc(a)+'</th>'; }).join('') + '<th>Total</th></tr>';
+            if(!rows.length){
+                body.innerHTML = '<tr><td colspan="24" style="text-align:center;color:#888">No data for this filter.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(function(r){
+                return '<tr><td>'+vaEsc(r.tehsil)+'</td><td><strong>'+vaEsc(r.name)+'</strong></td>' + r.vals.map(function(v){ return '<td>'+vaNum(v)+'</td>'; }).join('') + '<td><strong>'+vaNum(r.total)+'</strong></td></tr>';
+            }).join('') + '<tr style="background:#e8f5e9;font-weight:700"><td colspan="2">TOTAL</td>' + totals.map(function(v){ return '<td>'+vaNum(v)+'</td>'; }).join('') + '<td>'+vaNum(grand)+'</td></tr>';
+        }
+        function vaRenderZero(){
+            const head = document.getElementById('vaZeroHead'), body = document.getElementById('vaZeroBody');
+            const stats = document.getElementById('vaZeroStats');
+            if(!head || !body) return;
+            const day = vaDate(), teh = vaTehsil(), uc = vaUc();
+            const perUc = {};
+            vaEmrRows.forEach(function(r){ if(vaYmd(vaPick(r,['lastupdateddate'])) === day){ const k = vaNormUc(vaPick(r,['ucname','uc'])); perUc[k] = (perUc[k]||0)+1; } });
+            const leaveByUc = {};
+            vaLeaveRows.forEach(function(r){
+                if(vaYmd(vaPick(r,['leavedate'])) !== day) return;
+                const k = vaNormUc(vaPick(r,['uc']));
+                if(k && !leaveByUc[k]) leaveByUc[k] = { type: vaPick(r,['leavetype']), reason: vaPick(r,['reason']) };
+            });
+            const ciByKey = {};
+            vaInRows.forEach(function(r){
+                if(vaYmd(vaPick(r,['check-in time'])) !== day) return;
+                const v = vaPick(r,['check-in time__f']) || vaTimeStr(vaPick(r,['check-in time']));
+                const kU = vaNorm(vaPick(r,['username']));
+                const kN = vaNorm(vaPick(r,['vaccinator name']))+'|'+vaNormUc(vaPick(r,['union council (uc)','union council']));
+                if(kU) ciByKey[kU] = v;
+                if(kN) ciByKey[kN] = v;
+            });
+            const roster = vaRoster().filter(function(p){
+                if(teh && p.tehsil !== teh) return false;
+                if(uc && vaNormUc(p.uc) !== vaNormUc(uc)) return false;
+                return true;
+            });
+            const zero = roster.filter(function(p){ return (perUc[vaNormUc(p.uc)]||0) === 0; });
+            zero.sort(function(a,b){ return (a.tehsil+'|'+a.uc+'|'+a.name).localeCompare(b.tehsil+'|'+b.uc+'|'+b.name); });
+            const withEntry = roster.length - zero.length;
+            const zeroChecked = zero.filter(function(p){ return !!ciByKey[vaNorm(p.name)+'|'+vaNormUc(p.uc)]; }).length;
+            if(stats) stats.textContent = 'Date: ' + vaFmtDay(day) + ' · ' + vaNum(roster.length) + ' vaccinators · ' + vaNum(withEntry) + ' UCs with entries · ' + vaNum(zero.length) + ' zero-entry · ' + vaNum(zeroChecked) + ' checked in, no entry';
+            head.innerHTML = '<tr><th>Sr</th><th>Vaccinator</th><th>Tehsil</th><th>UC</th><th>Check-In</th><th>Leave</th><th>Entries</th></tr>';
+            if(!zero.length){
+                body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#2e7d32">No zero-entry UCs for this filter — every UC has entries on ' + vaEsc(vaFmtDay(day)) + '.</td></tr>';
+                return;
+            }
+            body.innerHTML = zero.map(function(p, i){
+                const ci = ciByKey[vaNorm(p.name)+'|'+vaNormUc(p.uc)] || '';
+                const lv = leaveByUc[vaNormUc(p.uc)];
+                const lvTxt = lv ? ('<span style="color:#c62828;font-weight:700">Leave · ' + vaEsc(lv.type || 'Casual') + '</span>') : '—';
+                return '<tr><td>'+(i+1)+'</td><td><strong>'+vaEsc(p.name)+'</strong>'+(p.vacant ? ' <span style="color:#888">(Vacant)</span>' : '')+'</td><td>'+vaEsc(p.tehsil)+'</td><td>'+vaEsc(p.uc)+'</td><td>'+vaEsc(ci || 'No')+'</td><td>'+lvTxt+'</td><td>0</td></tr>';
+            }).join('');
+        }
+        function vaRenderLeave(){
+            const head = document.getElementById('vaLeaveHead'), body = document.getElementById('vaLeaveBody');
+            const stats = document.getElementById('vaLeaveStats');
+            if(!head || !body) return;
+            const day = vaDate(), teh = vaTehsil(), uc = vaUc();
+            const rows = vaLeaveRows.filter(function(r){
+                if(vaYmd(vaPick(r,['leavedate'])) !== day) return false;
+                if(teh && vaNormUc(vaPick(r,['tehsil'])) !== vaNormUc(teh)) return false;
+                if(uc && vaNormUc(vaPick(r,['uc'])) !== vaNormUc(uc)) return false;
+                return true;
+            });
+            rows.sort(function(a,b){ return (vaPick(a,['tehsil'])+'|'+vaPick(a,['uc'])+'|'+vaPick(a,['name'])).localeCompare(vaPick(b,['tehsil'])+'|'+vaPick(b,['uc'])+'|'+vaPick(b,['name'])); });
+            if(stats) stats.textContent = 'On leave on ' + vaFmtDay(day) + ': ' + vaNum(rows.length) + ' vaccinator(s) · ' + vaNum(vaLeaveRows.length) + ' leave applications on record';
+            head.innerHTML = '<tr><th>Vaccinator</th><th>Username</th><th>Tehsil</th><th>UC</th><th>Leave Type</th><th>Reason</th><th>Leave Date</th><th>Attachment</th></tr>';
+            if(!rows.length){
+                body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888">No one on leave on ' + vaEsc(vaFmtDay(day)) + ' for this filter.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(function(r){
+                const link = vaPick(r,['attachmentlink']);
+                return '<tr><td><strong>'+vaEsc(vaPick(r,['name']))+'</strong></td><td>'+vaEsc(vaPick(r,['username']))+'</td><td>'+vaEsc(vaPick(r,['tehsil']))+'</td><td>'+vaEsc(vaPick(r,['uc']))+'</td><td>'+vaEsc(vaPick(r,['leavetype']))+'</td><td>'+vaEsc(vaPick(r,['reason']))+'</td><td>'+vaEsc(vaFmtDay(vaYmd(vaPick(r,['leavedate']))))+'</td><td>'+(link ? '<a href="'+vaEsc(link)+'" target="_blank" rel="noopener">Open</a>' : '—')+'</td></tr>';
+            }).join('');
+        }
+        async function vaRenderMicro(){
+            const box = document.getElementById('vaMicroBox');
+            const stats = document.getElementById('vaMicroStats');
+            if(!box) return;
+            if(vaMicro === null && !vaMicroError){
+                box.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:12px 14px;color:#555">Loading microplans…</div>';
+                try{
+                    const res = await fetch('microplans.json');
+                    if(!res.ok) throw new Error('HTTP '+res.status);
+                    vaMicro = await res.json();
+                }catch(e){ vaMicroError = String((e && e.message) || e); }
+            }
+            if(vaMicroError || !vaMicro || !vaMicro.microplans || !vaMicro.microplans.length){
+                if(stats) stats.textContent = '';
+                box.innerHTML = '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:14px 16px;color:#7a5c00">Microplans are being uploaded — the UC microplan files will appear here shortly. Please check back later.</div>';
+                return;
+            }
+            const teh = vaTehsil(), uc = vaUc();
+            const list = vaMicro.microplans.filter(function(m){
+                if(teh && vaNormUc(m.tehsil) !== vaNormUc(teh)) return false;
+                if(uc && vaNormUc(m.uc) !== vaNormUc(uc)) return false;
+                return true;
+            });
+            if(stats) stats.textContent = vaNum(list.length) + ' of ' + vaNum(vaMicro.microplans.length) + ' UC microplans · Year ' + (vaMicro.year || 2026) + ' · Updated ' + vaEsc(vaMicro.updated || '');
+            box.innerHTML = '<div class="emr-table-wrap"><table class="emr-table"><thead><tr><th>UC</th><th>Tehsil</th><th>Vaccinator</th><th>Population</th><th>Villages</th><th>Sessions</th><th>Size</th><th>Download</th></tr></thead><tbody>'
+                + (list.length ? list.map(function(m){
+                    return '<tr><td><strong>'+vaEsc(m.uc)+'</strong></td><td>'+vaEsc(m.tehsil)+'</td><td>'+vaEsc(m.vaccinator || '—')+'</td><td>'+vaNum(m.population)+'</td><td>'+(m.villageCount == null ? '—' : vaNum(m.villageCount))+'</td><td>'+(m.sessionCount == null ? '—' : vaNum(m.sessionCount))+'</td><td>'+(m.sizeKb ? (m.sizeKb >= 1024 ? (m.sizeKb/1024).toFixed(1)+' MB' : m.sizeKb+' KB') : '—')+'</td><td><a href="'+vaEsc(m.url || ('microplans/'+encodeURIComponent(m.tehsil)+'/'+encodeURIComponent(m.file)))+'" target="_blank" rel="noopener">Download Excel</a></td></tr>';
+                }).join('') : '<tr><td colspan="8" style="text-align:center;color:#888">No microplans for this filter.</td></tr>')
+                + '</tbody></table></div>';
+        }
+        function vaAttLookup(rows, day){
+            const map = {};
+            rows.forEach(function(r){
+                if(vaYmd(vaPick(r,['check-in time','check-out time'])) !== day) return;
+                const v = vaPick(r,['check-in time__f','check-out time__f']) || vaTimeStr(vaPick(r,['check-in time','check-out time']));
+                const kU = vaNorm(vaPick(r,['username']));
+                const kN = vaNorm(vaPick(r,['vaccinator name']))+'|'+vaNormUc(vaPick(r,['union council (uc)','union council']));
+                if(kU && !map[kU]) map[kU] = v;
+                if(kN && !map[kN]) map[kN] = v;
+            });
+            return map;
+        }
+        function vaRenderData(){
+            const head = document.getElementById('vaDataHead'), body = document.getElementById('vaDataBody');
+            const stats = document.getElementById('vaDataStats');
+            if(!head || !body) return;
+            const day = vaDate(), teh = vaTehsil(), uc = vaUc();
+            const qEl = document.getElementById('vaDataSearch');
+            const q = qEl ? qEl.value.trim().toLowerCase() : '';
+            const ci = vaAttLookup(vaInRows, day);
+            const co = vaAttLookup(vaOut2Rows, day);
+            const dosesByUc = {};
+            vaSummaryCompiled().forEach(function(r){ dosesByUc[vaNormUc(r.name)] = r.total; });
+            const recByKey = {};
+            vaRecRows.forEach(function(r){
+                const kU = vaNorm(vaPick(r,['username']));
+                const kN = vaNorm(vaPick(r,['name']));
+                if(kU){ if(!recByKey[kU]) recByKey[kU] = []; recByKey[kU].push(r); }
+                if(kN && kN !== kU){ if(!recByKey[kN]) recByKey[kN] = []; recByKey[kN].push(r); }
+            });
+            const roster = vaRoster().filter(function(p){
+                if(teh && p.tehsil !== teh) return false;
+                if(uc && vaNormUc(p.uc) !== vaNormUc(uc)) return false;
+                if(q && (p.name||'').toLowerCase().indexOf(q) < 0 && (p.uc||'').toLowerCase().indexOf(q) < 0) return false;
+                return true;
+            });
+            roster.sort(function(a,b){ return (a.tehsil+'|'+a.uc+'|'+a.name).localeCompare(b.tehsil+'|'+b.uc+'|'+b.name); });
+            if(stats) stats.textContent = vaNum(roster.length) + ' vaccinators · Date ' + vaFmtDay(day) + ' · Doses month-to-date ' + vaCurYm();
+            head.innerHTML = '<tr><th>Vaccinator</th><th>UC</th><th>Tehsil</th><th>Check-In</th><th>Check-Out</th><th>Doses (MTD)</th><th>Service Records</th></tr>';
+            if(!roster.length){
+                body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888">No vaccinators for this filter.</td></tr>';
+                return;
+            }
+            body.innerHTML = roster.map(function(p){
+                const keyU = vaNorm(p.name)+'|'+vaNormUc(p.uc);
+                const ciTxt = ci[keyU] || '—';
+                const coTxt = co[keyU] || '—';
+                const doses = dosesByUc[vaNormUc(p.uc)];
+                const recs = recByKey[vaNorm(p.name)] || recByKey[keyU] || [];
+                let recTxt = '—';
+                if(recs.length){
+                    const sorted = recs.slice().sort(function(a,b){ return String(vaPick(b,['date'])).localeCompare(String(vaPick(a,['date']))); });
+                    const latest = sorted[0];
+                    recTxt = vaNum(recs.length) + ' · Latest: ' + vaEsc(vaPick(latest,['type'])) + ' ' + vaEsc(vaPick(latest,['ref no.'])) + ' (' + vaEsc(vaPick(latest,['status'])) + ')';
+                }
+                return '<tr><td><strong>'+vaEsc(p.name)+'</strong>'+(p.vacant ? ' <span style="color:#888">(Vacant)</span>' : '')+'<br><span style="font-size:12px;color:#666">'+vaEsc(p.mobile || '')+'</span></td><td>'+vaEsc(p.uc)+'</td><td>'+vaEsc(p.tehsil)+'</td><td>'+vaEsc(ciTxt)+'</td><td>'+vaEsc(coTxt)+'</td><td>'+(doses == null ? '—' : vaNum(doses))+'</td><td>'+recTxt+'</td></tr>';
+            }).join('');
+        }
+        async function vaRenderApk(){
+            const box = document.getElementById('vaApkBox');
+            if(!box) return;
+            if(!vaVersionTried){
+                vaVersionTried = true;
+                try{ const res = await fetch('version.json'); if(res.ok) vaVersion = await res.json(); }catch(e){}
+            }
+            const v = vaVersion || {};
+            const vName = v.versionName || '1.0.0';
+            const vCode = (v.versionCode != null) ? v.versionCode : 1;
+            box.innerHTML = '<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:12px;padding:16px 18px">'
+                + '<h3 style="margin:0 0 6px;color:#0d5c3d">Vaccinators App — Version ' + vaEsc(vName) + ' (build ' + vaEsc(vCode) + ')</h3>'
+                + '<p style="margin:0 0 10px;color:#333">' + vaEsc(v.whatsNew || 'Login, live location, daily reports, zero entry, leave, notifications, My Data, My Microplan, message parents, daily reports and calls.') + '</p>'
+                + '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">'
+                + '<a href="' + VA_APK_URL + '" style="display:inline-block;background:#0d5c3d;color:#fff;font-weight:700;padding:12px 20px;border-radius:8px;text-decoration:none">⬇ Download APK (v' + vaEsc(vName) + ')</a>'
+                + '<a href="' + VA_RELEASE_URL + '" target="_blank" rel="noopener" style="display:inline-block;background:#fff;color:#0d5c3d;font-weight:700;padding:12px 20px;border-radius:8px;text-decoration:none;border:2px solid #0d5c3d">All Releases</a>'
+                + '</div>'
+                + '<p style="margin:12px 0 0;font-size:13px;color:#555">Free APK for District Chakwal vaccinators — Android only. On the phone, allow “Install unknown apps” for the browser when asked, then open the downloaded APK to install. New versions appear here automatically; the app also checks for updates itself on launch.</p>'
+                + '</div>';
+        }
+        vaInitFilters();
+        if('IntersectionObserver' in window){
+            const vaObs = new IntersectionObserver(function(en){
+                if(en.some(function(e){ return e.isIntersecting; })){ vaObs.disconnect(); vaLoad(); }
+            }, { rootMargin:'200px' });
+            const vaCard = document.getElementById('vaccAppCard');
+            if(vaCard) vaObs.observe(vaCard);
+        }
+    </script>
     <button type="button" class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" aria-label="Back to top">↑</button>
     <script>
         /* ===== Top navigation (dropdown menu, v14.22) ===== */
@@ -16387,6 +17015,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 setTimeout(function(){
                     try{
                         if(mod === 'noentry'){ if(typeof emrSwitch === 'function') emrSwitch('noentry'); }
+                        else if(mod && mod.slice(0,2) === 'va'){ if(typeof vaSwitch === 'function') vaSwitch(mod); }
                         else if(typeof emrSwitchModule === 'function') emrSwitchModule(mod);
                     }catch(e){}
                 }, 450);
@@ -16423,64 +17052,6 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 if(el) el.textContent = new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
             }catch(e){}
         })();
-    </script>
-
-    <script>
-    /* File Archive Search — names only (archive-names.json). No letter content on this page. */
-    var ARCHIVE_NAMES = null, ARCHIVE_NAMES_LOADING = false;
-    var ARCHIVE_TYPE_LABEL = {W:'Word', X:'Excel', P:'PDF', I:'Image', S:'Presentation', O:'Other'};
-    function archiveSearchLoad(cb){
-        if(ARCHIVE_NAMES){ if(cb) cb(); return; }
-        if(ARCHIVE_NAMES_LOADING){ setTimeout(function(){ archiveSearchLoad(cb); }, 300); return; }
-        ARCHIVE_NAMES_LOADING = true;
-        var st = document.getElementById('archiveSearchStatus');
-        if(st) st.textContent = 'Loading file list…';
-        fetch('archive-names.json').then(function(r){ return r.json(); }).then(function(d){
-            ARCHIVE_NAMES = d; ARCHIVE_NAMES_LOADING = false;
-            if(st) st.textContent = d.length.toLocaleString('en-US') + ' files indexed. Type at least 3 characters to search by file name.';
-            if(cb) cb();
-        }).catch(function(){
-            ARCHIVE_NAMES_LOADING = false;
-            if(st) st.textContent = 'File list could not be loaded. Please try again later.';
-        });
-    }
-    function archiveEscapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    function runArchiveSearch(q){
-        var box = document.getElementById('archiveSearchResults');
-        var st = document.getElementById('archiveSearchStatus');
-        q = (q || '').trim().toLowerCase();
-        if(q.length < 3){
-            if(box) box.innerHTML = '';
-            if(st && ARCHIVE_NAMES) st.textContent = ARCHIVE_NAMES.length.toLocaleString('en-US') + ' files indexed. Type at least 3 characters to search by file name.';
-            return;
-        }
-        archiveSearchLoad(function(){
-            var words = q.split(/\s+/);
-            var typeF = document.getElementById('archiveTypeFilter').value;
-            var out = [], i, r, name, ok, w;
-            for(i = 0; i < ARCHIVE_NAMES.length; i++){
-                r = ARCHIVE_NAMES[i];
-                if(typeF && r[2] !== typeF) continue;
-                name = r[0].toLowerCase();
-                ok = true;
-                for(w = 0; w < words.length; w++){ if(name.indexOf(words[w]) === -1){ ok = false; break; } }
-                if(ok) out.push(r);
-                if(out.length >= 50) break;
-            }
-            if(st) st.textContent = out.length >= 50 ? 'Showing first 50 of many matches — refine your search.' : out.length + (out.length === 1 ? ' file found.' : ' files found.');
-            if(!out.length){
-                if(box) box.innerHTML = '<div style="font-size:13.5px;color:#666">No file name matches. Try fewer words, or a name / letter number / date from the file name.</div>';
-                return;
-            }
-            var h = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px"><tbody>';
-            for(i = 0; i < out.length; i++){
-                r = out[i];
-                h += '<tr><td style="padding:7px 6px;border-bottom:1px solid #eee"><a href="https://drive.google.com/file/d/' + r[1] + '/view" target="_blank" rel="noopener">' + archiveEscapeHtml(r[0]) + '</a></td><td style="padding:7px 6px;border-bottom:1px solid #eee;white-space:nowrap;color:#666">' + (ARCHIVE_TYPE_LABEL[r[2]] || r[2]) + '</td></tr>';
-            }
-            h += '</tbody></table></div>';
-            if(box) box.innerHTML = h;
-        });
-    }
     </script>
 </body>
 </html>
