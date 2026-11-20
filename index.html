@@ -539,6 +539,7 @@
                 <button type="button" class="topnav-link" onclick="navToggleGroup(this)">📁 Reports</button>
                 <ul class="topnav-drop">
                     <li><button type="button" onclick="navGo('section-downloads')">Official Downloads</button></li>
+                    <li><button type="button" onclick="navGo('section-downloads');setTimeout(function(){var el=document.getElementById('archiveSearchInput');if(el){el.focus();}},700)">File Archive Search</button></li>
                     <li><button type="button" onclick="navGo('section-downloads')">Training Library</button></li>
                     <li><button type="button" onclick="navGo('section-contact')">Contact &amp; Location</button></li>
                 </ul>
@@ -2176,6 +2177,24 @@ rcaInit();
 
 <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
             <div class="download-grid">
+                <div class="download-card" id="archiveSearchCard" style="grid-column:1/-1;text-align:left">
+                    <h3 style="text-align:left">🔍 File Archive Search</h3>
+                    <p style="text-align:left;margin-bottom:10px">Search the DHA Chakwal file archive by file name — 14,307 files (letters, orders, certificates, reports). Files open in Google Drive.</p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <input type="text" id="archiveSearchInput" placeholder="Type a name, subject, letter number or date — e.g. Yasir Ahmed Khan, Zero Report Week 38..." autocomplete="off" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid #ccc;border-radius:8px;font-size:14px" oninput="runArchiveSearch(this.value)" onfocus="archiveSearchLoad(function(){})">
+                        <select id="archiveTypeFilter" onchange="runArchiveSearch(document.getElementById('archiveSearchInput').value)" style="padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px">
+                            <option value="">All types</option>
+                            <option value="W">Word</option>
+                            <option value="X">Excel</option>
+                            <option value="P">PDF</option>
+                            <option value="I">Image</option>
+                            <option value="S">Presentation</option>
+                            <option value="O">Other</option>
+                        </select>
+                    </div>
+                    <div id="archiveSearchStatus" style="font-size:12.5px;color:#666;margin-top:8px">Type at least 3 characters to search by file name.</div>
+                    <div id="archiveSearchResults" style="margin-top:10px"></div>
+                </div>
                 <div class="download-card">
                     <h3>Monthly EPI Presentation</h3>
                     <p>July 2026 District Performance Review</p>
@@ -3566,6 +3585,7 @@ rcaInit();
                 {type:'section', title:'Field Location Check-In', desc:'GPS location submits, late after 09:30 (inside Outreach)', action:'scroll', target:'Child Immunization'},
                 {type:'section', title:'Measles-Rubella (MR) Surveillance', desc:'Case line list, lab, EPID search', action:'scroll', target:'Measles-Rubella'},
                 {type:'section', title:'Official Downloads & Reports', desc:'PPT, Coverage, Dropout, TPVIC', action:'scroll', target:'Official Downloads'},
+                {type:'section', title:'File Archive Search', desc:'Search 14,307 archive files by name — opens in Google Drive', action:'scroll', target:'Official Downloads'},
                 {type:'section', title:'Coverage Reports July 2026', desc:'Antigen coverage & MIS vs EMR', action:'fn', target:'openCoverageModal'},
                 {type:'section', title:'Dropout Analysis', desc:'Drop-out rates by tehsil', action:'fn', target:'openDropoutModal'},
                 {type:'section', title:'Key Officers', desc:'CEO, DHO, DSV', action:'scroll', target:'Key Officers'},
@@ -16403,6 +16423,64 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 if(el) el.textContent = new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
             }catch(e){}
         })();
+    </script>
+
+    <script>
+    /* File Archive Search — names only (archive-names.json). No letter content on this page. */
+    var ARCHIVE_NAMES = null, ARCHIVE_NAMES_LOADING = false;
+    var ARCHIVE_TYPE_LABEL = {W:'Word', X:'Excel', P:'PDF', I:'Image', S:'Presentation', O:'Other'};
+    function archiveSearchLoad(cb){
+        if(ARCHIVE_NAMES){ if(cb) cb(); return; }
+        if(ARCHIVE_NAMES_LOADING){ setTimeout(function(){ archiveSearchLoad(cb); }, 300); return; }
+        ARCHIVE_NAMES_LOADING = true;
+        var st = document.getElementById('archiveSearchStatus');
+        if(st) st.textContent = 'Loading file list…';
+        fetch('archive-names.json').then(function(r){ return r.json(); }).then(function(d){
+            ARCHIVE_NAMES = d; ARCHIVE_NAMES_LOADING = false;
+            if(st) st.textContent = d.length.toLocaleString('en-US') + ' files indexed. Type at least 3 characters to search by file name.';
+            if(cb) cb();
+        }).catch(function(){
+            ARCHIVE_NAMES_LOADING = false;
+            if(st) st.textContent = 'File list could not be loaded. Please try again later.';
+        });
+    }
+    function archiveEscapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function runArchiveSearch(q){
+        var box = document.getElementById('archiveSearchResults');
+        var st = document.getElementById('archiveSearchStatus');
+        q = (q || '').trim().toLowerCase();
+        if(q.length < 3){
+            if(box) box.innerHTML = '';
+            if(st && ARCHIVE_NAMES) st.textContent = ARCHIVE_NAMES.length.toLocaleString('en-US') + ' files indexed. Type at least 3 characters to search by file name.';
+            return;
+        }
+        archiveSearchLoad(function(){
+            var words = q.split(/\s+/);
+            var typeF = document.getElementById('archiveTypeFilter').value;
+            var out = [], i, r, name, ok, w;
+            for(i = 0; i < ARCHIVE_NAMES.length; i++){
+                r = ARCHIVE_NAMES[i];
+                if(typeF && r[2] !== typeF) continue;
+                name = r[0].toLowerCase();
+                ok = true;
+                for(w = 0; w < words.length; w++){ if(name.indexOf(words[w]) === -1){ ok = false; break; } }
+                if(ok) out.push(r);
+                if(out.length >= 50) break;
+            }
+            if(st) st.textContent = out.length >= 50 ? 'Showing first 50 of many matches — refine your search.' : out.length + (out.length === 1 ? ' file found.' : ' files found.');
+            if(!out.length){
+                if(box) box.innerHTML = '<div style="font-size:13.5px;color:#666">No file name matches. Try fewer words, or a name / letter number / date from the file name.</div>';
+                return;
+            }
+            var h = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px"><tbody>';
+            for(i = 0; i < out.length; i++){
+                r = out[i];
+                h += '<tr><td style="padding:7px 6px;border-bottom:1px solid #eee"><a href="https://drive.google.com/file/d/' + r[1] + '/view" target="_blank" rel="noopener">' + archiveEscapeHtml(r[0]) + '</a></td><td style="padding:7px 6px;border-bottom:1px solid #eee;white-space:nowrap;color:#666">' + (ARCHIVE_TYPE_LABEL[r[2]] || r[2]) + '</td></tr>';
+            }
+            h += '</tbody></table></div>';
+            if(box) box.innerHTML = h;
+        });
+    }
     </script>
 </body>
 </html>
