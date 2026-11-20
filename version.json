@@ -1,8 +1,1 @@
-{
-  "versionCode": 2,
-  "versionName": "1.0.1",
-  "apkUrl": "https://github.com/dhachakwal/vaccinators-app/releases/download/v35/vaccinators-app-v1.0.1-2.apk",
-  "whatsNew": "Faster to open and sync fixed: the app no longer waits on the update check before opening, location and leave confirm quickly even on slow networks, and daily reports no longer block the sync queue.",
-  "whatsNewUr": "ایپ تیزی سے کھلتی ہے اور سنک ٹھیک ہو گئی ہے: ایپ کھلنے سے پہلے اپ ڈیٹ کا انتظار نہیں کرتی، لوکیشن اور چھٹی سست نیٹ ورک پر بھی جلدی کنفرم ہوتی ہے، اور روزانہ رپورٹ سنک کی قطار کو نہیں روکتی۔",
-  "optional": false
-}
+{"apkUrl":"https://github.com/dhachakwal/vaccinators-app/releases/download/v42/vaccinators-app-v1.0.2-3.apk","optional":false,"versionCode":3,"versionName":"1.0.2","whatsNew":"Update fix: this version is signed with the app's permanent key, so future updates will install over it without any conflict. (v1.0.1 could not update v1.0.0 in place — please uninstall the old app once, then install this one.)","whatsNewUr":"اپ ڈیٹ ٹھیک ہو گئی ہے: یہ ورژن ایپ کی مستقل چابی سے سائن ہے، اس لیے آئندہ اپ ڈیٹس بغیر کسی مسئلے کے اس پر انسٹال ہوں گی۔ (v1.0.1 پرانی v1.0.0 پر انسٹال نہیں ہو سکتی تھی — پرانی ایپ ایک بار ان انسٹال کر کے یہ والی انسٹال کریں۔)"}
