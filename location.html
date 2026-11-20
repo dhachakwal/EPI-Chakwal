@@ -560,18 +560,68 @@ function fileToCompressedDataUrl(file, maxSide, quality){
   });
 }
 
+// Lightweight Leave check: fetch ONLY the Leave tab via gviz JSON (~75 KB)
+// instead of the whole workbook xlsx (~600 KB). On a slow 3 KB/s field
+// connection the full download takes minutes per attempt, so verification
+// always failed even when the leave had actually saved. Same match as
+// before: name/username + leave date.
+function leaveDateYmd(raw){
+  const s=String(raw==null?'':raw);
+  let m=s.match(/(\d{4}-\d{2}-\d{2})/);
+  if(m) return m[1];
+  // gviz JSON date value: Date(2026,10,20) — month is 0-based
+  const dm=s.match(/Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)/);
+  if(dm){
+    const mo=parseInt(dm[2],10)+1, da=parseInt(dm[3],10);
+    return dm[1]+'-'+(mo<10?'0':'')+mo+'-'+(da<10?'0':'')+da;
+  }
+  const d=new Date(raw);
+  if(isNaN(d.getTime())) return '';
+  const m2=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m2){
+    const yy=m2[3].length===2?('20'+m2[3]):m2[3];
+    let ymd=yy+'-'+(m2[1].length===1?'0':'')+m2[1]+'-'+(m2[2].length===1?'0':'')+m2[2];
+    // if DMY format like 05/09/2026
+    if(+m2[1]<=31 && +m2[2]<=12 && s.indexOf('/')>=0){
+      ymd=yy+'-'+(m2[2].length===1?'0':'')+m2[2]+'-'+(m2[1].length===1?'0':'')+m2[1];
+    }
+    return ymd;
+  }
+  const y=d.getFullYear(), mo=d.getMonth()+1, da=d.getDate();
+  return y+'-'+(mo<10?'0':'')+mo+'-'+(da<10?'0':'')+da;
+}
+async function loadLeaveAoaViaGviz(){
+  const sheet=encodeURIComponent('Leave');
+  const url='https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/gviz/tq?tqx=out:json&sheet='+sheet+'&_='+Date.now();
+  const res=await fetchWithTimeout(url, 60000);
+  if(!res.ok) throw new Error('gviz HTTP '+res.status);
+  const text=await res.text();
+  const a=text.indexOf('{'), b=text.lastIndexOf('}');
+  if(a<0||b<0) throw new Error('gviz bad body');
+  const data=JSON.parse(text.substring(a,b+1));
+  if(!data.table) throw new Error('gviz no table');
+  const cols=data.table.cols||[];
+  const rows=data.table.rows||[];
+  const aoa=[cols.map(function(c){ return (c && c.label) ? c.label : ''; })];
+  rows.forEach(function(r){
+    const cells=(r && r.c) ? r.c : [];
+    aoa.push(cells.map(function(c){
+      if(!c) return '';
+      // prefer the formatted value (dates come as 2026-11-20); fall back to raw
+      if(c.f != null && c.f !== '') return c.f;
+      if(c.v != null && c.v !== '') return c.v;
+      return '';
+    }));
+  });
+  return aoa;
+}
 async function verifyLeaveInSheet(name, username, leaveDate, attempts){
-  attempts = attempts || 4;
+  attempts = attempts || 5;
   const key = normUserKey(username);
   const nm = String(name||'').trim().toLowerCase();
   for(let a=0; a<attempts; a++){
     try{
-      const url = 'https://docs.google.com/spreadsheets/d/'+MASTER_SHEET_ID+'/export?format=xlsx&_='+Date.now();
-      const res = await fetch(url);
-      const buf = await res.arrayBuffer();
-      const wb = XLSX.read(buf, {type:'array'});
-      const sn = (wb.SheetNames||[]).find(function(n){ return /leave/i.test(n); }) || 'Leave';
-      const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:false});
+      const aoa = await loadLeaveAoaViaGviz();
       if(!aoa || aoa.length < 2) { await sleep(1500); continue; }
       const headers = (aoa[0]||[]).map(function(h){ return String(h||'').toLowerCase().trim(); });
       function ix(cands){
@@ -586,31 +636,7 @@ async function verifyLeaveInSheet(name, username, leaveDate, attempts){
         const row=aoa[r];
         const rn=jN>=0?String(row[jN]||'').trim().toLowerCase():'';
         const ru=jU>=0?normUserKey(row[jU]):'';
-        let ymd='';
-        if(jD>=0){
-          const raw=row[jD];
-          const m=String(raw||'').match(/(\d{4}-\d{2}-\d{2})/);
-          if(m) ymd=m[1];
-          else {
-            const d=new Date(raw);
-            if(!isNaN(d.getTime())){
-              // treat as PKT-ish date string from sheet
-              const s=String(raw);
-              const m2=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-              if(m2){
-                let yy=m2[3].length===2?('20'+m2[3]):m2[3];
-                ymd=yy+'-'+(m2[1].length===1?'0':'')+m2[1]+'-'+(m2[2].length===1?'0':'')+m2[2];
-                // if DMY format like 05/09/2026
-                if(+m2[1]<=31 && +m2[2]<=12 && s.indexOf('/')>=0){
-                  ymd=yy+'-'+(m2[2].length===1?'0':'')+m2[2]+'-'+(m2[1].length===1?'0':'')+m2[1];
-                }
-              } else {
-                const y=d.getFullYear(), mo=d.getMonth()+1, da=d.getDate();
-                ymd=y+'-'+(mo<10?'0':'')+mo+'-'+(da<10?'0':'')+da;
-              }
-            }
-          }
-        }
+        const ymd=jD>=0?leaveDateYmd(row[jD]):'';
         if(ymd !== leaveDate) continue;
         if((key && ru && key===ru) || (nm && rn && nm===rn)) return true;
       }
@@ -745,7 +771,21 @@ async function submitLeave(){
   const btn=document.getElementById('btnLeaveSub');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Compressing & submitting…';
   try{
-    const packed = await fileToCompressedDataUrl(file, 1280, 0.7);
+    const packed = await fileToCompressedDataUrl(file, 1024, 0.65);
+    // Fresh check first: an earlier attempt may already have saved the leave
+    // while its confirmation failed on a slow connection. Never post twice.
+    btn.innerHTML='<span class="spinner"></span> Checking…';
+    if(await verifyLeaveInSheet(v.name, v.username, leaveDate, 1)){
+      leaveRows.push({name:v.name, username:v.username||'', ymd:leaveDate});
+      try{ sessionStorage.setItem(CACHE_KEY, JSON.stringify({master:master, leaveRows:leaveRows})); }catch(e){}
+      updateBalanceUI();
+      btn.className='btn btn-done';
+      btn.innerHTML='Leave Submitted<span class="thank">Thank You, '+v.name+'</span>';
+      const ur0=document.getElementById('urduOk');
+      ur0.style.display='block';
+      ur0.innerHTML='آپ کی چھٹی کامیابی سے سبمٹ ہو گئی ہے۔';
+      return;
+    }
     btn.innerHTML='<span class="spinner"></span> Uploading leave…';
     const payload={
       type:'leave',
@@ -756,12 +796,14 @@ async function submitLeave(){
       attachmentMime:packed.mime,
       attachmentBase64:packed.dataUrl
     };
-    // Send JSON body (Apps Script reads postData.contents)
+    // Send JSON body (Apps Script reads postData.contents).
+    // NOTE: no keepalive — keepalive rejects bodies over 64 KB, and a photo
+    // payload is bigger than that, so the upload would never be sent.
     try{
       await fetch(LOC_SCRIPT_URL, {
         method:'POST', mode:'no-cors', redirect:'follow',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify(payload), keepalive:true
+        body:JSON.stringify(payload)
       });
     }catch(e1){
       postPayload(payload);
@@ -770,7 +812,7 @@ async function submitLeave(){
     const ok = await verifyLeaveInSheet(v.name, v.username, leaveDate, 5);
     if(!ok){
       btn.disabled=false; btn.className='btn btn-leave'; btn.innerHTML='📝 Submit Leave';
-      showErr('Leave did NOT save on server. Try again with a smaller/clear photo (under 2 MB). Check internet and retry.');
+      showErr('Leave could not be confirmed on the server. Please check your internet and tap Submit Leave again. If it was already saved, it will show as already submitted and will not be saved twice.');
       return;
     }
     leaveRows.push({name:v.name, username:v.username||'', ymd:leaveDate});
