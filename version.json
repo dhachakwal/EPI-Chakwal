@@ -1,1 +1,8 @@
-{"apkUrl":"https://github.com/dhachakwal/vaccinators-app/releases/download/v30/vaccinators-app-v1.0.0-1.apk","optional":false,"versionCode":1,"versionName":"1.0.0","whatsNew":"First release: login, live location, daily reports, zero entry, leave, notifications, My Data, My Microplan, message parents, daily reports and calls.","whatsNewUr":"پہلی ریلیز: لاگ ان، لائیو لوکیشن، روزانہ رپورٹ، زیرو انٹری، چھٹی، اطلاعات، میرا ڈیٹا، میرا مائیکرو پلان، والدین کو پیغام، روزانہ رپورٹس اور کالز۔"}
+{
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "apkUrl": "https://github.com/dhachakwal/vaccinators-app/releases/download/v35/vaccinators-app-v1.0.1-2.apk",
+  "whatsNew": "Faster to open and sync fixed: the app no longer waits on the update check before opening, location and leave confirm quickly even on slow networks, and daily reports no longer block the sync queue.",
+  "whatsNewUr": "ایپ تیزی سے کھلتی ہے اور سنک ٹھیک ہو گئی ہے: ایپ کھلنے سے پہلے اپ ڈیٹ کا انتظار نہیں کرتی، لوکیشن اور چھٹی سست نیٹ ورک پر بھی جلدی کنفرم ہوتی ہے، اور روزانہ رپورٹ سنک کی قطار کو نہیں روکتی۔",
+  "optional": false
+}
