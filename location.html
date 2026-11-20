@@ -542,8 +542,8 @@ function fileToCompressedDataUrl(file, maxSide, quality){
         ctx.drawImage(img, 0, 0, w, h);
         let q = quality || 0.72;
         let dataUrl = canvas.toDataURL('image/jpeg', q);
-        // shrink further if still large (~1.2MB base64 ~ 0.9MB binary)
-        while(dataUrl.length > 1.4e6 && q > 0.4){
+        // shrink further if still large (keep the upload small for slow field networks)
+        while(dataUrl.length > 6e5 && q > 0.3){
           q -= 0.08;
           dataUrl = canvas.toDataURL('image/jpeg', q);
         }
@@ -771,7 +771,7 @@ async function submitLeave(){
   const btn=document.getElementById('btnLeaveSub');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Compressing & submitting…';
   try{
-    const packed = await fileToCompressedDataUrl(file, 1024, 0.65);
+    const packed = await fileToCompressedDataUrl(file, 800, 0.55);
     // Fresh check first: an earlier attempt may already have saved the leave
     // while its confirmation failed on a slow connection. Never post twice.
     btn.innerHTML='<span class="spinner"></span> Checking…';
@@ -799,15 +799,25 @@ async function submitLeave(){
     // Send JSON body (Apps Script reads postData.contents).
     // NOTE: no keepalive — keepalive rejects bodies over 64 KB, and a photo
     // payload is bigger than that, so the upload would never be sent.
-    try{
-      await fetch(LOC_SCRIPT_URL, {
-        method:'POST', mode:'no-cors', redirect:'follow',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify(payload)
-      });
-    }catch(e1){
-      postPayload(payload);
+    // Retry the upload: on a slow/flaky field connection a single attempt
+    // often drops mid-upload. Two fetch tries, then the hidden-form path.
+    // Before retrying, check the sheet — the first try may have saved the
+    // leave even though its reply was lost, and a retry must not save twice.
+    let posted=false;
+    for(let t=0; t<2 && !posted; t++){
+      try{
+        await fetch(LOC_SCRIPT_URL, {
+          method:'POST', mode:'no-cors', redirect:'follow',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify(payload)
+        });
+        posted=true;
+      }catch(e1){
+        if(await verifyLeaveInSheet(v.name, v.username, leaveDate, 1)){ posted=true; break; }
+        if(t===0) await sleep(1500);
+      }
     }
+    if(!posted) postPayload(payload);
     btn.innerHTML='<span class="spinner"></span> Verifying on server…';
     const ok = await verifyLeaveInSheet(v.name, v.username, leaveDate, 5);
     if(!ok){
