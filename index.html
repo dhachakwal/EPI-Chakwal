@@ -531,6 +531,7 @@
                     <li><button type="button" onclick="navGo('section-vaccapp','vaMicro')">Microplans</button></li>
                     <li><button type="button" onclick="navGo('section-vaccapp','vaApk')">APK Download</button></li>
                     <li><button type="button" onclick="navGo('section-vaccapp','vaLogin')">Login &amp; PINs</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaAppReports')">App Reports</button></li>
                 </ul>
             </li>
             <li class="topnav-item">
@@ -2224,6 +2225,7 @@ rcaInit();
                     <button type="button" class="emr-tab" data-va="vaData" onclick="vaSwitch('vaData')">6. Vaccinator Data</button>
                     <button type="button" class="emr-tab" data-va="vaApk" onclick="vaSwitch('vaApk')">7. APK Download</button>
                     <button type="button" class="emr-tab" data-va="vaLogin" onclick="vaSwitch('vaLogin')">8. Login &amp; PINs</button>
+                    <button type="button" class="emr-tab" data-va="vaAppReports" onclick="vaSwitch('vaAppReports')">9. App Reports</button>
                 </div>
 
                 <div id="vaPaneMap">
@@ -2312,6 +2314,18 @@ rcaInit();
                         </table>
                     </div>
                     <p class="emr-note">Login details from the All Vaccinators Profile tab of the master sheet. The PIN is the last 4 digits of the username. This list is visible to anyone who can open this page — keep it private and change a PIN in the sheet if it is ever shared.</p>
+                </div>
+
+                <div id="vaPaneAppReports" style="display:none">
+                    <div class="emr-stats" id="vaAppRepStats"></div>
+                    <div id="vaAppRepStatus" class="sweep-loading" style="display:none"></div>
+                    <div class="emr-table-wrap">
+                        <table class="emr-table">
+                            <thead id="vaAppRepHead"></thead>
+                            <tbody id="vaAppRepBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="emr-note">Daily reports sent from the Vaccinators App (DailyReport tab of the master sheet) for the selected date. Change the date above to see another day.</p>
                 </div>
             </div>
 <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
@@ -16532,13 +16546,14 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         const VA_ATT_ID = '1sPPllRYTJOju3xrQNfQahoLa0SNOp1iLJ7_wTvQrTKQ';
         const VA_REC_ID = '1EQwOe4sFs0hR5_eNYFllRvHGLpLeXdRE2nHXI-pF_uU';
         const VA_EMR_ID = '15xqAoGF3gu2OD0oK_25P1141Qx_PTO2MezqSgc8eDIg';
-        const VA_APK_URL = 'https://github.com/dhachakwal/vaccinators-app/releases/download/v57/vaccinators-app-v1.0.5-6.apk';
+        const VA_APK_URL = 'https://github.com/dhachakwal/vaccinators-app/releases/download/v58/vaccinators-app-v1.0.6-7.apk';
         const VA_RELEASE_URL = 'https://github.com/dhachakwal/vaccinators-app/releases';
         const VA_ANTIGENS = ['BCG','OPV0','Penta1','Pneumo1','OPV1','OPV2','OPV3','Penta2','Pneumo2','Penta3','Pneumo3','IPV','Measles1','Measles2','HepB','Rota1','Rota2','IPV2','DPT Booster','TCV','HPV'];
         let vaMode = 'vaMap', vaLoaded = false, vaLoading = false;
         let vaLocRows = [], vaLeaveRows = [], vaOutRows = [], vaFixRows = [];
         let vaInRows = [], vaOut2Rows = [], vaRecRows = [], vaEmrRows = [];
         let vaProfileRows = [];
+        let vaAppRepRows = [];
         let vaMicro = null, vaMicroError = '', vaVersion = null, vaVersionTried = false;
         let vaMap = null, vaMapLayer = null, vaMapFitted = false;
 
@@ -16651,7 +16666,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         function vaSwitch(mode){
             vaMode = mode || 'vaMap';
             document.querySelectorAll('#vaTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-va') === vaMode); });
-            ['Map','Reports','Zero','Leave','Micro','Data','Apk','Login'].forEach(function(p){
+            ['Map','Reports','Zero','Leave','Micro','Data','Apk','Login','AppReports'].forEach(function(p){
                 const el = document.getElementById('vaPane'+p);
                 if(el) el.style.display = ('va'+p === vaMode) ? '' : 'none';
             });
@@ -16668,6 +16683,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             else if(vaMode === 'vaData') vaRenderData();
             else if(vaMode === 'vaApk') vaRenderApk();
             else if(vaMode === 'vaLogin') vaRenderLogin();
+            else if(vaMode === 'vaAppReports') vaRenderAppReports();
         }
         async function vaLoad(force){
             if(vaLoading) return;
@@ -16685,6 +16701,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 vaGviz(VA_ATT_ID,'Check-Out').then(function(r){ vaOut2Rows = r; }).catch(function(){ vaOut2Rows = []; }),
                 vaGviz(VA_REC_ID,'Records').then(function(r){ vaRecRows = r; }).catch(function(){ vaRecRows = []; }),
                 vaGviz(VA_MASTER_ID,'All Vaccinators Profile').then(function(r){ vaProfileRows = r; }).catch(function(){ vaProfileRows = []; }),
+                vaGviz(VA_MASTER_ID,'DailyReport').then(function(r){ vaAppRepRows = r; }).catch(function(){ vaAppRepRows = []; }),
                 vaEmrLoad(ym)
             ]);
             if(!vaOutRows.length){ try{ vaOutRows = await vaGviz(VA_SUMMARY_ID,'Outreach'); }catch(e){} }
@@ -17052,6 +17069,41 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 if(pin && /^\d{1,3}$/.test(pin)) pin = ('0000'+pin).slice(-4);
                 return '<tr><td>'+vaEsc(vaPick(r,['srno.','sr no','sr']))+'</td><td>'+vaEsc(vaPick(r,['tehsil']))+'</td><td>'+vaEsc(vaPick(r,['union council (uc)','union council','uc']))+'</td><td><strong>'+vaEsc(vaPick(r,['vaccinator name','name']))+'</strong></td><td>'+vaEsc(vaPick(r,['username']))+'</td><td><strong>'+vaEsc(pin || '—')+'</strong></td></tr>';
             }).join('');
+        }
+        // v1.0.6 (user order 22 Nov 2026): the app-submitted daily
+        // reports (DailyReport tab) get their own tab — the old
+        // "Daily Reports" tab shows Summary month-to-date doses,
+        // never these. Filtered by the selected date + Tehsil/UC.
+        function vaRenderAppReports(){
+            const head = document.getElementById('vaAppRepHead'), body = document.getElementById('vaAppRepBody');
+            const stats = document.getElementById('vaAppRepStats');
+            if(!head || !body) return;
+            const day = vaDate(), teh = vaTehsil(), uc = vaUc();
+            const rows = vaAppRepRows.filter(function(r){
+                if(vaYmd(vaPick(r,['date'])) !== day) return false;
+                if(teh && vaNormUc(vaPick(r,['tehsil'])) !== vaNormUc(teh)) return false;
+                if(uc && vaNormUc(vaPick(r,['uc'])) !== vaNormUc(uc)) return false;
+                return true;
+            });
+            rows.sort(function(a,b){ return (vaPick(a,['tehsil'])+'|'+vaPick(a,['uc'])+'|'+vaPick(a,['name'])).localeCompare(vaPick(b,['tehsil'])+'|'+vaPick(b,['uc'])+'|'+vaPick(b,['name'])); });
+            const antigens = ['bcg','penta-i','penta-ii','penta-iii','mr-1','mr-ii','dtp'];
+            const totals = [0,0,0,0,0,0,0];
+            let grand = 0;
+            rows.forEach(function(r){
+                antigens.forEach(function(a,i){ const v = parseInt(vaPick(r,[a]),10); totals[i] += isNaN(v) ? 0 : v; });
+                const t = parseInt(vaPick(r,['total children']),10);
+                grand += isNaN(t) ? 0 : t;
+            });
+            if(stats) stats.textContent = vaNum(rows.length) + ' report(s) · ' + vaNum(grand) + ' doses · ' + vaFmtDay(day) + (teh ? ' · ' + teh : '') + (uc ? ' · ' + uc : '');
+            head.innerHTML = '<tr><th>Date</th><th>Vaccinator</th><th>Tehsil</th><th>UC</th><th>Kit Station</th><th>BCG</th><th>Penta-I</th><th>Penta-II</th><th>Penta-III</th><th>MR-1</th><th>MR-II</th><th>DTP</th><th>Total</th></tr>';
+            if(!rows.length){
+                body.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#888">No app reports on ' + vaEsc(vaFmtDay(day)) + ' for this filter.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(function(r){
+                const cells = antigens.map(function(a){ return '<td>'+vaNum(parseInt(vaPick(r,[a]),10) || 0)+'</td>'; }).join('');
+                return '<tr><td>'+vaEsc(vaFmtDay(vaYmd(vaPick(r,['date']))))+'</td><td><strong>'+vaEsc(vaPick(r,['name']))+'</strong></td><td>'+vaEsc(vaPick(r,['tehsil']))+'</td><td>'+vaEsc(vaPick(r,['uc']))+'</td><td>'+vaEsc(vaPick(r,['kit station']))+'</td>' + cells + '<td><strong>'+vaNum(parseInt(vaPick(r,['total children']),10) || 0)+'</strong></td></tr>';
+            }).join('') + '<tr style="background:#e8f5e9;font-weight:700"><td colspan="5">TOTAL</td>' + totals.map(function(v){ return '<td>'+vaNum(v)+'</td>'; }).join('') + '<td>'+vaNum(grand)+'</td></tr>';
         }
         async function vaRenderApk(){
             const box = document.getElementById('vaApkBox');
