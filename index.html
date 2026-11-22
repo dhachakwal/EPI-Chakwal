@@ -5864,19 +5864,24 @@ rcaInit();
         let vcStoreCache = null;
         let vcRowMap = {};
         let vcCarryCache = {};
+        let vcCarryPhoneCache = {};
         function vcStore(){
             if(vcStoreCache) return vcStoreCache;
             try{ vcStoreCache = JSON.parse(localStorage.getItem('vcStatusV1') || '{}'); }catch(e){ vcStoreCache = {}; }
             if(!vcStoreCache || typeof vcStoreCache !== 'object') vcStoreCache = {};
             return vcStoreCache;
         }
-        function vcStoreSave(){ vcCarryCache = {}; try{ localStorage.setItem('vcStatusV1', JSON.stringify(vcStore())); }catch(e){} }
+        function vcStoreSave(){ vcCarryCache = {}; vcCarryPhoneCache = {}; try{ localStorage.setItem('vcStatusV1', JSON.stringify(vcStore())); }catch(e){} }
         function vcEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
         function vcRowKey(row){
             const mr = emrCell(row, EMR_COLS.mr);
             if(mr) return 'mr:' + mr;
             return 'np:' + emrCell(row, EMR_COLS.phone) + '|' + emrCell(row, EMR_COLS.name) + '|' + emrCell(row, EMR_COLS.uc);
         }
+        // Phone helpers (v14.34, 2026-11-22): the phone number is the stable
+        // link for a child across visits — the MR number changes every visit.
+        function vcNormPhone(p){ return String(p == null ? '' : p).replace(/\D/g, ''); }
+        function vcRowPhone(row){ return vcNormPhone(emrCell(row, EMR_COLS.phone)); }
         function vcRowYmd(row){
             const u = emrUpdatedObj(row);
             return (u && u.date) ? emrYmdFromDate(u.date) : '';
@@ -5925,28 +5930,77 @@ rcaInit();
         // date itself (or an explicit clear of it) always wins. Carried statuses are
         // resolved on the fly: nothing extra is stored or synced for them, so this
         // applies automatically every day, on every date opened afterwards.
-        function vcCarriedVerified(ymd, key){
-            if(!ymd || !key) return false;
-            let set = vcCarryCache[ymd];
-            if(!set){
-                set = {};
-                const store = vcStore();
-                Object.keys(store).forEach(function(d){
-                    if(d < ymd){ const day = store[d] || {}; Object.keys(day).forEach(function(k){ if(day[k] === 'Verified') set[k] = 1; }); }
-                });
-                Object.keys(VC_BAKED).forEach(function(d){
-                    if(d < ymd){ const day = VC_BAKED[d] || {}; Object.keys(day).forEach(function(k){ if(day[k] === 'Verified') set[k] = 1; }); }
-                });
-                vcCarryCache[ymd] = set;
+        function vcCarriedVerified(ymd, key, phone){
+            if(!ymd || (!key && !phone)) return false;
+            // (a) Exact-key carry (unchanged): same MR / same np key verified before.
+            if(key){
+                let set = vcCarryCache[ymd];
+                if(!set){
+                    set = {};
+                    const store = vcStore();
+                    Object.keys(store).forEach(function(d){
+                        if(d < ymd){ const day = store[d] || {}; Object.keys(day).forEach(function(k){ if(day[k] === 'Verified') set[k] = 1; }); }
+                    });
+                    Object.keys(VC_BAKED).forEach(function(d){
+                        if(d < ymd){ const day = VC_BAKED[d] || {}; Object.keys(day).forEach(function(k){ if(day[k] === 'Verified') set[k] = 1; }); }
+                    });
+                    vcCarryCache[ymd] = set;
+                }
+                if(set[key]) return true;
             }
-            return !!set[key];
+            // (b) Phone carry (v14.34, 2026-11-22): a child verified on an earlier
+            // date counts as Verified on every later date too, EVEN when the new
+            // visit has a NEW MR number. The phone number is the stable link:
+            // the MR number embeds the registration date, so it changes every
+            // visit and the old MR-only match missed almost every returning child.
+            if(phone){
+                let phones = vcCarryPhoneCache[ymd];
+                if(!phones){
+                    phones = {};
+                    // MR -> phone map from the loaded EMR rows (all months).
+                    const mp = {};
+                    (emrRows || []).forEach(function(r){
+                        const mr = emrCell(r, EMR_COLS.mr);
+                        const ph = vcRowPhone(r);
+                        if(mr && ph) mp[String(mr).trim()] = ph;
+                    });
+                    const addKey = function(k){
+                        if(k.indexOf('mr:') === 0){
+                            const ph = mp[k.slice(3)];
+                            if(ph) phones[ph] = 1;
+                        } else if(k.indexOf('np:') === 0){
+                            const ph = vcNormPhone(k.slice(3).split('|')[0]);
+                            if(ph) phones[ph] = 1;
+                        } else if(k.indexOf('ph:') === 0){
+                            phones[k.slice(3)] = 1;
+                        }
+                    };
+                    const store = vcStore();
+                    Object.keys(store).forEach(function(d){
+                        if(d < ymd){ const day = store[d] || {}; Object.keys(day).forEach(function(k){ if(day[k] === 'Verified') addKey(k); }); }
+                    });
+                    Object.keys(VC_BAKED).forEach(function(d){
+                        if(d < ymd){ const day = VC_BAKED[d] || {}; Object.keys(day).forEach(function(k){ if(day[k] === 'Verified') addKey(k); }); }
+                    });
+                    vcCarryPhoneCache[ymd] = phones;
+                }
+                if(phones[phone]) return true;
+            }
+            return false;
         }
-        function vcStatusOf(ymd, key){
+        function vcStatusOf(ymd, key, phone){
             const day = vcStore()[ymd];
             if(day && Object.prototype.hasOwnProperty.call(day, key)) return day[key] || '';
             const b = VC_BAKED[ymd];
             if(b && b[key]) return b[key];
-            if(vcCarriedVerified(ymd, key)) return 'Verified';
+            // No phone number on this record (user rule, 2026-11-22): a child
+            // with no number to call is Invalid Number. An explicit status or
+            // a baked status above always wins; carry-forward never overrides
+            // this. phone === '' means the caller confirmed there is no
+            // number; phone === undefined means no number was supplied, so
+            // this rule is skipped in that case.
+            if(phone === '') return 'Invalid Number';
+            if(vcCarriedVerified(ymd, key, phone)) return 'Verified';
             return '';
         }
         let vcCmtCache = null;
@@ -6225,7 +6279,7 @@ rcaInit();
             if(!sum) return;
             const counts = {}; VC_STATUSES.forEach(function(s){ counts[s] = 0; });
             let called = 0;
-            rows.forEach(function(r){ const st = vcStatusOf(ymd, vcRowKey(r)); if(st && counts[st] != null){ counts[st]++; called++; } });
+            rows.forEach(function(r){ const st = vcStatusOf(ymd, vcRowKey(r), vcRowPhone(r)); if(st && counts[st] != null){ counts[st]++; called++; } });
             const pct = rows.length ? Math.round(called * 100 / rows.length) : 0;
             const showVal = (document.getElementById('vcShow') || {}).value || '';
             const activeKey = vcStatusFilter || (showVal === 'called' ? 'called' : (showVal === '' ? 'all' : ''));
@@ -6427,7 +6481,7 @@ rcaInit();
             const rows = all.rows.filter(function(r){
                 if(teh && emrCell(r, EMR_COLS.tehsil) !== teh) return false;
                 if(ucf && emrCell(r, EMR_COLS.uc) !== ucf) return false;
-                const st = vcStatusOf(ymd, vcRowKey(r));
+                const st = vcStatusOf(ymd, vcRowKey(r), vcRowPhone(r));
                 if(vcStatusFilter === 'called' && !st) return false;
                 if(vcStatusFilter && vcStatusFilter !== 'called' && st !== vcStatusFilter) return false;
                 if(show === 'pending' && st) return false;
@@ -6449,7 +6503,7 @@ rcaInit();
         }
         function vcCardHtml(r, ymd){
             const key = vcRowKey(r);
-            const st = vcStatusOf(ymd, key);
+            const st = vcStatusOf(ymd, key, vcRowPhone(r));
             const name = emrCell(r, EMR_COLS.name) || '—';
             const father = emrCell(r, EMR_COLS.father);
             const teh = emrCell(r, EMR_COLS.tehsil);
@@ -6489,7 +6543,8 @@ rcaInit();
         function vcSetStatus(ymd, key, status){
             const store = vcStore();
             if(!store[ymd]) store[ymd] = {};
-            if(vcStatusOf(ymd, key) === status) store[ymd][key] = '';
+            const _row = (typeof vcRowMap !== 'undefined' && vcRowMap) ? vcRowMap[key] : null;
+            if(vcStatusOf(ymd, key, _row ? vcRowPhone(_row) : undefined) === status) store[ymd][key] = '';
             else store[ymd][key] = status;
             vcStoreSave();
             vcTouchTs(ymd, key);
@@ -6506,7 +6561,7 @@ rcaInit();
                 aoa.push([
                     emrCell(r, EMR_COLS.tehsil), emrCell(r, EMR_COLS.uc), emrCell(r, EMR_COLS.name),
                     emrCell(r, EMR_COLS.father), emrCell(r, EMR_COLS.address), emrCell(r, EMR_COLS.phone),
-                    vcStatusOf(all.ymd, vcRowKey(r)), vcCommentOf(all.ymd, vcRowKey(r))
+                    vcStatusOf(all.ymd, vcRowKey(r), vcRowPhone(r)), vcCommentOf(all.ymd, vcRowKey(r))
                 ]);
             });
             const wsx = XLSX.utils.aoa_to_sheet(aoa);
