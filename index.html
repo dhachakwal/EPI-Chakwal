@@ -16441,19 +16441,24 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         }
         </script>
     <script>
-        /* ===== Vaccinator App section (v14.33, 20 Nov 2026) =====
-           Live view of the Vaccinators App (Flutter APK v1.0.0) data.
-           Same Google Sheets as the app: Location & Leave (master
-           sheet), Summary by Vaccinators, Attendance, Vaccinator
-           Records and EMR Outreach. Lazy: nothing is fetched until
-           the section scrolls into view or a tab is opened. All
-           fetches use the site's gviz pattern (public sheets). */
-        const VA_MASTER_ID = '1nG-J44aAXotVp9BTBA_DAu7StQNH3xXK7C02L9hzzd4';
-        const VA_SUMMARY_ID = '16YcZU2RwgWMtNjfjukHqsNTH-EW5T-TcZ5XNwgh79ls';
-        const VA_ATT_ID = '1KAuJOL3WuYdp5YA4sD70kofeVkYPP3bJ5Rxro_0MUUc';
-        const VA_REC_ID = '11GHoNbiXzpLhQb6qb9Hyki1Z8bd-pCMMZRt-UFyG764';
-        const VA_EMR_ID = '13ZSu5fZQFarP4bXLQhJVETtGuYOEb8C9jrrdcvK1TAo';
-        const VA_APK_URL = 'https://github.com/dhachakwal/vaccinators-app/releases/download/v30/vaccinators-app-v1.0.0-1.apk';
+        /* ===== Vaccinator App section (v14.33, 20 Nov 2026;
+           NEW backend 22 Nov 2026) =====
+           Live view of the Vaccinators App (Flutter APK) data.
+           Reads the NEW Pak Eagle backend (user order 22 Nov 2026)
+           — the parallel system, separate from the live dashboard
+           sheets. Same tabs as the app: Location & Leave (NEW
+           master sheet), Summary by Vaccinators, Attendance,
+           Vaccinator Records and EMR Outreach. Lazy: nothing is
+           fetched until the section scrolls into view or a tab is
+           opened. All fetches use the site's gviz pattern (public
+           sheets). APK link = current LIVE version (v1.0.3); the
+           v1.0.4 test build is NOT linked here. */
+        const VA_MASTER_ID = '1HkIPLMk4s6U873txeP9q7XMA1p6HVnXUUmUab0fDeUI';
+        const VA_SUMMARY_ID = '1o7KELzEO50pu-kpGYQ_LR16k7eOzPMBMJoJ-N9EMP_M';
+        const VA_ATT_ID = '1sPPllRYTJOju3xrQNfQahoLa0SNOp1iLJ7_wTvQrTKQ';
+        const VA_REC_ID = '1EQwOe4sFs0hR5_eNYFllRvHGLpLeXdRE2nHXI-pF_uU';
+        const VA_EMR_ID = '15xqAoGF3gu2OD0oK_25P1141Qx_PTO2MezqSgc8eDIg';
+        const VA_APK_URL = 'https://github.com/dhachakwal/vaccinators-app/releases/download/v47/vaccinators-app-v1.0.3-4.apk';
         const VA_RELEASE_URL = 'https://github.com/dhachakwal/vaccinators-app/releases';
         const VA_ANTIGENS = ['BCG','OPV0','Penta1','Pneumo1','OPV1','OPV2','OPV3','Penta2','Pneumo2','Penta3','Pneumo3','IPV','Measles1','Measles2','HepB','Rota1','Rota2','IPV2','DPT Booster','TCV','HPV'];
         let vaMode = 'vaMap', vaLoaded = false, vaLoading = false;
