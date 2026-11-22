@@ -530,6 +530,7 @@
                     <li><button type="button" onclick="navGo('section-vaccapp','vaZero')">Zero Entry</button></li>
                     <li><button type="button" onclick="navGo('section-vaccapp','vaMicro')">Microplans</button></li>
                     <li><button type="button" onclick="navGo('section-vaccapp','vaApk')">APK Download</button></li>
+                    <li><button type="button" onclick="navGo('section-vaccapp','vaLogin')">Login &amp; PINs</button></li>
                 </ul>
             </li>
             <li class="topnav-item">
@@ -2222,6 +2223,7 @@ rcaInit();
                     <button type="button" class="emr-tab" data-va="vaMicro" onclick="vaSwitch('vaMicro')">5. Microplans</button>
                     <button type="button" class="emr-tab" data-va="vaData" onclick="vaSwitch('vaData')">6. Vaccinator Data</button>
                     <button type="button" class="emr-tab" data-va="vaApk" onclick="vaSwitch('vaApk')">7. APK Download</button>
+                    <button type="button" class="emr-tab" data-va="vaLogin" onclick="vaSwitch('vaLogin')">8. Login &amp; PINs</button>
                 </div>
 
                 <div id="vaPaneMap">
@@ -2293,6 +2295,23 @@ rcaInit();
 
                 <div id="vaPaneApk" style="display:none">
                     <div id="vaApkBox"></div>
+                </div>
+
+                <div id="vaPaneLogin" style="display:none">
+                    <div class="emr-filter" style="margin-bottom:10px">
+                        <label>Search vaccinator
+                            <input type="text" id="vaLoginSearch" placeholder="Name, UC or username…" oninput="vaRenderLogin()" style="min-width:200px">
+                        </label>
+                    </div>
+                    <div class="emr-stats" id="vaLoginStats"></div>
+                    <div id="vaLoginStatus" class="sweep-loading" style="display:none"></div>
+                    <div class="emr-table-wrap">
+                        <table class="emr-table">
+                            <thead id="vaLoginHead"></thead>
+                            <tbody id="vaLoginBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="emr-note">Login details from the All Vaccinators Profile tab of the master sheet. The PIN is the last 4 digits of the username. This list is visible to anyone who can open this page — keep it private and change a PIN in the sheet if it is ever shared.</p>
                 </div>
             </div>
 <div class="section-title" id="section-downloads">Official Downloads & Reports</div>
@@ -16519,6 +16538,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         let vaMode = 'vaMap', vaLoaded = false, vaLoading = false;
         let vaLocRows = [], vaLeaveRows = [], vaOutRows = [], vaFixRows = [];
         let vaInRows = [], vaOut2Rows = [], vaRecRows = [], vaEmrRows = [];
+        let vaProfileRows = [];
         let vaMicro = null, vaMicroError = '', vaVersion = null, vaVersionTried = false;
         let vaMap = null, vaMapLayer = null, vaMapFitted = false;
 
@@ -16631,7 +16651,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         function vaSwitch(mode){
             vaMode = mode || 'vaMap';
             document.querySelectorAll('#vaTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-va') === vaMode); });
-            ['Map','Reports','Zero','Leave','Micro','Data','Apk'].forEach(function(p){
+            ['Map','Reports','Zero','Leave','Micro','Data','Apk','Login'].forEach(function(p){
                 const el = document.getElementById('vaPane'+p);
                 if(el) el.style.display = ('va'+p === vaMode) ? '' : 'none';
             });
@@ -16647,6 +16667,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             else if(vaMode === 'vaMicro') vaRenderMicro();
             else if(vaMode === 'vaData') vaRenderData();
             else if(vaMode === 'vaApk') vaRenderApk();
+            else if(vaMode === 'vaLogin') vaRenderLogin();
         }
         async function vaLoad(force){
             if(vaLoading) return;
@@ -16663,6 +16684,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 vaGviz(VA_ATT_ID,'Chek-In').then(function(r){ vaInRows = r; }).catch(function(){ vaInRows = []; }),
                 vaGviz(VA_ATT_ID,'Check-Out').then(function(r){ vaOut2Rows = r; }).catch(function(){ vaOut2Rows = []; }),
                 vaGviz(VA_REC_ID,'Records').then(function(r){ vaRecRows = r; }).catch(function(){ vaRecRows = []; }),
+                vaGviz(VA_MASTER_ID,'All Vaccinators Profile').then(function(r){ vaProfileRows = r; }).catch(function(){ vaProfileRows = []; }),
                 vaEmrLoad(ym)
             ]);
             if(!vaOutRows.length){ try{ vaOutRows = await vaGviz(VA_SUMMARY_ID,'Outreach'); }catch(e){} }
@@ -16996,6 +17018,39 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                     recTxt = vaNum(recs.length) + ' · Latest: ' + vaEsc(vaPick(latest,['type'])) + ' ' + vaEsc(vaPick(latest,['ref no.'])) + ' (' + vaEsc(vaPick(latest,['status'])) + ')';
                 }
                 return '<tr><td><strong>'+vaEsc(p.name)+'</strong>'+(p.vacant ? ' <span style="color:#888">(Vacant)</span>' : '')+'<br><span style="font-size:12px;color:#666">'+vaEsc(p.mobile || '')+'</span></td><td>'+vaEsc(p.uc)+'</td><td>'+vaEsc(p.tehsil)+'</td><td>'+vaEsc(ciTxt)+'</td><td>'+vaEsc(coTxt)+'</td><td>'+(doses == null ? '—' : vaNum(doses))+'</td><td>'+recTxt+'</td></tr>';
+            }).join('');
+        }
+        function vaRenderLogin(){
+            const head = document.getElementById('vaLoginHead'), body = document.getElementById('vaLoginBody');
+            const stats = document.getElementById('vaLoginStats');
+            if(!head || !body) return;
+            const teh = vaTehsil(), uc = vaUc();
+            const qEl = document.getElementById('vaLoginSearch');
+            const q = qEl ? qEl.value.trim().toLowerCase() : '';
+            let rows = vaProfileRows.filter(function(r){
+                const name = vaPick(r,['vaccinator name','name']);
+                if(!name || name.toLowerCase() === 'vacant') return false;
+                if(teh && vaNormUc(vaPick(r,['tehsil'])) !== vaNormUc(teh)) return false;
+                if(uc && vaNormUc(vaPick(r,['union council (uc)','union council','uc'])) !== vaNormUc(uc)) return false;
+                if(q){
+                    const hay = (name+' '+vaPick(r,['union council (uc)','union council','uc'])+' '+vaPick(r,['username'])).toLowerCase();
+                    if(hay.indexOf(q) < 0) return false;
+                }
+                return true;
+            });
+            rows.sort(function(a,b){ return (vaPick(a,['tehsil'])+'|'+vaPick(a,['union council (uc)','union council','uc'])+'|'+vaPick(a,['vaccinator name','name'])).localeCompare(vaPick(b,['tehsil'])+'|'+vaPick(b,['union council (uc)','union council','uc'])+'|'+vaPick(b,['vaccinator name','name'])); });
+            if(stats) stats.textContent = vaNum(rows.length) + ' vaccinator(s) · ' + vaNum(vaProfileRows.length) + ' on the roster';
+            head.innerHTML = '<tr><th>Sr.</th><th>Tehsil</th><th>UC</th><th>Vaccinator Name</th><th>Username</th><th>Password</th></tr>';
+            if(!rows.length){
+                body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888">No vaccinators for this filter.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(function(r){
+                // PIN cells are text; if one ever comes back numeric
+                // and lost its leading zero, restore the 4 digits.
+                let pin = vaPick(r,['pin']);
+                if(pin && /^\d{1,3}$/.test(pin)) pin = ('0000'+pin).slice(-4);
+                return '<tr><td>'+vaEsc(vaPick(r,['srno.','sr no','sr']))+'</td><td>'+vaEsc(vaPick(r,['tehsil']))+'</td><td>'+vaEsc(vaPick(r,['union council (uc)','union council','uc']))+'</td><td><strong>'+vaEsc(vaPick(r,['vaccinator name','name']))+'</strong></td><td>'+vaEsc(vaPick(r,['username']))+'</td><td><strong>'+vaEsc(pin || '—')+'</strong></td></tr>';
             }).join('');
         }
         async function vaRenderApk(){
