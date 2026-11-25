@@ -1137,6 +1137,34 @@ rcaInit();
         <button type="button" class="btn btn-outline" onclick="svDownloadExcel()">⬇ Download Excel</button>
         <button type="button" class="btn btn-outline" id="svPdfBtn" onclick="svDownloadPdf()">📄 Download PDF</button>
     </div>
+    <div style="margin-top:14px;padding:12px;background:#f0f7f4;border:1px solid #c8e6c9;border-radius:10px">
+        <div style="font-weight:700;color:#0d5c3d;margin-bottom:8px">🧪 Antigen-wise Report Generator</div>
+        <div class="emr-filter" style="margin-bottom:8px">
+            <label>Date
+                <select id="svAgMonth" onchange="svAgOnMonth()"></select>
+            </label>
+            <label>Tehsil
+                <select id="svAgTehsil" onchange="svAgPopulateUC()">
+                    <option value="">All Tehsils</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option><option>Lawa</option>
+                </select>
+            </label>
+            <label>UC
+                <select id="svAgUC">
+                    <option value="">All UCs</option>
+                </select>
+            </label>
+            <label>Antigen
+                <select id="svAgAntigen">
+                    <option value="">All Antigens</option>
+                </select>
+            </label>
+            <button type="button" class="btn" onclick="svAgGenerate()">▶ Generate Report</button>
+            <button type="button" class="btn btn-outline" id="svAgExcelBtn" onclick="svAgDownloadExcel()" disabled>⬇ Download Excel</button>
+            <button type="button" class="btn btn-outline" id="svAgPdfBtn" onclick="svAgDownloadPdf()" disabled>📄 Download PDF</button>
+        </div>
+        <div id="svAgStatus" style="font-size:12.5px;color:#555">Select Date, Tehsil, UC and Antigen, then press Generate Report. Based on Summary by Vaccinators monthly data (Compiled: Outreach + Fixed).</div>
+        <div id="svAgOut" style="overflow-x:auto;margin-top:8px"></div>
+    </div>
     <div id="svStatus">Loading…</div>
     <div style="overflow-x:auto">
         <table class="emr-table" id="svTable">
@@ -15446,8 +15474,189 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             }
             if(btn) btn.textContent = old || '📄 Download PDF';
         }
-        if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', function(){ svLoad(); }); }
-        else { svLoad(); }
+        // ===== Antigen-wise Report Generator (Summary monthly data) =====
+        var svAgExport = [], svAgTitle = '', svAgCache = {};
+        function svAgMonthLabel(m){
+            var sel = document.getElementById('svAgMonth');
+            if(sel){ for(var i = 0; i < sel.options.length; i++){ if(sel.options[i].value === m) return sel.options[i].text; } }
+            return m;
+        }
+        function svAgCompiledFrom(outRows, fixRows){
+            var map = {}, order = [];
+            function add(teh, uc, vals){
+                var k = teh.toUpperCase() + '|' + uc.toUpperCase();
+                if(!map[k]){ map[k] = {tehsil: teh, name: uc, vals: new Array(21).fill(0), total: 0}; order.push(k); }
+                for(var i = 0; i < 21; i++) map[k].vals[i] += vals[i];
+                map[k].total += vals.reduce(function(a, b){ return a + b; }, 0);
+            }
+            (outRows || []).forEach(function(r){ add(r.tehsil, r.name, r.vals); });
+            (fixRows || []).forEach(function(r){ var uc = svFacUC(r); if(uc) add(r.tehsil, uc, r.vals); });
+            return order.map(function(k){ return map[k]; });
+        }
+        async function svAgGetCompiled(m){
+            if(svAgCache[m]) return svAgCache[m];
+            var mSel = document.getElementById('svMonth');
+            var cur = mSel ? mSel.value : '';
+            var rows;
+            if(m === cur && svOutreachRows.length){ rows = svCompiledData().filter(function(r){ return !r.unmapped; }); }
+            else {
+                var out = await svFetchTab('Out_' + m);
+                var fix = await svFetchTab('Fix_' + m);
+                rows = svAgCompiledFrom(out, fix);
+            }
+            svAgCache[m] = rows;
+            return rows;
+        }
+        function svAgInit(){
+            var mSel = document.getElementById('svMonth');
+            var aSel = document.getElementById('svAgMonth');
+            if(mSel && aSel){
+                aSel.innerHTML = mSel.innerHTML;
+                aSel.value = mSel.value;
+            }
+            var agSel = document.getElementById('svAgAntigen');
+            if(agSel){
+                var html = '<option value="">All Antigens</option>';
+                SV_ANTIGENS.forEach(function(a){ html += '<option value="' + svEsc(a) + '">' + svEsc(a) + '</option>'; });
+                agSel.innerHTML = html;
+            }
+            svAgPopulateUC();
+        }
+        async function svAgPopulateUC(){
+            var ucSel = document.getElementById('svAgUC');
+            if(!ucSel) return;
+            var m = (document.getElementById('svAgMonth') || {}).value || '';
+            var teh = (document.getElementById('svAgTehsil') || {}).value || '';
+            var prev = ucSel.value;
+            try{
+                var rows = await svAgGetCompiled(m);
+                var seen = {}, list = [];
+                rows.forEach(function(r){
+                    if(teh && r.tehsil !== teh) return;
+                    var key = String(r.name || '').toUpperCase();
+                    if(key && !seen[key]){ seen[key] = 1; list.push(key); }
+                });
+                list.sort();
+                var html = '<option value="">All UCs</option>';
+                list.forEach(function(u){ html += '<option value="' + svEsc(u) + '">' + svEsc(svTitleUC(u)) + '</option>'; });
+                ucSel.innerHTML = html;
+                if(prev && seen[prev]) ucSel.value = prev;
+            }catch(e){ /* keep All UCs */ }
+        }
+        function svAgOnMonth(){ svAgPopulateUC(); }
+        async function svAgGenerate(){
+            var st = document.getElementById('svAgStatus');
+            var out = document.getElementById('svAgOut');
+            var m = (document.getElementById('svAgMonth') || {}).value || '';
+            var teh = (document.getElementById('svAgTehsil') || {}).value || '';
+            var uc = (document.getElementById('svAgUC') || {}).value || '';
+            var ag = (document.getElementById('svAgAntigen') || {}).value || '';
+            if(st) st.textContent = 'Generating report…';
+            try{
+                var rows = await svAgGetCompiled(m);
+                rows = rows.filter(function(r){
+                    if(teh && r.tehsil !== teh) return false;
+                    if(uc && String(r.name || '').toUpperCase() !== uc) return false;
+                    return true;
+                });
+                rows.sort(function(a, b){
+                    var ta = SV_TEHSILS.indexOf(a.tehsil), tb = SV_TEHSILS.indexOf(b.tehsil);
+                    if(ta !== tb) return ta - tb;
+                    return String(a.name).localeCompare(String(b.name));
+                });
+                var agIdx = ag ? SV_ANTIGENS.indexOf(ag) : -1;
+                var exp = [['Tehsil', 'UC', 'Antigen', 'Doses']];
+                var grand = 0, ucCount = 0;
+                rows.forEach(function(r){
+                    var emitted = false;
+                    for(var i = 0; i < 21; i++){
+                        if(agIdx >= 0 && i !== agIdx) continue;
+                        var v = r.vals[i] || 0;
+                        if(agIdx < 0 && v <= 0) continue;
+                        exp.push([r.tehsil, svTitleUC(r.name), SV_ANTIGENS[i], v]);
+                        grand += v; emitted = true;
+                    }
+                    if(emitted || agIdx >= 0) ucCount++;
+                });
+                exp.push(['', 'DISTRICT TOTAL', ag || 'All Antigens', grand]);
+                svAgExport = exp;
+                svAgTitle = 'Antigen-wise Report - ' + svAgMonthLabel(m) + (teh ? ' - ' + teh : '') + (uc ? ' - ' + svTitleUC(uc) : '') + (ag ? ' - ' + ag : '');
+                var html = '<table class="emr-table"><thead><tr><th>Tehsil</th><th>UC</th><th>Antigen</th><th>Doses</th></tr></thead><tbody>';
+                for(var i = 1; i < exp.length; i++){
+                    var r = exp[i];
+                    var isTotal = (r[1] === 'DISTRICT TOTAL');
+                    html += '<tr' + (isTotal ? ' style="background:#c8e6c9;font-weight:700"' : '') + '><td>' + svEsc(r[0]) + '</td><td>' + svEsc(r[1]) + '</td><td>' + svEsc(r[2]) + '</td><td>' + svNum(r[3]) + '</td></tr>';
+                }
+                html += '</tbody></table>';
+                if(out) out.innerHTML = html;
+                var eb = document.getElementById('svAgExcelBtn'), pb = document.getElementById('svAgPdfBtn');
+                if(eb) eb.disabled = false;
+                if(pb) pb.disabled = false;
+                if(st) st.textContent = svAgTitle + ' · ' + ucCount + ' UCs · ' + svNum(grand) + ' doses. Based on Summary by Vaccinators monthly data (Compiled: Outreach + Fixed).';
+            }catch(e){
+                console.error(e);
+                if(st) st.textContent = 'Failed to generate report. Please press Refresh Data and try again.';
+            }
+        }
+        function svAgFileName(ext){ return (svAgTitle || 'Antigen-wise Report').replace(/[\\/:*?"<>|]/g, '') + ext; }
+        function svAgDownloadExcel(){
+            if(!svAgExport.length){ alert('Please generate the report first.'); return; }
+            var ws = XLSX.utils.aoa_to_sheet(svAgExport);
+            ws['!cols'] = [{wch: 18}, {wch: 26}, {wch: 14}, {wch: 12}];
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Antigen-wise Report');
+            XLSX.writeFile(wb, svAgFileName('.xlsx'));
+        }
+        function svAgDownloadPdf(){
+            if(typeof window.jspdf === 'undefined'){ alert('The jsPDF library is missing. Please refresh the page.'); return; }
+            if(!svAgExport.length){ alert('Please generate the report first.'); return; }
+            var btn = document.getElementById('svAgPdfBtn');
+            var old = btn ? btn.textContent : '';
+            if(btn) btn.textContent = 'Preparing PDF…';
+            try{
+                var jsPDF = window.jspdf.jsPDF;
+                var pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                var pageW = pdf.internal.pageSize.getWidth();
+                var pageH = pdf.internal.pageSize.getHeight();
+                var margin = 12, usable = pageW - margin * 2;
+                var colW = [usable * 0.24, usable * 0.36, usable * 0.22, usable * 0.18];
+                var y = margin;
+                pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(13, 92, 61);
+                pdf.text(svAgTitle || 'Antigen-wise Report', pageW / 2, y, {align: 'center'}); y += 6;
+                pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(100, 100, 100);
+                pdf.text('EPI District Chakwal · Generated: ' + new Date().toLocaleString(), pageW / 2, y, {align: 'center'}); y += 7;
+                function drawHead(){
+                    pdf.setFillColor(13, 92, 61); pdf.rect(margin, y, usable, 7, 'F');
+                    pdf.setTextColor(255, 255, 255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
+                    var x = margin;
+                    ['Tehsil', 'UC', 'Antigen', 'Doses'].forEach(function(h, i){ pdf.text(h, x + 1.5, y + 4.8); x += colW[i]; });
+                    y += 7; pdf.setFont('helvetica', 'normal'); pdf.setTextColor(20, 20, 20);
+                }
+                drawHead();
+                for(var i = 1; i < svAgExport.length; i++){
+                    if(y + 6 > pageH - margin){ pdf.addPage(); y = margin; drawHead(); }
+                    var r = svAgExport[i];
+                    var isTotal = (r[1] === 'DISTRICT TOTAL');
+                    if(isTotal){ pdf.setFillColor(200, 230, 201); pdf.rect(margin, y, usable, 6, 'F'); pdf.setFont('helvetica', 'bold'); }
+                    else if(i % 2){ pdf.setFillColor(232, 245, 233); pdf.rect(margin, y, usable, 6, 'F'); }
+                    var x = margin;
+                    for(var c = 0; c < 4; c++){
+                        var val = (c === 3) ? svNum(r[c]) : String(r[c] == null ? '' : r[c]);
+                        pdf.text(val, x + 1.5, y + 4.2);
+                        x += colW[c];
+                    }
+                    if(isTotal) pdf.setFont('helvetica', 'normal');
+                    y += 6;
+                }
+                pdf.save(svAgFileName('.pdf'));
+            }catch(e){
+                console.error(e);
+                alert('PDF failed: ' + (e.message || e));
+            }
+            if(btn) btn.textContent = old || '📄 Download PDF';
+        }
+        if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', function(){ svLoad(); svAgInit(); }); }
+        else { svLoad(); svAgInit(); }
 
         // ===== Daily EPI Cards =====
         const CARDS_SHEET_ID = '1oOg0mHsMWvmRAykqSKvET2K6tcxlACoYD9ZxMfv9iVo'; /* 'EPI Daily Cards' Google Sheet (pakeagle6@gmail.com) */
