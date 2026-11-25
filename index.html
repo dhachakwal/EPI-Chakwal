@@ -1194,7 +1194,7 @@ rcaInit();
         <button type="button" class="emr-tab" data-mis="downloads" onclick="misTab('downloads')">Monthly Downloads</button>
     </div>
     <div id="misControls" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
-        <label style="font-size:13px;font-weight:600">Year<br><select id="misYear" onchange="misYearChange()" style="padding:6px 8px;border:1px solid #b7d8bf;border-radius:6px"><option value="2026">2026</option><option value="2025">2025</option></select></label>
+        <label style="font-size:13px;font-weight:600">Year<br><select id="misYear" onchange="misYearChange()" style="padding:6px 8px;border:1px solid #b7d8bf;border-radius:6px"><option value="all">All</option><option value="2026">2026</option><option value="2025">2025</option></select></label>
         <label style="font-size:13px;font-weight:600">From<br><select id="misFrom" onchange="misRender()" style="padding:6px 8px;border:1px solid #b7d8bf;border-radius:6px"></select></label>
         <label style="font-size:13px;font-weight:600">To<br><select id="misTo" onchange="misRender()" style="padding:6px 8px;border:1px solid #b7d8bf;border-radius:6px"></select></label>
     </div>
@@ -1219,11 +1219,13 @@ var MIS_GRAPH_ANT=6;
 var MIS_Q_ANT=6;
 function misTab(t){MIS_TAB=t;document.querySelectorAll('#misTabs .emr-tab').forEach(function(b){b.classList.toggle('active',b.dataset.mis===t);});misRender();}
 function misYear(){return document.getElementById('misYear').value;}
-function misYearMonths(){return MIS_MONTHS.filter(function(p){return p.indexOf(misYear())===0;});}
-function misFillMonths(){var ym=misYearMonths();['misFrom','misTo'].forEach(function(id){var s=document.getElementById(id);s.innerHTML='';ym.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=MIS_MLABELS[p];s.appendChild(o);});});document.getElementById('misFrom').value=ym[0];document.getElementById('misTo').value=ym[ym.length-1];}
-function misYearChange(){misFillMonths();misRender();}
-function misRange(){var ym=misYearMonths();var a=ym.indexOf(document.getElementById('misFrom').value);var b=ym.indexOf(document.getElementById('misTo').value);if(a>b){var t=a;a=b;b=t;}return ym.slice(a,b+1);}
-function misRangeLabel(){var r=misRange();return MIS_MLABELS[r[0]]+' – '+MIS_MLABELS[r[r.length-1]]+' '+misYear();}
+function misYears(){var y=misYear();if(y==='all')return ['2025','2026'];return [y];}
+function misYearMonths(){var ys=misYears();return MIS_MONTHS.filter(function(p){return ys.indexOf(p.slice(0,4))>=0;});}
+function misFillMonths(){['misFrom','misTo'].forEach(function(id){var s=document.getElementById(id);s.innerHTML='';var o=document.createElement('option');o.value='all';o.textContent='All';s.appendChild(o);['January','February','March','April','May','June','July','August','September','October','November','December'].forEach(function(mn,i){var oo=document.createElement('option');oo.value=String(i+1);oo.textContent=mn;s.appendChild(oo);});s.value='all';});}
+function misYearChange(){misRender();}
+function misRange(){var fv=document.getElementById('misFrom').value;var tv=document.getElementById('misTo').value;var a=fv==='all'?1:parseInt(fv,10);var b=tv==='all'?12:parseInt(tv,10);if(a>b){var t=a;a=b;b=t;}return misYearMonths().filter(function(p){var mn=parseInt(p.slice(5,7),10);return mn>=a&&mn<=b;});}
+function misRangeLabel(){var r=misRange();if(!r.length)return '';var y=misYear();var yl=y==='all'?'All Years':y;return MIS_MLABELS[r[0]]+' – '+MIS_MLABELS[r[r.length-1]]+' ('+yl+')';}
+function misCumMonths(){var r=misRange();if(!r.length)return r;var last=r[r.length-1];return MIS_MONTHS.filter(function(p){return p<=last&&misYears().indexOf(p.slice(0,4))>=0;});}
 function misCov(doses,target){return target>0?doses/target*100:0;}
 function misOverall(covs){var s=0;covs.forEach(function(c){s+=c;});return covs.length?s/covs.length:0;}
 function misRangeDoses(u,ms){return MIS_ANT.map(function(a,i){var d=0;ms.forEach(function(p){d+=u.m[p][i];});return d;});}
@@ -1245,10 +1247,10 @@ function misRender(){
     var ms=misRange();var head,rowHtml='';
     if(MIS_TAB==='coverage'||MIS_TAB==='cumulative'){
         var useMs=ms;
-        if(MIS_TAB==='cumulative'){var ym=misYearMonths();useMs=ym.slice(0,ym.indexOf(document.getElementById('misTo').value)+1);}
+        if(MIS_TAB==='cumulative'){useMs=misCumMonths();}
         head=['S.No','Tehsil','Union Council'].concat(MIS_ANT).concat(['Overall %']);
         MIS_UCS.forEach(function(u,i){var covs=misRangeCovs(u,useMs);rowHtml+='<tr><td>'+(i+1)+'</td><td>'+u.teh+'</td><td style="text-align:left">'+u.uc+'</td>'+covs.map(misCovCell).join('')+'<td style="font-weight:700">'+misFmt(misOverall(covs))+'</td></tr>';});
-        var note=MIS_TAB==='coverage'?('Coverage (%) against target — '+misRangeLabel()+'.'):('Cumulative coverage (%) January – '+MIS_MLABELS[useMs[useMs.length-1]]+' '+misYear()+' against target for elapsed months (yearly target = monthly target × 12).');
+        var note=MIS_TAB==='coverage'?('Coverage (%) against target — '+misRangeLabel()+'.'):('Cumulative coverage (%) January – '+MIS_MLABELS[useMs[useMs.length-1]]+' '+(misYear()==='all'?'All Years':misYear())+' against target for elapsed months (yearly target = monthly target × 12).');
         body.innerHTML='<p class="emr-note">'+note+'</p>'+misTable(head,rowHtml);return;
     }
     if(MIS_TAB==='dropout'){
@@ -1274,17 +1276,17 @@ function misRender(){
         var ai2=MIS_Q_ANT;var ym2=misYearMonths();
         var quarters=[['Q1 (Jan–Mar)',0],['Q2 (Apr–Jun)',3],['Q3 (Jul–Sep)',6],['Q4 (Oct–Dec)',9]];
         head=['S.No','Tehsil','Union Council'].concat(quarters.map(function(q){return q[0]+' %';}));
-        MIS_UCS.forEach(function(u,i){var cells=quarters.map(function(q){var qms=ym2.slice(q[1],q[1]+3);if(!qms.length)return '<td>—</td>';var d=0;qms.forEach(function(p){d+=u.m[p][ai2];});return misCovCell(misCov(d,misRangeTarget(u,qms,MIS_DEN[ai2])));}).join('');rowHtml+='<tr><td>'+(i+1)+'</td><td>'+u.teh+'</td><td style="text-align:left">'+u.uc+'</td>'+cells+'</tr>';});
-        body.innerHTML='<div style="margin-bottom:10px">'+misAntSelect('misQAnt',ai2,'misSetQAnt')+'</div><p class="emr-note">Quarterly coverage (%) for <strong>'+MIS_ANT[ai2]+'</strong> — '+misYear()+'.</p>'+misTable(head,rowHtml);return;
+        MIS_UCS.forEach(function(u,i){var cells=quarters.map(function(q){var qms=ym2.filter(function(p){var mn=parseInt(p.slice(5,7),10);return mn>=q[1]+1&&mn<=q[1]+3;});if(!qms.length)return '<td>—</td>';var d=0;qms.forEach(function(p){d+=u.m[p][ai2];});return misCovCell(misCov(d,misRangeTarget(u,qms,MIS_DEN[ai2])));}).join('');rowHtml+='<tr><td>'+(i+1)+'</td><td>'+u.teh+'</td><td style="text-align:left">'+u.uc+'</td>'+cells+'</tr>';});
+        body.innerHTML='<div style="margin-bottom:10px">'+misAntSelect('misQAnt',ai2,'misSetQAnt')+'</div><p class="emr-note">Quarterly coverage (%) for <strong>'+MIS_ANT[ai2]+'</strong> — '+(misYear()==='all'?'All Years':misYear())+'.</p>'+misTable(head,rowHtml);return;
     }
     function tehAgg(perList){return MIS_TEHS.map(function(th){var us=MIS_UCS.filter(function(u){return u.teh===th;});var doses=MIS_ANT.map(function(a,ai){var d=0;us.forEach(function(u){perList.forEach(function(p){d+=u.m[p][ai];});});return d;});var tg=[0,0,0,0];us.forEach(function(u){perList.forEach(function(p){u.t[p].forEach(function(v,i){tg[i]+=v;});});});var td=[0,0];us.forEach(function(u){perList.forEach(function(p){td[0]+=u.td[p][0];td[1]+=u.td[p][1];});});return {th:th,n:us.length,doses:doses,tg:tg,td:td};});}
     if(MIS_TAB==='tehsum'||MIS_TAB==='tehcum'){
         var useMs2=ms;
-        if(MIS_TAB==='tehcum'){var ym3=misYearMonths();useMs2=ym3.slice(0,ym3.indexOf(document.getElementById('misTo').value)+1);}
+        if(MIS_TAB==='tehcum'){useMs2=misCumMonths();}
         var agg=tehAgg(useMs2);
         head=['Tehsil','UCs'].concat(MIS_ANT).concat(['Overall %']);
         agg.forEach(function(a){var covs=MIS_ANT.map(function(x,ai){return misCov(a.doses[ai],a.tg[MIS_DEN[ai]]);});rowHtml+='<tr><td style="text-align:left;font-weight:600">'+a.th+'</td><td>'+a.n+'</td>'+covs.map(misCovCell).join('')+'<td style="font-weight:700">'+misFmt(misOverall(covs))+'</td></tr>';});
-        body.innerHTML='<p class="emr-note">'+(MIS_TAB==='tehsum'?('Tehsil-wise coverage (%) — '+misRangeLabel()+'.'):'Tehsil-wise cumulative coverage (%) — January – '+MIS_MLABELS[useMs2[useMs2.length-1]]+' '+misYear()+'.')+'</p>'+misTable(head,rowHtml);return;
+        body.innerHTML='<p class="emr-note">'+(MIS_TAB==='tehsum'?('Tehsil-wise coverage (%) — '+misRangeLabel()+'.'):'Tehsil-wise cumulative coverage (%) — January – '+MIS_MLABELS[useMs2[useMs2.length-1]]+' '+(misYear()==='all'?'All Years':misYear())+'.')+'</p>'+misTable(head,rowHtml);return;
     }
     if(MIS_TAB==='tehdrop'){
         var agg2=tehAgg(ms);
@@ -1293,11 +1295,11 @@ function misRender(){
         body.innerHTML='<p class="emr-note">Tehsil-wise drop out rate (%) — '+misRangeLabel()+'. Tehsils in order: Chakwal, Choa Saidan Shah, Kallar Kahar, Talagang.</p>'+misTable(head,rowHtml);return;
     }
     if(MIS_TAB==='tehgraph'){
-        rowHtml=ms.map(function(p){var agg3=tehAgg([p]);var cells=agg3.map(function(a){var covs=MIS_ANT.map(function(x,ai){return misCov(a.doses[ai],a.tg[MIS_DEN[ai]]);});var ov=misOverall(covs);var w=Math.min(100,ov);var col=ov>=90?'#1a9850':(ov>=70?'#e6a817':(ov>=50?'#e67e22':'#d64545'));return '<div style="display:flex;align-items:center;gap:8px;margin:2px 0;font-size:12px"><div style="width:130px;text-align:right">'+a.th+'</div><div style="flex:1;background:#eef4ef;border-radius:4px"><div style="width:'+w+'%;background:'+col+';height:14px;border-radius:4px"></div></div><div style="width:60px">'+misFmt(ov)+'%</div></div>';}).join('');return '<div style="margin:10px 0"><div style="font-weight:700;font-size:13px">'+MIS_MLABELS[p]+' '+misYear()+'</div>'+cells+'</div>';}).join('');
+        rowHtml=ms.map(function(p){var agg3=tehAgg([p]);var cells=agg3.map(function(a){var covs=MIS_ANT.map(function(x,ai){return misCov(a.doses[ai],a.tg[MIS_DEN[ai]]);});var ov=misOverall(covs);var w=Math.min(100,ov);var col=ov>=90?'#1a9850':(ov>=70?'#e6a817':(ov>=50?'#e67e22':'#d64545'));return '<div style="display:flex;align-items:center;gap:8px;margin:2px 0;font-size:12px"><div style="width:130px;text-align:right">'+a.th+'</div><div style="flex:1;background:#eef4ef;border-radius:4px"><div style="width:'+w+'%;background:'+col+';height:14px;border-radius:4px"></div></div><div style="width:60px">'+misFmt(ov)+'%</div></div>';}).join('');return '<div style="margin:10px 0"><div style="font-weight:700;font-size:13px">'+MIS_MLABELS[p]+' '+p.slice(0,4)+'</div>'+cells+'</div>';}).join('');
         body.innerHTML='<p class="emr-note">Tehsil-wise overall coverage (%) by month — '+misRangeLabel()+'.</p>'+rowHtml;return;
     }
 }
-(function(){misFillMonths();misRender();})();
+(function(){document.getElementById('misYear').value='2026';misFillMonths();misRender();})();
 </script>
 
 <div class="section-title" id="section-emr" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
