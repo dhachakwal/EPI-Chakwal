@@ -15476,6 +15476,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         }
         // ===== Antigen-wise Report Generator (Summary monthly data) =====
         var svAgExport = [], svAgTitle = '', svAgCache = {};
+        function svAgTotalLabel(teh, uc){ return uc ? 'TOTAL' : (teh ? 'TEHSIL TOTAL' : 'DISTRICT TOTAL'); }
         function svAgMonthLabel(m){
             var sel = document.getElementById('svAgMonth');
             if(sel){ for(var i = 0; i < sel.options.length; i++){ if(sel.options[i].value === m) return sel.options[i].text; } }
@@ -15578,13 +15579,13 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                     }
                     if(emitted || agIdx >= 0) ucCount++;
                 });
-                exp.push(['', 'DISTRICT TOTAL', ag || 'All Antigens', grand]);
+                exp.push(['', svAgTotalLabel(teh, uc), ag || 'All Antigens', grand]);
                 svAgExport = exp;
                 svAgTitle = 'Antigen-wise Report - ' + svAgMonthLabel(m) + (teh ? ' - ' + teh : '') + (uc ? ' - ' + svTitleUC(uc) : '') + (ag ? ' - ' + ag : '');
                 var html = '<table class="emr-table"><thead><tr><th>Tehsil</th><th>UC</th><th>Antigen</th><th>Doses</th></tr></thead><tbody>';
                 for(var i = 1; i < exp.length; i++){
                     var r = exp[i];
-                    var isTotal = (r[1] === 'DISTRICT TOTAL');
+                    var isTotal = (r[1] === 'DISTRICT TOTAL' || r[1] === 'TEHSIL TOTAL' || r[1] === 'TOTAL');
                     html += '<tr' + (isTotal ? ' style="background:#c8e6c9;font-weight:700"' : '') + '><td>' + svEsc(r[0]) + '</td><td>' + svEsc(r[1]) + '</td><td>' + svEsc(r[2]) + '</td><td>' + svNum(r[3]) + '</td></tr>';
                 }
                 html += '</tbody></table>';
@@ -15636,7 +15637,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 for(var i = 1; i < svAgExport.length; i++){
                     if(y + 6 > pageH - margin){ pdf.addPage(); y = margin; drawHead(); }
                     var r = svAgExport[i];
-                    var isTotal = (r[1] === 'DISTRICT TOTAL');
+                    var isTotal = (r[1] === 'DISTRICT TOTAL' || r[1] === 'TEHSIL TOTAL' || r[1] === 'TOTAL');
                     if(isTotal){ pdf.setFillColor(200, 230, 201); pdf.rect(margin, y, usable, 6, 'F'); pdf.setFont('helvetica', 'bold'); }
                     else if(i % 2){ pdf.setFillColor(232, 245, 233); pdf.rect(margin, y, usable, 6, 'F'); }
                     var x = margin;
