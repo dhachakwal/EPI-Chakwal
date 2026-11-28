@@ -1128,12 +1128,14 @@ rcaInit();
             </select>
         </label>
         <label>Tehsil
-            <select id="svTehsil" onchange="svRender()">
+            <select id="svTehsil" onchange="svTehsilChange()">
                 <option value="">All Tehsils</option><option>Chakwal</option><option>Choa Saidan Shah</option><option>Kallar Kahar</option><option>Talagang</option><option>Lawa</option>
             </select>
         </label>
         <label>Search
-            <input type="text" id="svSearch" placeholder="UC / facility name…" oninput="svRender()">
+            <select id="svSearch" onchange="svRender()">
+                <option value="">All UCs</option>
+            </select>
         </label>
         <button type="button" class="btn" onclick="svLoad()">🔄 Refresh Data</button>
         <button type="button" class="btn btn-outline" onclick="svDownloadExcel()">⬇ Download Excel</button>
@@ -2726,18 +2728,106 @@ function cmpRender(){
             
                 <div class="download-card train-card" style="grid-column:1/-1;text-align:left">
                     <h3 style="color:#5e35b1;margin-bottom:6px">📚 EPI Training Material / Library</h3>
-                    <p style="margin-bottom:4px">12 training files from the renamed archive, arranged category-wise</p>
+                    <p style="margin-bottom:4px">73 training files, arranged category-wise</p>
 
                     <div class="train-tabs" id="trainTabs">
-                        <button type="button" class="train-tab active" onclick="showTrainTab('polio', this)">Polio / NID-SNID (2)</button>
-                        <button type="button" class="train-tab" onclick="showTrainTab('campaigns', this)">Campaign Trainings (1)</button>
-                        <button type="button" class="train-tab" onclick="showTrainTab('coldchain', this)">Vaccine &amp; Cold Chain (2)</button>
-                        <button type="button" class="train-tab" onclick="showTrainTab('guidelines', this)">Guidelines &amp; SOPs (2)</button>
+                        <button type="button" class="train-tab active" onclick="showTrainTab('epi', this)">EPI / Routine Immunization (7)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('polio', this)">Polio / NID-SNID (8)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('sbc', this)">SBC &amp; Communication (3)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('campaigns', this)">Campaign Trainings (6)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('data', this)">Data Tools &amp; MIS (2)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('coldchain', this)">Vaccine &amp; Cold Chain (7)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('surveillance', this)">Surveillance &amp; AEFI (4)</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('guidelines', this)">Guidelines &amp; SOPs (15)</button>
                         <button type="button" class="train-tab" onclick="showTrainTab('presentations', this)">Presentations (5)</button>
                         <button type="button" class="train-tab" onclick="showTrainTab('nid-dec-2026', this)">NID Dec 2026 Training Material</button>
+                        <button type="button" class="train-tab" onclick="showTrainTab('other', this)">Other Trainings (16)</button>
                     </div>
 
-                    <div id="train-polio" class="train-panel active">
+                    <div id="train-epi" class="train-panel active">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>10. Final Module 5- Managing Immunization session</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1P9hUuOhhbFticxlPdL3ePO48plfe0prK/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1P9hUuOhhbFticxlPdL3ePO48plfe0prK" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>12.Final Module7 Immunization Communication</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1Lkjkq0YPRWu-vmFLy0iaKeW71jUydL7w/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1Lkjkq0YPRWu-vmFLy0iaKeW71jUydL7w" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Agenda for Team Assistants</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1EiGdUTBNvGk7PaQrvAyTE9dYy1lD7-Vc/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1EiGdUTBNvGk7PaQrvAyTE9dYy1lD7-Vc" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 4_Microplanning for Reaching Every Community_ Urdu</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/13aPdQNmu8cjD7QOFOM1ii03r0VaTR27t/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=13aPdQNmu8cjD7QOFOM1ii03r0VaTR27t" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 5_Managing an Immunization Session _ Urdu</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1gHLDtGS2mwzsDLrN-zPvKBxuv4ARscIY/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1gHLDtGS2mwzsDLrN-zPvKBxuv4ARscIY" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 7_IPC for Immunization_Urdu</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1FNvTte0k6DTW8hFyaZTNzm2UZyFv9Ya3/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1FNvTte0k6DTW8hFyaZTNzm2UZyFv9Ya3" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SIS Training plan</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1W4H2oiG1zpe9zdQZwu8jnPDNnZj8gf2d/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1W4H2oiG1zpe9zdQZwu8jnPDNnZj8gf2d" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-polio" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Chakwal  Team Training Plan</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1mF-M4fg34OqNy-1w7HDj64wOTB_TqlLX/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1mF-M4fg34OqNy-1w7HDj64wOTB_TqlLX" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
                         <div class="train-item">
                             <div class="train-item-info">
                                 <h4>Guidelines for UCMOs Regarding NA Children - Finger Marking Photo and Written Report After Vaccination - No.5710-Estab - 09-09-2024</h4>
@@ -2746,6 +2836,56 @@ function cmpRender(){
                             <div class="train-btns">
                                 <a href="https://drive.google.com/file/d/1CNYiyNy9TDF-r7893fe3bRSrkWr8kC07/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
                                 <a href="https://drive.google.com/uc?export=download&id=1CNYiyNy9TDF-r7893fe3bRSrkWr8kC07" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SOPs for Cleanliness of Cold Box-Standard Vaccine Carrier and Polio Vaccine Carrier (Urdu)</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1sLVoB7omfdLf-ZoZmjwKd5lO0D1snQte/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1sLVoB7omfdLf-ZoZmjwKd5lO0D1snQte" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Team Training Plan Nov 23</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/19nml5CWWJQn4oaOpp7EgR7yfxZma4ql8/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=19nml5CWWJQn4oaOpp7EgR7yfxZma4ql8" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Team Training Plan SNID Dec</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1UgSrPkS198WrlVDBu4yf2kapWU8DcNsJ/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1UgSrPkS198WrlVDBu4yf2kapWU8DcNsJ" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Team Training Plans Nid April 2026</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/15WZvgkUyFh6PJ45Gaaq0RwTx-wm7sFbN/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=15WZvgkUyFh6PJ45Gaaq0RwTx-wm7sFbN" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Team Training Plans Nid Feb 2026</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/18uaUXRFkEipTg0Kzl2L8HmH00BS03g_f/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=18uaUXRFkEipTg0Kzl2L8HmH00BS03g_f" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
                             </div>
                         </div>
                         <div class="train-item">
@@ -2760,7 +2900,70 @@ function cmpRender(){
                         </div>
                     </div>
 
+                    <div id="train-sbc" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>ACSM District Cascade Training plan</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1kmAurZo_EAiWcsMsDcv1uMVgZHvE5N3s/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1kmAurZo_EAiWcsMsDcv1uMVgZHvE5N3s" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Chapter-10- Immunization Module - Cold Chain &amp; SBC Section</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1aOsFXPGaLJme9DrgC31x9TY7ExSZF0Tj/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1aOsFXPGaLJme9DrgC31x9TY7ExSZF0Tj" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SBC, IPCI &amp; CC Presentation for Senior Officials (1)</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1izIHTBtGfQiVfmH_UFvW-jZgWxS9y0tF/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1izIHTBtGfQiVfmH_UFvW-jZgWxS9y0tF" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="train-campaigns" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Agenda - Provincial Workshop on District POA and Microplanning using RED-REC &amp; BCU Strategy for 2025</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1TF4HPHiNVb_gSglPZCcXN6khUlWwcNiU/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1TF4HPHiNVb_gSglPZCcXN6khUlWwcNiU" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Agenda for District Cascade Microplanning Training for HPV &amp; MR campaign2025</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1DI-VHXkfkAztkNpKbpnFfEGyGov-6Nt2/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1DI-VHXkfkAztkNpKbpnFfEGyGov-6Nt2" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>BCU - District Cascade Training Plan Chakwal NEW</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/16TbFkh0aw_UKfuLtgSbX19p90CNpq1MP/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=16TbFkh0aw_UKfuLtgSbX19p90CNpq1MP" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
                         <div class="train-item">
                             <div class="train-item-info">
                                 <h4>BCU Round-II Guidelines, 17 Feb-15 Mar 2025 (04 Feb 2025)</h4>
@@ -2771,9 +2974,82 @@ function cmpRender(){
                                 <a href="https://drive.google.com/uc?export=download&id=1Wu5qcR9rV8JfyU_FNAL3yuIgmjSQn5CL" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
                             </div>
                         </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>DDM SOPs BCU Round 2</h4>
+                                <p>Image file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1TgKITfKTEDgTSHeLss8yRA9j6kg-kFGJ/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1TgKITfKTEDgTSHeLss8yRA9j6kg-kFGJ" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Updated BCU Monitoring Presentation</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1XSmklr7-3YDIzmiCGCHubBY8p7IGQvIb/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1XSmklr7-3YDIzmiCGCHubBY8p7IGQvIb" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-data" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Agenda - eDDM Training 2025</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1zet9qsCtN3uMvF-mQOTSaXZRzPMJqX1G/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1zet9qsCtN3uMvF-mQOTSaXZRzPMJqX1G" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Divisional Cascade Training Plan on EPI Data System Chakwal</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1Wvg7H2w2c2MeHLBRX5b2NW0KfaSK-FH3/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1Wvg7H2w2c2MeHLBRX5b2NW0KfaSK-FH3" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="train-coldchain" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>5. Final Module 2- Cold Chain</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1n0gszjlUrWq2vuqgMtt8dPogGGvGfHUz/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1n0gszjlUrWq2vuqgMtt8dPogGGvGfHUz" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Guidelines regarding Repair and Maintenanace of Cold Chain Equipments </h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1Sl_QNoxqbYWm5lsnUt3hqQKJDGg--7Ja/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1Sl_QNoxqbYWm5lsnUt3hqQKJDGg--7Ja" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 2_The Vaccine Cold Chain_Urdu (1)</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1vJyLFGzXeInQO1vZGB7ux0oP9iqG5AiQ/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1vJyLFGzXeInQO1vZGB7ux0oP9iqG5AiQ" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
                         <div class="train-item">
                             <div class="train-item-info">
                                 <h4>SOPs and Guidelines Regarding Vaccine Management and Cold Chain Inventory - Maryam Nawaz Health Clinics - 31-07</h4>
@@ -2794,9 +3070,92 @@ function cmpRender(){
                                 <a href="https://drive.google.com/uc?export=download&id=1CNSNRAdPSI4cebSnEwtATnvmBzZhUN1q" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
                             </div>
                         </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SOPs, Guidelines Regarding Vaccine Management &amp; Cold Chain Inventory</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1YW5-jnc8VvbdaiJehTPqg9RcNs-riG2-/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1YW5-jnc8VvbdaiJehTPqg9RcNs-riG2-" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Training Plan vaccine Management Chakwal</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1H7ymEWDrpnDsyuALkRmiJ488ID2jL82q/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1H7ymEWDrpnDsyuALkRmiJ488ID2jL82q" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-surveillance" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>7. Final Module 6- Monitoring and Surveillance</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1RmZzwBvn623yCxMfW_lYsMCN-87PMs6_/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1RmZzwBvn623yCxMfW_lYsMCN-87PMs6_" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 6_ Monitoring and Surveillance_Urdu</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1z1jQ2WzQRFzB7hxXiQEtpAqt1CaKvvCb/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1z1jQ2WzQRFzB7hxXiQEtpAqt1CaKvvCb" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Revised SOPs for Measles-Rubella Surveillance</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1BEe7Ktgv1kMz8wzYAkgIt7EEMaXK7EKx/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1BEe7Ktgv1kMz8wzYAkgIt7EEMaXK7EKx" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Template for Cascade Training Plan  on VPDs &amp; AEFI Surveillance Jan-22 (1)</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1Pt85Ev_qjccVUd5xIdhd6flAZRXBw4hz/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1Pt85Ev_qjccVUd5xIdhd6flAZRXBw4hz" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="train-guidelines" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>EPI M.P Guidelines 2021</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1KG30sFGS35MneMdt31lNhvxOL91rl0Td/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1KG30sFGS35MneMdt31lNhvxOL91rl0Td" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Guidelines for AICs and UCMOs Training. May 2025</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/14WdG2atQ1arf4-o3gjOIkFs2c8OOkbN9/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=14WdG2atQ1arf4-o3gjOIkFs2c8OOkbN9" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
                         <div class="train-item">
                             <div class="train-item-info">
                                 <h4>Guidelines for Developing UC-wise Action Plan - POA Weak UCs District Chakwal 2022</h4>
@@ -2809,12 +3168,122 @@ function cmpRender(){
                         </div>
                         <div class="train-item">
                             <div class="train-item-info">
+                                <h4>Implementation of Diphtheria Case Investigation &amp; Response Guidelines</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1YbckqZLc0gCIigcVeojejYTUpx0SFuUo/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1YbckqZLc0gCIigcVeojejYTUpx0SFuUo" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>MR Operational Guidelines 2025</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/19ORP_WdaLVf0r-Fc73ZNf1PXYriZ7uUj/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=19ORP_WdaLVf0r-Fc73ZNf1PXYriZ7uUj" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>One_Page_SOP_Returned_Unopened_Vaccine_Vials_Clear</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1lx674nJTJfdw8-Mo4knCuFmD_LIG9Tzx/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1lx674nJTJfdw8-Mo4knCuFmD_LIG9Tzx" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SMC Tracker - User Manualv2</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1q_aB9HOfOUZVw6UOrr0coCexEAnPPd6n/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1q_aB9HOfOUZVw6UOrr0coCexEAnPPd6n" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SOPs for Cleanliness of ILR (Urdu)</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1D_YAhj6U4-v54Sx1PQ47uA4GIdSabC-x/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1D_YAhj6U4-v54Sx1PQ47uA4GIdSabC-x" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SOPs for Vaccine Vials Handling (Urdu)</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1HrzNdVQK_dIf_wJf24allVTa9nuiwASX/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1HrzNdVQK_dIf_wJf24allVTa9nuiwASX" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>SOPs on UC Level Data Recording and Archiving (1)</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1A-sB4KK8IFmT8lYRYRBam9jq94h5AwJB/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1A-sB4KK8IFmT8lYRYRBam9jq94h5AwJB" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Special Guidelines for FLWs.</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1RNlaPtlNI994XSP0dEDJKJ-g-xiEdxhN/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1RNlaPtlNI994XSP0dEDJKJ-g-xiEdxhN" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
                                 <h4>Standard Operating Procedures for Multidose Vial Policy Especially for MR Vaccine - 06-03-2025</h4>
                                 <p>PDF file</p>
                             </div>
                             <div class="train-btns">
                                 <a href="https://drive.google.com/file/d/1v7uA8WsUtYDURw4KVEW6Z67-5feywP9f/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
                                 <a href="https://drive.google.com/uc?export=download&id=1v7uA8WsUtYDURw4KVEW6Z67-5feywP9f" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Training manual </h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1W9UgvmQM4ji2ZlHwHwGyu7qdHZJjtYSv/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1W9UgvmQM4ji2ZlHwHwGyu7qdHZJjtYSv" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Vaccinators Guideline</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1wndGOpqgPsc81B7Kt2baPFIHioWffaG3/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1wndGOpqgPsc81B7Kt2baPFIHioWffaG3" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>VaccineCarrierColdBox-guideline-2021</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1We0_5ZVy9HFwUHDY5yLBio04RFtDOsOd/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1We0_5ZVy9HFwUHDY5yLBio04RFtDOsOd" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
                             </div>
                         </div>
                     </div>
@@ -2880,6 +3349,169 @@ function cmpRender(){
                             </div>
                             <div class="train-btns">
                                 <a href="https://drive.google.com/drive/folders/1d8DIy3yQzL2A18KyJBKY4HSr6IRrqvLs" class="btn btn-purple btn-sm" target="_blank" rel="noopener">Open Folder</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="train-other" class="train-panel">
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>8. Module3 SafeInjection</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1XmEcZqZ0f9WWYLplj3oIuS1mszcoWszq/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1XmEcZqZ0f9WWYLplj3oIuS1mszcoWszq" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Agenda - 2 Days District TOT  2026</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1GuKHdfuFaKuU21ADDf9Caxfxu0g0bFos/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1GuKHdfuFaKuU21ADDf9Caxfxu0g0bFos" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Agenda for Training of UCMO AICs</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/11aYKknncLwNyjOpjoetZvYMxZzmNq1zO/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=11aYKknncLwNyjOpjoetZvYMxZzmNq1zO" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>AIC, UCMOs training Agenda Feb 2026</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1RaIjR8P3SWLJd1mcxwi7vOmlmORHtbUJ/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1RaIjR8P3SWLJd1mcxwi7vOmlmORHtbUJ" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>AIC, UCMOs training Agenda Oct 2025</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/10dRdKaCys9qORtivik7BbL_4Z3Jf6m2g/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=10dRdKaCys9qORtivik7BbL_4Z3Jf6m2g" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Cascade Training Plan (1)</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1TlKfVwvtkm-6BeYLxfiRpI3yyOPgTsvu/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1TlKfVwvtkm-6BeYLxfiRpI3yyOPgTsvu" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Cascade Training Plan Tehsil Level District Chakwal</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1kV-fm73KicF_cd5CbKlONSXuZeW1drwa/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1kV-fm73KicF_cd5CbKlONSXuZeW1drwa" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Draft Agenda - Cascade Training on Big Catch Up 2024</h4>
+                                <p>Word file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1JGODooU52dx0DYb-BBXChqj4RWIv1ypt/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1JGODooU52dx0DYb-BBXChqj4RWIv1ypt" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>IPCI Urdu Presentation for Supervisors (1)</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/13ng0gLnxFlU4pw8Ter_540ZpvizJMmUU/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=13ng0gLnxFlU4pw8Ter_540ZpvizJMmUU" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 1_Target Diseases and Vaccines_Urdu</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1YTo9_wAJ0WFt9t_qCVo8XZiP9Y16FeTl/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1YTo9_wAJ0WFt9t_qCVo8XZiP9Y16FeTl" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module 3_Ensuring Safe Injections_Urdu (1)</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1B2WZyCSWQ6klryuCu0EmTAf7nskJ0gpo/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1B2WZyCSWQ6klryuCu0EmTAf7nskJ0gpo" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Module HSA Green</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/12kYiH2DK5Z_T3jklSTpyTVStqTg-OYps/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=12kYiH2DK5Z_T3jklSTpyTVStqTg-OYps" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Operational MR Training Plan</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1_iSOOh8z1YLzrvAJInvS7E_2skY2zcMO/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1_iSOOh8z1YLzrvAJInvS7E_2skY2zcMO" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>TPVICS_Handout_2_PJ_214_CHAKWAL</h4>
+                                <p>PDF file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1hi0bynCSa-haqJINYAEJvz0DiDSpd833/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1hi0bynCSa-haqJINYAEJvz0DiDSpd833" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>Training plans UPDATED</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/1EhJJhrrWOpM343ncgaaHHBdUyym3oMNT/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=1EhJJhrrWOpM343ncgaaHHBdUyym3oMNT" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
+                            </div>
+                        </div>
+                        <div class="train-item">
+                            <div class="train-item-info">
+                                <h4>UCMO Aic training plan</h4>
+                                <p>Excel file</p>
+                            </div>
+                            <div class="train-btns">
+                                <a href="https://drive.google.com/file/d/185ZGPJegTD2HmdtBQP2ZTH8rNjBFkozU/view" class="btn btn-purple btn-sm" target="_blank" rel="noopener">View</a>
+                                <a href="https://drive.google.com/uc?export=download&id=185ZGPJegTD2HmdtBQP2ZTH8rNjBFkozU" class="btn btn-purple-outline btn-sm" target="_blank" rel="noopener">Download</a>
                             </div>
                         </div>
                     </div>
@@ -15490,13 +16122,89 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             'mnhcwanhartalagangchakwal': 'BIDHAR',
             'mnhcbhillomartalagangchakwal': 'BHILOMAR',
             'ruralhealthcenterkotqazitalagangchakwal': 'KOT QAZI',
-            'tehsilheadquarterhospitaltalagangchakwal': 'TALAGANG URBAN II'
+            'tehsilheadquarterhospitaltalagangchakwal': 'TALAGANG URBAN II',
+            'dhqhospitalchakwal': 'CHAKWAL URBAN V',
+            'cityhospitaltalagang': 'TALAGANG URBAN 1',
+            'thqhospitalchoasaidanshah': 'CHOA SAIDAN SHAH',
+            'thqhospitalkallarkahar': 'KALLAR KAHAR',
+            'thqhospitaltalagang': 'TALAGANG URBAN 2'
         };
         function svNormName(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
         function svEsc(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
         function svTitleUC(s){ return String(s || '').toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); }).replace(/\b(Ii|Iii|Iv|Vi)\b/g, function(m){ return m.toUpperCase(); }); }
         function svNum(n){ return Number(n || 0).toLocaleString('en-US'); }
-        function svFacUC(f){ return SV_FAC_UC[svNormName(f.name)] || ''; }
+        function svUCIndex(outRows){
+            const idx = {};
+            (outRows || svOutreachRows || []).forEach(function(r){ idx[svNormName(r.name)] = r; });
+            return idx;
+        }
+        function svFacUC(f, outRows){
+            const idx = svUCIndex(outRows);
+            const direct = SV_FAC_UC[svNormName(f.name)];
+            if(direct){
+                const canon = idx[svNormName(direct)];
+                return canon ? canon.name : direct;
+            }
+            const n = svNormName(f.name);
+            if(n.indexOf('epicenteruc') === 0){
+                const m = idx[n.slice(11)];
+                if(m) return m.name;
+            }
+            let best = '';
+            Object.keys(idx).forEach(function(k){
+                if(k.length >= 4 && n.indexOf(k) >= 0 && k.length > best.length) best = k;
+            });
+            return best ? idx[best].name : '';
+        }
+        function svFacTehsil(f, uc, outRows){
+            if(uc){
+                const m = svUCIndex(outRows)[svNormName(uc)];
+                if(m) return m.tehsil;
+            }
+            const n = svNormName(f.name);
+            if(n.indexOf('talagang') >= 0) return 'Talagang';
+            if(n.indexOf('choasaidanshah') >= 0) return 'Choa Saidan Shah';
+            if(n.indexOf('kallarkahar') >= 0) return 'Kallar Kahar';
+            return f.tehsil;
+        }
+        function svPopulateSearch(){
+            const sel = document.getElementById('svSearch');
+            if(!sel) return;
+            const tehEl = document.getElementById('svTehsil');
+            const tehF = tehEl ? tehEl.value : '';
+            const prev = sel.value;
+            let html = '';
+            if(svMode === 'fixed'){
+                html = '<option value="">All Facilities</option>';
+                const seen = {};
+                const facs = svFixedRows.filter(function(r){ return !tehF || svFacTehsil(r, svFacUC(r)) === tehF; })
+                    .slice().sort(function(a, b){ return String(a.name).localeCompare(String(b.name)); });
+                facs.forEach(function(r){
+                    if(seen[r.name]) return; seen[r.name] = 1;
+                    const uc = svFacUC(r);
+                    html += '<option value="' + svEsc(r.name) + '">' + svEsc(r.name) + (uc ? ' — UC ' + svEsc(svTitleUC(uc)) : '') + '</option>';
+                });
+            } else {
+                html = '<option value="">All UCs</option>';
+                const seen = {};
+                const ucs = svOutreachRows.filter(function(r){ return !tehF || r.tehsil === tehF; })
+                    .slice().sort(function(a, b){ return String(a.name).localeCompare(String(b.name)); });
+                ucs.forEach(function(r){
+                    const k = String(r.name || '').toUpperCase();
+                    if(!k || seen[k]) return; seen[k] = 1;
+                    html += '<option value="' + svEsc(k) + '">' + svEsc(svTitleUC(k)) + '</option>';
+                });
+            }
+            sel.innerHTML = html;
+            sel.value = prev;
+            if(sel.value !== prev) sel.value = '';
+        }
+        function svTehsilChange(){
+            const sel = document.getElementById('svSearch');
+            if(sel) sel.value = '';
+            svPopulateSearch();
+            svRender();
+        }
         async function svFetchTab(tab){
             const url = 'https://docs.google.com/spreadsheets/d/' + SV_SHEET_ID + '/gviz/tq?tqx=out:json&headers=1&sheet=' + encodeURIComponent(tab);
             const res = await fetch(url);
@@ -15528,6 +16236,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             try{
                 svOutreachRows = await svFetchTab('Out_' + m);
                 svFixedRows = await svFetchTab('Fix_' + m);
+                svPopulateSearch();
                 svRender();
                 const asof = document.getElementById('svSectionAsOf');
                 if(asof){
@@ -15543,6 +16252,9 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
         function svSwitch(mode){
             svMode = mode;
             document.querySelectorAll('#svTabs .emr-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-sv') === mode); });
+            const sel = document.getElementById('svSearch');
+            if(sel) sel.value = '';
+            svPopulateSearch();
             svRender();
         }
         function svCompiledData(){
@@ -15557,7 +16269,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             const unmapped = {};
             svFixedRows.forEach(function(r){
                 const uc = svFacUC(r);
-                if(uc){ add(r.tehsil, uc, r.vals); }
+                if(uc){ add(svFacTehsil(r, uc), uc, r.vals); }
                 else{
                     if(!unmapped[r.tehsil]) unmapped[r.tehsil] = {vals: new Array(21).fill(0), total: 0, names: []};
                     for(let i = 0; i < 21; i++) unmapped[r.tehsil].vals[i] += r.vals[i];
@@ -15582,7 +16294,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             let cols, rows;
             if(svMode === 'fixed'){
                 cols = ['Tehsil', 'Facility', 'UC'].concat(SV_ANTIGENS, ['Total']);
-                rows = svFixedRows.map(function(r){ return {tehsil: r.tehsil, label: r.name, sub: svFacUC(r), vals: r.vals, total: r.total}; });
+                rows = svFixedRows.map(function(r){ const uc = svFacUC(r); return {tehsil: svFacTehsil(r, uc), label: r.name, sub: uc, vals: r.vals, total: r.total}; });
             } else if(svMode === 'compiled'){
                 cols = ['Tehsil', 'UC'].concat(SV_ANTIGENS, ['Total']);
                 rows = svCompiledData().map(function(r){ return {tehsil: r.tehsil, label: svTitleUC(r.name), sub: null, vals: r.vals, total: r.total, unmapped: r.unmapped}; });
@@ -15593,8 +16305,8 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
             rows = rows.filter(function(r){
                 if(tehF && r.tehsil !== tehF) return false;
                 if(q){
-                    const hay = (r.label + ' ' + (r.sub ? svTitleUC(r.sub) : '')).toLowerCase();
-                    if(hay.indexOf(q) < 0) return false;
+                    if(svMode === 'fixed'){ if(r.label !== (searchEl ? searchEl.value : '')) return false; }
+                    else if(String(r.label || '').toUpperCase() !== q.toUpperCase()) return false;
                 }
                 return true;
             });
@@ -15770,7 +16482,7 @@ const VPD_META={"source": "VPD & AEFI Surveillance linelist files 2019–2025 (d
                 map[k].total += vals.reduce(function(a, b){ return a + b; }, 0);
             }
             (outRows || []).forEach(function(r){ add(r.tehsil, r.name, r.vals); });
-            (fixRows || []).forEach(function(r){ var uc = svFacUC(r); if(uc) add(r.tehsil, uc, r.vals); });
+            (fixRows || []).forEach(function(r){ var uc = svFacUC(r, outRows); if(uc) add(svFacTehsil(r, uc, outRows), uc, r.vals); });
             return order.map(function(k){ return map[k]; });
         }
         async function svAgGetCompiled(m){
