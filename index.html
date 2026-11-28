@@ -4085,7 +4085,7 @@ function cmpRender(){
             const err = document.getElementById('siteLockErr');
             const val = (inp && inp.value) ? inp.value.trim() : '';
             if(sha256Hex(val) === SITE_PASSWORD_HASH){
-                try{ localStorage.setItem('epi_chakwal_unlocked','1'); }catch(e){}
+                try{ localStorage.setItem('epi_chakwal_unlocked', SITE_PASSWORD_HASH); }catch(e){}
                 const lock = document.getElementById('siteLock');
                 if(lock) lock.style.display = 'none';
                 document.body.classList.remove('site-locked');
@@ -4097,7 +4097,7 @@ function cmpRender(){
         }
         function checkSiteLock(){
             let ok = false;
-            try{ ok = localStorage.getItem('epi_chakwal_unlocked') === '1'; }catch(e){}
+            try{ ok = localStorage.getItem('epi_chakwal_unlocked') === SITE_PASSWORD_HASH; }catch(e){}
             const lock = document.getElementById('siteLock');
             if(ok){
                 if(lock) lock.style.display = 'none';
